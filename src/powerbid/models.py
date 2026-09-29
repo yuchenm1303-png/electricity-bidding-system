@@ -33,12 +33,16 @@ class MarketScenario:
     interval_hours: float
     target_unit_id: str
     offers: tuple[Offer, ...]
+    description: str = ""
+    data_source: str = "unknown"
 
     def __post_init__(self) -> None:
         if self.demand_mw < 0:
             raise ValueError("demand_mw must be non-negative")
         if self.interval_hours <= 0:
             raise ValueError("interval_hours must be positive")
+        if not self.data_source:
+            raise ValueError("data_source must not be empty")
         unit_ids = [offer.unit_id for offer in self.offers]
         if len(unit_ids) != len(set(unit_ids)):
             raise ValueError("unit_id values must be unique")
