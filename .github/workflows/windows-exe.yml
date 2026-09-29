@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build Windows Desktop App
 
 on:
   workflow_dispatch:
@@ -13,9 +13,9 @@ on:
       - ".github/workflows/windows-exe.yml"
 
 jobs:
-  build-windows-exe:
+  build-windows-desktop:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v4
@@ -32,28 +32,44 @@ jobs:
           pip install -e ".[ui]"
           pip install "pyinstaller>=6.11,<7"
 
-      - name: Build single-file Windows executable
+      - name: Build desktop application
         shell: pwsh
         run: |
           pyinstaller --clean --noconfirm packaging/powerbid.spec
-          if (-not (Test-Path "dist/PowerBidLab.exe")) {
-            throw "dist/PowerBidLab.exe was not created"
+          if (-not (Test-Path "dist/PowerBidLab/PowerBidLab.exe")) {
+            throw "dist/PowerBidLab/PowerBidLab.exe was not created"
           }
 
-      - name: Smoke-check executable artifact
+      - name: Smoke-test packaged application server
         shell: pwsh
         run: |
-          $item = Get-Item "dist/PowerBidLab.exe"
-          Write-Host "Built $($item.FullName) ($([math]::Round($item.Length / 1MB, 1)) MB)"
+          $proc = Start-Process -FilePath "$PWD/dist/PowerBidLab/PowerBidLab.exe" -ArgumentList "--self-test" -PassThru -Wait
+          if ($proc.ExitCode -ne 0) {
+            $log = Join-Path $env:LOCALAPPDATA "PowerBidLab/startup-error.log"
+            if (Test-Path $log) { Get-Content $log }
+            throw "Packaged PowerBidLab self-test failed with exit code $($proc.ExitCode)"
+          }
+          Write-Host "Packaged desktop application self-test passed."
 
-      - name: Prepare release folder
+      - name: Prepare release directory
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "release" | Out-Null
-          Copy-Item "dist/PowerBidLab.exe" "release/PowerBidLab.exe"
+          Compress-Archive -Path "dist/PowerBidLab/*" -DestinationPath "release/PowerBidLab-Portable-x64.zip" -Force
           Copy-Item "packaging/WINDOWS-README.txt" "release/README.txt"
 
-      - name: Upload Windows package
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          choco install innosetup --yes --no-progress
+          iscc "packaging/powerbid.iss"
+          if (-not (Test-Path "release/PowerBidLab-Setup-x64.exe")) {
+            throw "PowerBidLab-Setup-x64.exe was not created"
+          }
+          $item = Get-Item "release/PowerBidLab-Setup-x64.exe"
+          Write-Host "Built installer $($item.FullName) ($([math]::Round($item.Length / 1MB, 1)) MB)"
+
+      - name: Upload Windows desktop package
         uses: actions/upload-artifact@v4
         with:
           name: PowerBidLab-Windows-x64
