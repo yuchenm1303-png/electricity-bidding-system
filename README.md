@@ -2,83 +2,159 @@
 
 面向电力市场研讨与教学实验的 **发电商报价决策原型系统**。
 
-这个仓库不从零重写完整电力市场。第一阶段只实现我们真正需要的“报价决策层”，并把“市场出清”抽象成可替换引擎：
-
-- 内置一个可解释的 **统一出清价（uniform-price）** 教学引擎，便于快速跑通实验；
-- 可选接入 **PyPSA** 作为成熟的优化/出清计算内核；
-- 后续通过 Adapter 对接老师提供的“报价出清仿真系统”；
-- 报价策略接口按“状态 → 报价 → 出清 → 收益反馈”的思路设计，方便后续接入 ASSUME 风格策略、预测模型或强化学习。
-
-> 当前版本是课程研讨 MVP，不是生产级交易系统。示例数据均明确标记为仿真数据。
-
-## 第一阶段目标
-
-给定：
-
-- 机组真实边际成本；
-- 申报容量；
-- 竞争机组报价；
-- 市场负荷；
-- 候选报价范围；
-
-系统自动逐个测试候选报价，执行市场出清，并计算目标机组的：
-
-- 中标电量；
-- 市场统一出清价；
-- 收入；
-- 变动成本；
-- 利润；
-
-最后推荐 **利润最大的候选报价**。
-
-核心链路：
+我们不从零重写完整电力市场，而是把项目拆成：
 
 ```text
 市场/机组数据
     ↓
-候选报价生成
+报价决策层（本项目重点）
     ↓
-市场出清引擎
+候选报价 → 出清 → 收益评价 → 最优报价
     ↓
-中标电量 + 出清价
-    ↓
-利润计算
-    ↓
-最优报价推荐
+可替换的市场出清环境
+    ├─ 内置教学引擎
+    ├─ PyPSA
+    └─ 老师的报价出清仿真系统（待确认接口）
 ```
 
-## 为什么这样设计
+> 当前版本是课程研讨 MVP，不是生产级交易系统。`data/sample_market.json` 明确标记为仿真数据。
 
-我们参考成熟开源项目的职责划分，而不是自己重造所有轮子：
+## 已完成的第一版
 
-- **PyPSA**：用于网络、经济调度、最优潮流和市场出清计算；
-- **ASSUME**：参考其“Unit / Bidding Strategy / Market”分层思想；
-- **AMES**：参考完整批发电力市场的业务流程；
+- [x] 统一的机组报价 / 市场场景数据模型
+- [x] 单区域统一出清价（uniform-price）教学引擎
+- [x] 同价边际机组按容量比例分配
+- [x] 网格搜索候选报价
+- [x] 按真实边际成本计算收入、成本、利润
+- [x] Streamlit 可视化演示界面
+- [x] PyPSA 可选出清 Adapter
+- [x] 示例仿真场景
+- [x] 单元测试与 GitHub Actions CI
+- [x] 开源项目参考与架构说明
 
-本仓库第一阶段只保留一个很小、可测试、可解释的核心。等老师平台的数据/API形式明确后，再实现对应 Adapter。
+## 第一版到底在算什么
 
-## 计划中的目录
+目标机组的 `bid_price`（向市场报的价格）和 `marginal_cost`（真实发电边际成本）分开保存。
+
+系统依次尝试：
 
 ```text
-src/powerbid/          核心模型、出清、报价优化
-app/                   Streamlit 演示界面
-data/                  仿真场景
-adapters/              外部出清环境适配
- tests/                 自动测试
- docs/                  架构与课程说明
+180 → 出清 → 中标电量 → 利润
+190 → 出清 → 中标电量 → 利润
+200 → 出清 → 中标电量 → 利润
+...
+390 → 出清 → 中标电量 → 利润
+400 → 出清 → 中标电量 → 利润
 ```
 
-## Roadmap
+统一价市场下，当前 MVP 用下面的单时段结算关系：
 
-- [x] 确定“报价决策层 + 可替换出清引擎”的总体架构
-- [ ] 单区域统一出清价 MVP
-- [ ] 网格搜索最优报价
-- [ ] Streamlit 可视化演示
-- [ ] PyPSA 出清 Adapter
-- [ ] 老师网页/仿真系统 Adapter（待确认其 API / 导入导出格式）
-- [ ] 历史价格、负荷与新能源预测
-- [ ] 风险约束与多目标优化
-- [ ] ASSUME / 强化学习策略实验
+```text
+利润 = (统一出清价 - 真实边际成本) × 中标MW × 时段小时数
+```
+
+最后从所有可行候选中选择利润最大的报价。这个算法故意保持可解释，后续再加入风险、预测和强化学习。
+
+## 快速运行
+
+要求 Python 3.11+。
+
+### 1. 命令行 MVP
+
+```bash
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -e '.[dev]'
+
+powerbid data/sample_market.json --start 180 --stop 400 --step 10
+```
+
+示例场景会列出每个候选报价的出清价、中标 MW 和利润，并输出推荐报价。
+
+### 2. 可视化界面
+
+```bash
+pip install -e '.[ui]'
+streamlit run app/streamlit_app.py
+```
+
+界面里可以直接修改：
+
+- 市场负荷；
+- 目标机组；
+- 各机组申报容量；
+- 竞争机组报价；
+- 真实边际成本；
+- 候选报价范围和步长。
+
+然后点击“开始搜索最优报价”，即可看到推荐报价、预计中标量、出清价、利润曲线和全部试算结果。
+
+### 3. 用 PyPSA 做出清
+
+```bash
+pip install -e '.[pypsa]'
+powerbid data/sample_market.json --engine pypsa --start 180 --stop 400 --step 10
+```
+
+当前 PyPSA Adapter 先实现单市场区。下一阶段会把 Bus、Line、电抗、线路容量等映射进 PyPSA，避免自己重写潮流和网络优化。
+
+## 为什么不是从零做
+
+我们把成熟开源项目当作不同层的参考或计算内核：
+
+- **PyPSA**：网络、经济调度、最优潮流、市场出清、节点边际价格；
+- **ASSUME**：Unit / Bidding Strategy / Market 的分层与策略设计；
+- **AMES**：日前/实时市场、SCUC/SCED、LMP 等完整批发市场流程；
+- **OpenEUPHEMIA / POMATO**：复杂真实市场规则与网络市场研究参考。
+
+详细记录见 [`docs/OPEN_SOURCE_NOTES.md`](docs/OPEN_SOURCE_NOTES.md)。
+
+## 项目结构
+
+```text
+.
+├── app/
+│   └── streamlit_app.py          # 课堂演示 UI
+├── data/
+│   └── sample_market.json        # 明确标注的仿真场景
+├── docs/
+│   ├── ARCHITECTURE.md           # 架构、数据来源和后续计划
+│   └── OPEN_SOURCE_NOTES.md      # 成熟开源项目参考
+├── src/powerbid/
+│   ├── adapters/
+│   │   └── pypsa_engine.py       # PyPSA Adapter
+│   ├── clearing/
+│   │   ├── base.py               # ClearingEngine 接口
+│   │   └── uniform_price.py      # 内置教学出清引擎
+│   ├── cli.py
+│   ├── models.py
+│   ├── optimizer.py
+│   ├── scenario_io.py
+│   └── settlement.py
+└── tests/
+```
+
+## 数据从哪里来
+
+后续场景都要记录数据来源，不能把人为构造数据冒充真实市场数据：
+
+- `platform`：老师仿真系统/API/导出；
+- `course`：课程材料；
+- `public`：公开市场数据；
+- `synthetic`：我们人为构造的教学场景。
+
+现在的示例属于 `synthetic`。等老师平台的 API 或导入导出格式确定后，再实现 `TeacherPlatformAdapter`。
+
+## 下一阶段
+
+1. 根据老师仿真网页的真实字段建立数据映射；
+2. 加入 Bus / Line / reactance / transmission limit；
+3. 用 PyPSA 做带网络约束的市场出清；
+4. 加入 24h 多时段负荷、风光和机组运行约束；
+5. 再加入历史价格预测、竞争者场景与风险指标；
+6. 最后再研究 ASSUME / 强化学习报价策略。
+
+详见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
 ## License
 

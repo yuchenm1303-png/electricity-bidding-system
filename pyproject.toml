@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "powerbid-lab"
+version = "0.1.0"
+description = "Electricity market bidding decision lab for teaching and research"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "yuchenm1303-png" }]
+dependencies = []
+
+[project.optional-dependencies]
+ui = [
+  "streamlit>=1.38",
+  "pandas>=2.2",
+]
+pypsa = [
+  "pypsa>=0.35",
+]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.6",
+]
+all = [
+  "streamlit>=1.38",
+  "pandas>=2.2",
+  "pypsa>=0.35",
+  "pytest>=8.3",
+  "ruff>=0.6",
+]
+
+[project.scripts]
+powerbid = "powerbid.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/powerbid"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
