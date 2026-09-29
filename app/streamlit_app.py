@@ -123,7 +123,12 @@ html, body, [class*="css"] {
     padding: 2.15rem 2.25rem 1.95rem;
     margin-bottom: 1.15rem;
     background:
-        linear-gradient(125deg, rgba(59, 130, 246, .10), rgba(20, 184, 166, .045) 48%, transparent 75%),
+        linear-gradient(
+            125deg,
+            rgba(59, 130, 246, .10),
+            rgba(20, 184, 166, .045) 48%,
+            transparent 75%
+        ),
         color-mix(in srgb, var(--secondary-background-color) 78%, transparent);
     box-shadow: 0 20px 60px rgba(15, 23, 42, .06);
 }
@@ -840,7 +845,8 @@ if run:
             st.markdown(
                 f"""
                 <div class="pb-result-banner">
-                    <span><strong>风险摘要</strong> · 风险得分 {best.score:,.2f} · 可行概率 {best.feasible_probability:.0%}</span>
+                    <span><strong>风险摘要</strong> · 风险得分 {best.score:,.2f} ·
+                    可行概率 {best.feasible_probability:.0%}</span>
                     <span>预计中标 {best.expected_accepted_mw:.2f} MW</span>
                 </div>
                 """,
@@ -893,7 +899,11 @@ if run:
                             )
                             .encode(
                                 x=alt.X("报价:Q", title="报价"),
-                                y=alt.Y("风险得分:Q", title="风险得分", scale=alt.Scale(zero=False)),
+                                y=alt.Y(
+                                    "风险得分:Q",
+                                    title="风险得分",
+                                    scale=alt.Scale(zero=False),
+                                ),
                                 tooltip=[
                                     alt.Tooltip("报价:Q", format=".2f"),
                                     alt.Tooltip("风险得分:Q", format=",.2f"),
