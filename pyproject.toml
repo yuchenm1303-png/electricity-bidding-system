@@ -16,6 +16,7 @@ dependencies = []
 ui = [
   "streamlit>=1.38",
   "pandas>=2.2",
+  "pywebview>=5.3,<6",
 ]
 pypsa = [
   "pypsa>=0.35",
@@ -27,6 +28,7 @@ dev = [
 all = [
   "streamlit>=1.38",
   "pandas>=2.2",
+  "pywebview>=5.3,<6",
   "pypsa>=0.35",
   "pytest>=8.3",
   "ruff>=0.6",
