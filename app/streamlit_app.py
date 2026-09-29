@@ -50,13 +50,8 @@ html, body, [class*="css"] {
         "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-html {
-    scroll-behavior: smooth;
-}
-
-body {
-    letter-spacing: -.008em;
-}
+html { scroll-behavior: smooth; }
+body { letter-spacing: -.008em; }
 
 .stApp {
     background:
@@ -78,153 +73,87 @@ body {
     mask-image: linear-gradient(to bottom, rgba(0,0,0,.18), transparent 58%);
 }
 
-[data-testid="stHeader"] {
-    height: 2.4rem;
-    background: transparent;
-}
-
-[data-testid="stDecoration"] {
-    display: none;
-}
-
-#MainMenu,
-footer {
-    visibility: hidden;
-}
-
-[data-testid="stAppViewBlockContainer"] {
-    max-width: 1510px;
-    padding: 1.2rem 2.2rem 4.5rem;
-}
+[data-testid="stHeader"] { height: 2.4rem; background: transparent; }
+[data-testid="stDecoration"] { display: none; }
+#MainMenu, footer { visibility: hidden; }
+[data-testid="stAppViewBlockContainer"] { max-width: 1510px; padding: 1.2rem 2.2rem 4.5rem; }
 
 /* ---------- Sidebar ---------- */
 section[data-testid="stSidebar"] {
-    width: 322px !important;
-    min-width: 322px !important;
+    width: 306px !important;
+    min-width: 306px !important;
     background:
-        linear-gradient(180deg, rgba(79, 140, 255, .035), transparent 24rem),
-        color-mix(in srgb, var(--secondary-background-color) 94%, var(--background-color));
+        radial-gradient(circle at 22% 0%, rgba(79, 140, 255, .055), transparent 17rem),
+        color-mix(in srgb, var(--secondary-background-color) 96%, var(--background-color));
     border-right: 1px solid var(--pb-line);
-    box-shadow: 18px 0 50px rgba(0, 0, 0, .035);
+    box-shadow: 14px 0 42px rgba(0, 0, 0, .035);
 }
-
-section[data-testid="stSidebar"] > div {
-    padding-top: .9rem;
-}
-
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-    gap: .64rem;
-}
-
-[data-testid="stSidebar"] .stMarkdown p {
-    margin-bottom: .1rem;
-}
-
+section[data-testid="stSidebar"] > div { padding-top: .55rem; }
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] { padding: .2rem .72rem 1rem; }
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: .46rem; }
+[data-testid="stSidebar"] .stMarkdown p { margin-bottom: 0; }
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
-    font-size: .77rem !important;
+    font-size: .73rem !important;
+    line-height: 1.2 !important;
     font-weight: 650 !important;
-    color: color-mix(in srgb, var(--text-color) 72%, transparent) !important;
+    color: color-mix(in srgb, var(--text-color) 68%, transparent) !important;
 }
-
-.pb-side-brand {
-    display: flex;
-    align-items: center;
-    gap: .78rem;
-    padding: .35rem .08rem 1.05rem;
-    margin-bottom: .15rem;
-    border-bottom: 1px solid var(--pb-line);
-}
-
+.pb-side-brand { display:flex; align-items:center; gap:.66rem; padding:.32rem .18rem .76rem; margin-bottom:.22rem; }
 .pb-side-logo {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    border-radius: 13px;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    font-weight: 850;
-    font-size: .95rem;
-    color: white;
-    background: linear-gradient(145deg, #3f72f2 0%, #4f8cff 44%, #1ebcab 100%);
-    box-shadow: 0 10px 26px rgba(46, 113, 255, .20), inset 0 1px rgba(255,255,255,.22);
+    position:relative; width:35px; height:35px; flex:0 0 35px;
+    border-radius:11px; display:grid; place-items:center; overflow:hidden; color:white;
+    background:linear-gradient(145deg,#497ff2 0%,#4f8cff 48%,#21baa9 108%);
+    box-shadow:0 7px 20px rgba(46,113,255,.18), inset 0 1px rgba(255,255,255,.20);
 }
-
-.pb-side-logo::after {
-    content: "";
-    position: absolute;
-    inset: 1px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.14);
+.pb-side-logo::after { content:""; position:absolute; inset:1px; border-radius:10px; border:1px solid rgba(255,255,255,.13); }
+.pb-side-title { font-size:.88rem; line-height:1.12; font-weight:760; letter-spacing:-.025em; color:var(--text-color); }
+.pb-side-subtitle { margin-top:.14rem; font-size:.61rem; font-weight:560; letter-spacing:.03em; color:color-mix(in srgb,var(--text-color) 41%,transparent); }
+.pb-live-dot { display:inline-block; width:7px; height:7px; margin-right:.32rem; border-radius:999px; background:var(--pb-cyan); box-shadow:0 0 0 4px rgba(39,211,194,.09); }
+.pb-side-group-head { display:flex; align-items:center; justify-content:space-between; gap:.7rem; padding:.02rem .02rem .42rem; }
+.pb-side-group-title { display:flex; align-items:center; gap:.46rem; font-size:.70rem; font-weight:760; color:color-mix(in srgb,var(--text-color) 86%,transparent); }
+.pb-side-index { display:grid; place-items:center; width:22px; height:22px; border-radius:7px; background:rgba(79,140,255,.10); border:1px solid rgba(79,140,255,.15); color:var(--pb-blue); font-size:.60rem; font-weight:800; }
+.pb-side-group-meta { font-size:.56rem; font-weight:700; letter-spacing:.10em; text-transform:uppercase; color:color-mix(in srgb,var(--text-color) 31%,transparent); }
+.st-key-sidebar_market [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-sidebar_bid [data-testid="stVerticalBlockBorderWrapper"],
+.st-key-sidebar_risk [data-testid="stVerticalBlockBorderWrapper"] {
+    border:1px solid color-mix(in srgb,var(--text-color) 7%,transparent) !important;
+    border-radius:14px !important;
+    background:linear-gradient(145deg,rgba(79,140,255,.025),transparent 48%),color-mix(in srgb,var(--secondary-background-color) 48%,transparent) !important;
+    box-shadow:inset 0 1px rgba(255,255,255,.012) !important;
 }
-
-.pb-side-title {
-    font-size: .96rem;
-    font-weight: 760;
-    letter-spacing: -.025em;
-    color: var(--text-color);
+.st-key-sidebar_market [data-testid="stVerticalBlockBorderWrapper"] > div,
+.st-key-sidebar_bid [data-testid="stVerticalBlockBorderWrapper"] > div,
+.st-key-sidebar_risk [data-testid="stVerticalBlockBorderWrapper"] > div { padding:.78rem .72rem .72rem !important; }
+.st-key-sidebar_market [data-testid="stVerticalBlock"],
+.st-key-sidebar_bid [data-testid="stVerticalBlock"],
+.st-key-sidebar_risk [data-testid="stVerticalBlock"] { gap:.52rem !important; }
+[data-testid="stSidebar"] [data-baseweb="input"] > div,
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] [data-testid="stNumberInput"] > div > div {
+    min-height:2.34rem !important;
+    border:1px solid color-mix(in srgb,var(--text-color) 12%,transparent) !important;
+    border-radius:10px !important;
+    background:color-mix(in srgb,var(--background-color) 73%,transparent) !important;
+    box-shadow:inset 0 1px rgba(255,255,255,.012) !important;
 }
-
-.pb-side-subtitle {
-    margin-top: .13rem;
-    font-size: .68rem;
-    font-weight: 570;
-    letter-spacing: .035em;
-    color: color-mix(in srgb, var(--text-color) 46%, transparent);
-}
-
-.pb-side-section {
-    display: flex;
-    align-items: center;
-    gap: .52rem;
-    margin: .82rem 0 .05rem;
-    padding-top: .72rem;
-    border-top: 1px solid var(--pb-line);
-    font-size: .66rem;
-    font-weight: 780;
-    letter-spacing: .115em;
-    text-transform: uppercase;
-    color: color-mix(in srgb, var(--text-color) 43%, transparent);
-}
-
-.pb-side-section::before {
-    content: "";
-    width: 5px;
-    height: 5px;
-    border-radius: 999px;
-    background: var(--pb-blue);
-    box-shadow: 0 0 0 4px rgba(79,140,255,.08);
-}
-
-.pb-side-status {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: .8rem;
-    padding: .72rem .78rem;
-    margin-top: .3rem;
-    border: 1px solid var(--pb-line);
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--background-color) 42%, transparent);
-    font-size: .69rem;
-    color: var(--pb-muted);
-}
-
-.pb-side-status strong {
-    color: color-mix(in srgb, var(--text-color) 78%, transparent);
-    font-weight: 650;
-}
-
-.pb-live-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    margin-right: .42rem;
-    border-radius: 999px;
-    background: var(--pb-cyan);
-    box-shadow: 0 0 0 4px rgba(39, 211, 194, .10);
-}
+[data-testid="stSidebar"] [data-baseweb="select"] > div:hover,
+[data-testid="stSidebar"] [data-baseweb="input"] > div:hover { border-color:color-mix(in srgb,var(--text-color) 20%,transparent) !important; }
+[data-testid="stSidebar"] [data-baseweb="select"] > div:focus-within,
+[data-testid="stSidebar"] [data-baseweb="input"] > div:focus-within { border-color:color-mix(in srgb,var(--pb-blue) 58%,transparent) !important; box-shadow:0 0 0 3px rgba(79,140,255,.07) !important; }
+[data-testid="stSidebar"] input { font-size:.79rem !important; font-weight:620 !important; }
+[data-testid="stSidebar"] [data-testid="stNumberInput"] button { width:1.68rem !important; height:1.68rem !important; min-height:1.68rem !important; margin:.18rem .12rem !important; padding:0 !important; border:0 !important; border-radius:7px !important; background:transparent !important; opacity:.54; }
+[data-testid="stSidebar"] [data-testid="stNumberInput"] button:hover { opacity:1; background:color-mix(in srgb,var(--text-color) 7%,transparent) !important; }
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] > div { padding-left:.72rem !important; padding-right:.42rem !important; }
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[role="button"],
+[data-testid="stSidebar"] [data-testid="stSelectbox"] span { font-size:.78rem !important; }
+.pb-side-summary { display:grid; gap:.48rem; padding:.76rem .78rem .72rem; border:1px solid var(--pb-line); border-radius:13px; background:linear-gradient(120deg,rgba(79,140,255,.055),rgba(39,211,194,.018) 52%,transparent),color-mix(in srgb,var(--secondary-background-color) 70%,var(--background-color)); box-shadow:0 10px 28px rgba(0,0,0,.045); }
+.pb-side-summary-head { display:flex; align-items:center; justify-content:space-between; font-size:.63rem; font-weight:730; color:color-mix(in srgb,var(--text-color) 78%,transparent); }
+.pb-side-ready { display:inline-flex; align-items:center; gap:.34rem; color:var(--pb-cyan); font-size:.56rem; font-weight:760; letter-spacing:.06em; }
+.pb-side-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:.38rem .6rem; }
+.pb-side-summary-item span { display:block; margin-bottom:.08rem; font-size:.54rem; color:color-mix(in srgb,var(--text-color) 35%,transparent); }
+.pb-side-summary-item strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.66rem; font-weight:660; color:color-mix(in srgb,var(--text-color) 76%,transparent); }
+.pb-side-footnote { margin:.35rem .1rem .1rem; text-align:center; font-size:.54rem; color:color-mix(in srgb,var(--text-color) 28%,transparent); }
 
 /* ---------- Inputs ---------- */
 [data-baseweb="input"] > div,
@@ -238,13 +167,11 @@ section[data-testid="stSidebar"] > div {
     box-shadow: inset 0 1px rgba(255,255,255,.018);
     transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
 }
-
 [data-baseweb="input"] > div:focus-within,
 [data-baseweb="select"] > div:focus-within {
     border-color: color-mix(in srgb, var(--pb-blue) 58%, transparent) !important;
     box-shadow: 0 0 0 3px rgba(79, 140, 255, .08) !important;
 }
-
 [data-testid="stNumberInput"] button {
     width: 2rem;
     height: 2rem;
@@ -255,12 +182,10 @@ section[data-testid="stSidebar"] > div {
     opacity: .72;
     transition: opacity .15s ease, background .15s ease;
 }
-
 [data-testid="stNumberInput"] button:hover {
     opacity: 1;
     background: color-mix(in srgb, var(--secondary-background-color) 66%, transparent) !important;
 }
-
 [data-baseweb="popover"] [role="listbox"] {
     padding: .35rem;
     border: 1px solid var(--pb-line-strong);
@@ -268,15 +193,8 @@ section[data-testid="stSidebar"] > div {
     background: var(--secondary-background-color);
     box-shadow: 0 18px 45px rgba(0,0,0,.16);
 }
-
-[data-baseweb="popover"] [role="option"] {
-    border-radius: 8px;
-    font-size: .78rem;
-}
-
-[data-testid="stSlider"] [data-baseweb="slider"] > div > div {
-    height: 4px;
-}
+[data-baseweb="popover"] [role="option"] { border-radius: 8px; font-size: .78rem; }
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div { height: 4px; }
 
 /* ---------- Top bar / hero ---------- */
 .pb-topbar {
@@ -288,34 +206,9 @@ section[data-testid="stSidebar"] > div {
     margin-bottom: .9rem;
     padding: 0 .15rem;
 }
-
-.pb-breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    font-size: .72rem;
-    font-weight: 610;
-    color: var(--pb-muted);
-}
-
-.pb-breadcrumb strong {
-    color: color-mix(in srgb, var(--text-color) 82%, transparent);
-    font-weight: 700;
-}
-
-.pb-top-status {
-    display: inline-flex;
-    align-items: center;
-    gap: .48rem;
-    padding: .38rem .62rem;
-    border: 1px solid var(--pb-line);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--secondary-background-color) 58%, transparent);
-    font-size: .68rem;
-    font-weight: 650;
-    color: var(--pb-muted);
-}
-
+.pb-breadcrumb { display:flex; align-items:center; gap:.55rem; font-size:.72rem; font-weight:610; color:var(--pb-muted); }
+.pb-breadcrumb strong { color:color-mix(in srgb,var(--text-color) 82%,transparent); font-weight:700; }
+.pb-top-status { display:inline-flex; align-items:center; gap:.48rem; padding:.38rem .62rem; border:1px solid var(--pb-line); border-radius:999px; background:color-mix(in srgb,var(--secondary-background-color) 58%,transparent); font-size:.68rem; font-weight:650; color:var(--pb-muted); }
 .pb-hero {
     position: relative;
     overflow: hidden;
@@ -328,7 +221,6 @@ section[data-testid="stSidebar"] > div {
         color-mix(in srgb, var(--secondary-background-color) 72%, transparent);
     box-shadow: 0 22px 54px rgba(0, 0, 0, .055), inset 0 1px rgba(255,255,255,.025);
 }
-
 .pb-hero::before {
     content: "";
     position: absolute;
@@ -343,200 +235,39 @@ section[data-testid="stSidebar"] > div {
     mask-image: linear-gradient(90deg, transparent, #000 50%);
     pointer-events: none;
 }
-
-.pb-hero::after {
-    content: "";
-    position: absolute;
-    width: 250px;
-    height: 250px;
-    right: -88px;
-    top: -118px;
-    border-radius: 999px;
-    background: radial-gradient(circle, rgba(79, 140, 255, .15), transparent 66%);
-    pointer-events: none;
-}
-
-.pb-hero-grid {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 305px;
-    gap: 2rem;
-    align-items: stretch;
-}
-
-.pb-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: .48rem;
-    color: var(--pb-blue);
-    font-size: .68rem;
-    font-weight: 790;
-    letter-spacing: .125em;
-    text-transform: uppercase;
-}
-
-.pb-eyebrow-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--pb-cyan);
-    box-shadow: 0 0 0 5px rgba(39, 211, 194, .09);
-}
-
-.pb-hero h1 {
-    margin: .52rem 0 .48rem;
-    font-size: clamp(2rem, 3.5vw, 2.85rem);
-    line-height: 1.02;
-    letter-spacing: -.052em;
-    color: var(--text-color);
-}
-
-.pb-hero-copy {
-    max-width: 790px;
-    margin: 0;
-    font-size: .90rem;
-    line-height: 1.72;
-    color: color-mix(in srgb, var(--text-color) 62%, transparent);
-}
-
-.pb-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .48rem;
-    margin-top: 1.08rem;
-}
-
-.pb-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: .38rem;
-    padding: .36rem .62rem;
-    border-radius: 999px;
-    border: 1px solid var(--pb-line);
-    background: color-mix(in srgb, var(--background-color) 54%, transparent);
-    font-size: .70rem;
-    font-weight: 630;
-    color: color-mix(in srgb, var(--text-color) 72%, transparent);
-}
-
-.pb-chip-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--pb-blue);
-}
-
-.pb-hero-panel {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 142px;
-    padding: 1rem 1.05rem;
-    border-radius: 16px;
-    border: 1px solid var(--pb-line);
-    background: color-mix(in srgb, var(--background-color) 56%, transparent);
-    backdrop-filter: blur(16px);
-}
-
-.pb-hero-panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: .8rem;
-    font-size: .66rem;
-    font-weight: 720;
-    letter-spacing: .09em;
-    text-transform: uppercase;
-    color: var(--pb-muted);
-}
-
-.pb-hero-panel-head span:last-child {
-    color: var(--pb-cyan);
-}
-
-.pb-hero-panel-value {
-    margin: .72rem 0 .1rem;
-    font-size: 1.55rem;
-    font-weight: 730;
-    letter-spacing: -.04em;
-    color: var(--text-color);
-}
-
-.pb-hero-panel-sub {
-    font-size: .70rem;
-    line-height: 1.5;
-    color: var(--pb-muted);
-}
-
-.pb-mini-bars {
-    display: flex;
-    align-items: end;
-    gap: 5px;
-    height: 27px;
-    margin-top: .8rem;
-}
-
-.pb-mini-bars i {
-    display: block;
-    flex: 1;
-    border-radius: 3px 3px 1px 1px;
-    background: linear-gradient(to top, rgba(79,140,255,.32), rgba(39,211,194,.75));
-}
-
-.pb-mini-bars i:nth-child(1) { height: 34%; }
-.pb-mini-bars i:nth-child(2) { height: 52%; }
-.pb-mini-bars i:nth-child(3) { height: 43%; }
-.pb-mini-bars i:nth-child(4) { height: 73%; }
-.pb-mini-bars i:nth-child(5) { height: 60%; }
-.pb-mini-bars i:nth-child(6) { height: 88%; }
-.pb-mini-bars i:nth-child(7) { height: 68%; }
-.pb-mini-bars i:nth-child(8) { height: 100%; }
-.pb-mini-bars i:nth-child(9) { height: 82%; }
-.pb-mini-bars i:nth-child(10) { height: 92%; }
+.pb-hero::after { content:""; position:absolute; width:250px; height:250px; right:-88px; top:-118px; border-radius:999px; background:radial-gradient(circle,rgba(79,140,255,.15),transparent 66%); pointer-events:none; }
+.pb-hero-grid { position:relative; z-index:1; display:grid; grid-template-columns:minmax(0,1fr) 305px; gap:2rem; align-items:stretch; }
+.pb-eyebrow { display:inline-flex; align-items:center; gap:.48rem; color:var(--pb-blue); font-size:.68rem; font-weight:790; letter-spacing:.125em; text-transform:uppercase; }
+.pb-eyebrow-dot { width:6px; height:6px; border-radius:50%; background:var(--pb-cyan); box-shadow:0 0 0 5px rgba(39,211,194,.09); }
+.pb-hero h1 { margin:.52rem 0 .48rem; font-size:clamp(2rem,3.5vw,2.85rem); line-height:1.02; letter-spacing:-.052em; color:var(--text-color); }
+.pb-hero-copy { max-width:790px; margin:0; font-size:.90rem; line-height:1.72; color:color-mix(in srgb,var(--text-color) 62%,transparent); }
+.pb-chip-row { display:flex; flex-wrap:wrap; gap:.48rem; margin-top:1.08rem; }
+.pb-chip { display:inline-flex; align-items:center; gap:.38rem; padding:.36rem .62rem; border-radius:999px; border:1px solid var(--pb-line); background:color-mix(in srgb,var(--background-color) 54%,transparent); font-size:.70rem; font-weight:630; color:color-mix(in srgb,var(--text-color) 72%,transparent); }
+.pb-chip-dot { width:6px; height:6px; border-radius:50%; background:var(--pb-blue); }
+.pb-hero-panel { display:flex; flex-direction:column; justify-content:space-between; min-height:142px; padding:1rem 1.05rem; border-radius:16px; border:1px solid var(--pb-line); background:color-mix(in srgb,var(--background-color) 56%,transparent); backdrop-filter:blur(16px); }
+.pb-hero-panel-head { display:flex; align-items:center; justify-content:space-between; gap:.8rem; font-size:.66rem; font-weight:720; letter-spacing:.09em; text-transform:uppercase; color:var(--pb-muted); }
+.pb-hero-panel-head span:last-child { color:var(--pb-cyan); }
+.pb-hero-panel-value { margin:.72rem 0 .1rem; font-size:1.55rem; font-weight:730; letter-spacing:-.04em; color:var(--text-color); }
+.pb-hero-panel-sub { font-size:.70rem; line-height:1.5; color:var(--pb-muted); }
+.pb-mini-bars { display:flex; align-items:end; gap:5px; height:27px; margin-top:.8rem; }
+.pb-mini-bars i { display:block; flex:1; border-radius:3px 3px 1px 1px; background:linear-gradient(to top,rgba(79,140,255,.32),rgba(39,211,194,.75)); }
+.pb-mini-bars i:nth-child(1) { height:34%; }
+.pb-mini-bars i:nth-child(2) { height:52%; }
+.pb-mini-bars i:nth-child(3) { height:43%; }
+.pb-mini-bars i:nth-child(4) { height:73%; }
+.pb-mini-bars i:nth-child(5) { height:60%; }
+.pb-mini-bars i:nth-child(6) { height:88%; }
+.pb-mini-bars i:nth-child(7) { height:68%; }
+.pb-mini-bars i:nth-child(8) { height:100%; }
+.pb-mini-bars i:nth-child(9) { height:82%; }
+.pb-mini-bars i:nth-child(10) { height:92%; }
 
 /* ---------- Section headers ---------- */
-.pb-section-head {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
-    margin: 1.72rem 0 .76rem;
-}
-
-.pb-section-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: .42rem;
-    font-size: .66rem;
-    font-weight: 780;
-    text-transform: uppercase;
-    letter-spacing: .115em;
-    color: var(--pb-blue);
-    margin-bottom: .23rem;
-}
-
-.pb-section-kicker::after {
-    content: "";
-    width: 30px;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(79,140,255,.55), transparent);
-}
-
-.pb-section-title {
-    font-size: 1.16rem;
-    font-weight: 735;
-    letter-spacing: -.025em;
-    color: var(--text-color);
-}
-
-.pb-section-desc {
-    margin-top: .23rem;
-    max-width: 760px;
-    font-size: .78rem;
-    line-height: 1.55;
-    color: color-mix(in srgb, var(--text-color) 52%, transparent);
-}
+.pb-section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin:1.72rem 0 .76rem; }
+.pb-section-kicker { display:inline-flex; align-items:center; gap:.42rem; font-size:.66rem; font-weight:780; text-transform:uppercase; letter-spacing:.115em; color:var(--pb-blue); margin-bottom:.23rem; }
+.pb-section-kicker::after { content:""; width:30px; height:1px; background:linear-gradient(90deg,rgba(79,140,255,.55),transparent); }
+.pb-section-title { font-size:1.16rem; font-weight:735; letter-spacing:-.025em; color:var(--text-color); }
+.pb-section-desc { margin-top:.23rem; max-width:760px; font-size:.78rem; line-height:1.55; color:color-mix(in srgb,var(--text-color) 52%,transparent); }
 
 /* ---------- Cards / metrics ---------- */
 [data-testid="stMetric"] {
@@ -546,325 +277,76 @@ section[data-testid="stSidebar"] > div {
     padding: 1.02rem 1.08rem;
     border: 1px solid var(--pb-line);
     border-radius: var(--pb-radius-lg);
-    background:
-        linear-gradient(145deg, rgba(79,140,255,.042), transparent 52%),
-        color-mix(in srgb, var(--secondary-background-color) 68%, transparent);
-    box-shadow: 0 12px 34px rgba(0, 0, 0, .035), inset 0 1px rgba(255,255,255,.02);
-    transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    background: linear-gradient(145deg,rgba(79,140,255,.042),transparent 52%), color-mix(in srgb,var(--secondary-background-color) 68%,transparent);
+    box-shadow:0 12px 34px rgba(0,0,0,.035), inset 0 1px rgba(255,255,255,.02);
+    transition:transform .18s ease,border-color .18s ease,background .18s ease;
 }
-
-[data-testid="stMetric"]::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 18px;
-    right: 18px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(79,140,255,.34), transparent);
-}
-
-[data-testid="stMetric"]:hover {
-    transform: translateY(-2px);
-    border-color: color-mix(in srgb, var(--pb-blue) 24%, var(--pb-line));
-    background:
-        linear-gradient(145deg, rgba(79,140,255,.065), transparent 55%),
-        color-mix(in srgb, var(--secondary-background-color) 72%, transparent);
-}
-
-[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"]::before {
-    background: linear-gradient(90deg, transparent, rgba(39,211,194,.38), transparent);
-}
-
-[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]::before {
-    background: linear-gradient(90deg, transparent, rgba(139,124,246,.38), transparent);
-}
-
-[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"]::before {
-    background: linear-gradient(90deg, transparent, rgba(240,180,95,.36), transparent);
-}
-
-[data-testid="stMetricLabel"] {
-    font-size: .72rem;
-    font-weight: 650;
-    color: color-mix(in srgb, var(--text-color) 50%, transparent);
-}
-
-[data-testid="stMetricValue"] {
-    margin-top: .27rem;
-    font-size: 1.75rem;
-    font-weight: 690;
-    letter-spacing: -.04em;
-}
-
-[data-testid="stVerticalBlockBorderWrapper"] {
-    border-radius: var(--pb-radius-lg) !important;
-    border-color: var(--pb-line) !important;
-    background:
-        linear-gradient(180deg, rgba(255,255,255,.012), transparent 7rem),
-        color-mix(in srgb, var(--secondary-background-color) 56%, transparent);
-    box-shadow: 0 14px 40px rgba(0, 0, 0, .035), inset 0 1px rgba(255,255,255,.015);
-}
-
-[data-testid="stVerticalBlockBorderWrapper"] > div {
-    padding: .2rem;
-}
-
-.st-key-offer_card [data-testid="stVerticalBlockBorderWrapper"] {
-    background:
-        linear-gradient(135deg, rgba(79,140,255,.035), transparent 36%),
-        color-mix(in srgb, var(--secondary-background-color) 57%, transparent);
-}
-
-.st-key-run_card [data-testid="stVerticalBlockBorderWrapper"] {
-    border-color: color-mix(in srgb, var(--pb-blue) 16%, var(--pb-line)) !important;
-    background:
-        linear-gradient(100deg, rgba(79,140,255,.065), rgba(39,211,194,.018) 46%, transparent 74%),
-        color-mix(in srgb, var(--secondary-background-color) 62%, transparent);
-}
-
-.pb-card-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: .1rem;
-}
-
-.pb-card-title {
-    font-size: .88rem;
-    font-weight: 710;
-    color: var(--text-color);
-}
-
-.pb-card-meta {
-    padding: .28rem .5rem;
-    border-radius: 999px;
-    border: 1px solid var(--pb-line);
-    font-size: .64rem;
-    color: var(--pb-muted);
-}
-
-.pb-note {
-    display: flex;
-    gap: .75rem;
-    align-items: flex-start;
-    padding: .88rem .95rem;
-    margin: .78rem 0 .9rem;
-    border-radius: 13px;
-    border: 1px solid rgba(79, 140, 255, .15);
-    background: linear-gradient(90deg, rgba(79, 140, 255, .055), rgba(39,211,194,.018));
-}
-
-.pb-note-mark {
-    flex: 0 0 auto;
-    width: 24px;
-    height: 24px;
-    border-radius: 8px;
-    display: grid;
-    place-items: center;
-    color: var(--pb-blue);
-    background: rgba(79, 140, 255, .10);
-    font-size: .72rem;
-    font-weight: 800;
-}
-
-.pb-note-copy {
-    font-size: .77rem;
-    line-height: 1.62;
-    color: color-mix(in srgb, var(--text-color) 57%, transparent);
-}
-
-.pb-note-copy strong {
-    color: color-mix(in srgb, var(--text-color) 84%, transparent);
-    font-weight: 700;
-}
-
-.pb-action-copy {
-    padding: .16rem 0 .3rem;
-}
-
-.pb-action-title {
-    font-size: .91rem;
-    font-weight: 715;
-    color: var(--text-color);
-}
-
-.pb-action-desc {
-    margin-top: .22rem;
-    font-size: .73rem;
-    line-height: 1.48;
-    color: color-mix(in srgb, var(--text-color) 48%, transparent);
-}
-
-.pb-result-banner {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    align-items: center;
-    padding: .82rem .92rem;
-    margin: .3rem 0 .78rem;
-    border-radius: 13px;
-    background: linear-gradient(90deg, rgba(39, 211, 194, .065), rgba(79, 140, 255, .045));
-    border: 1px solid rgba(39, 211, 194, .14);
-    font-size: .74rem;
-    color: color-mix(in srgb, var(--text-color) 56%, transparent);
-}
-
-.pb-result-banner strong {
-    color: var(--text-color);
-}
+[data-testid="stMetric"]::before { content:""; position:absolute; top:0; left:18px; right:18px; height:1px; background:linear-gradient(90deg,transparent,rgba(79,140,255,.34),transparent); }
+[data-testid="stMetric"]:hover { transform:translateY(-2px); border-color:color-mix(in srgb,var(--pb-blue) 24%,var(--pb-line)); background:linear-gradient(145deg,rgba(79,140,255,.065),transparent 55%),color-mix(in srgb,var(--secondary-background-color) 72%,transparent); }
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"]::before { background:linear-gradient(90deg,transparent,rgba(39,211,194,.38),transparent); }
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]::before { background:linear-gradient(90deg,transparent,rgba(139,124,246,.38),transparent); }
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"]::before { background:linear-gradient(90deg,transparent,rgba(240,180,95,.36),transparent); }
+[data-testid="stMetricLabel"] { font-size:.72rem; font-weight:650; color:color-mix(in srgb,var(--text-color) 50%,transparent); }
+[data-testid="stMetricValue"] { margin-top:.27rem; font-size:1.75rem; font-weight:690; letter-spacing:-.04em; }
+[data-testid="stVerticalBlockBorderWrapper"] { border-radius:var(--pb-radius-lg) !important; border-color:var(--pb-line) !important; background:linear-gradient(180deg,rgba(255,255,255,.012),transparent 7rem),color-mix(in srgb,var(--secondary-background-color) 56%,transparent); box-shadow:0 14px 40px rgba(0,0,0,.035),inset 0 1px rgba(255,255,255,.015); }
+[data-testid="stVerticalBlockBorderWrapper"] > div { padding:.2rem; }
+.st-key-offer_card [data-testid="stVerticalBlockBorderWrapper"] { background:linear-gradient(135deg,rgba(79,140,255,.035),transparent 36%),color-mix(in srgb,var(--secondary-background-color) 57%,transparent); }
+.st-key-run_card [data-testid="stVerticalBlockBorderWrapper"] { border-color:color-mix(in srgb,var(--pb-blue) 16%,var(--pb-line)) !important; background:linear-gradient(100deg,rgba(79,140,255,.065),rgba(39,211,194,.018) 46%,transparent 74%),color-mix(in srgb,var(--secondary-background-color) 62%,transparent); }
+.pb-card-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:.1rem; }
+.pb-card-title { font-size:.88rem; font-weight:710; color:var(--text-color); }
+.pb-card-meta { padding:.28rem .5rem; border-radius:999px; border:1px solid var(--pb-line); font-size:.64rem; color:var(--pb-muted); }
+.pb-note { display:flex; gap:.75rem; align-items:flex-start; padding:.88rem .95rem; margin:.78rem 0 .9rem; border-radius:13px; border:1px solid rgba(79,140,255,.15); background:linear-gradient(90deg,rgba(79,140,255,.055),rgba(39,211,194,.018)); }
+.pb-note-mark { flex:0 0 auto; width:24px; height:24px; border-radius:8px; display:grid; place-items:center; color:var(--pb-blue); background:rgba(79,140,255,.10); font-size:.72rem; font-weight:800; }
+.pb-note-copy { font-size:.77rem; line-height:1.62; color:color-mix(in srgb,var(--text-color) 57%,transparent); }
+.pb-note-copy strong { color:color-mix(in srgb,var(--text-color) 84%,transparent); font-weight:700; }
+.pb-action-copy { padding:.16rem 0 .3rem; }
+.pb-action-title { font-size:.91rem; font-weight:715; color:var(--text-color); }
+.pb-action-desc { margin-top:.22rem; font-size:.73rem; line-height:1.48; color:color-mix(in srgb,var(--text-color) 48%,transparent); }
+.pb-result-banner { display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:.82rem .92rem; margin:.3rem 0 .78rem; border-radius:13px; background:linear-gradient(90deg,rgba(39,211,194,.065),rgba(79,140,255,.045)); border:1px solid rgba(39,211,194,.14); font-size:.74rem; color:color-mix(in srgb,var(--text-color) 56%,transparent); }
+.pb-result-banner strong { color:var(--text-color); }
 
 /* ---------- Buttons ---------- */
 .stButton > button,
-.stDownloadButton > button {
-    min-height: 2.72rem;
-    border-radius: 11px;
-    border-color: var(--pb-line-strong);
-    font-weight: 680;
-    letter-spacing: -.008em;
-    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
-}
-
-.stButton > button[kind="primary"] {
-    border: 1px solid rgba(117, 171, 255, .20);
-    color: white;
-    background: linear-gradient(100deg, #356fe6 0%, #4f8cff 62%, #34aeb1 118%);
-    box-shadow: 0 10px 24px rgba(43, 105, 224, .18), inset 0 1px rgba(255,255,255,.12);
-}
-
+.stDownloadButton > button { min-height:2.72rem; border-radius:11px; border-color:var(--pb-line-strong); font-weight:680; letter-spacing:-.008em; transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,background .16s ease; }
+.stButton > button[kind="primary"] { border:1px solid rgba(117,171,255,.20); color:white; background:linear-gradient(100deg,#356fe6 0%,#4f8cff 62%,#34aeb1 118%); box-shadow:0 10px 24px rgba(43,105,224,.18),inset 0 1px rgba(255,255,255,.12); }
 .stButton > button:hover,
-.stDownloadButton > button:hover {
-    transform: translateY(-1px);
-    border-color: color-mix(in srgb, var(--pb-blue) 42%, var(--pb-line));
-}
-
-.stButton > button[kind="primary"]:hover {
-    box-shadow: 0 13px 28px rgba(43, 105, 224, .24), inset 0 1px rgba(255,255,255,.16);
-}
+.stDownloadButton > button:hover { transform:translateY(-1px); border-color:color-mix(in srgb,var(--pb-blue) 42%,var(--pb-line)); }
+.stButton > button[kind="primary"]:hover { box-shadow:0 13px 28px rgba(43,105,224,.24),inset 0 1px rgba(255,255,255,.16); }
 
 /* ---------- Data / charts / tabs ---------- */
 [data-testid="stDataFrame"],
-[data-testid="stDataEditor"] {
-    overflow: hidden;
-    border: 1px solid var(--pb-line);
-    border-radius: 13px;
-    background: color-mix(in srgb, var(--background-color) 45%, transparent);
-}
-
+[data-testid="stDataEditor"] { overflow:hidden; border:1px solid var(--pb-line); border-radius:13px; background:color-mix(in srgb,var(--background-color) 45%,transparent); }
 [data-testid="stDataEditor"] [role="grid"],
-[data-testid="stDataFrame"] [role="grid"] {
-    border: 0 !important;
-}
-
-[data-testid="stTabs"] [data-baseweb="tab-list"] {
-    gap: .35rem;
-    padding: .26rem;
-    border: 1px solid var(--pb-line);
-    border-radius: 12px;
-    background: color-mix(in srgb, var(--secondary-background-color) 50%, transparent);
-}
-
-[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
-    display: none;
-}
-
-[data-testid="stTabs"] [data-baseweb="tab"] {
-    height: 2.45rem;
-    padding: 0 .82rem;
-    border-radius: 9px;
-    font-size: .76rem;
-    font-weight: 640;
-    color: var(--pb-muted);
-}
-
-[data-testid="stTabs"] [aria-selected="true"] {
-    color: var(--text-color) !important;
-    background: color-mix(in srgb, var(--background-color) 74%, transparent) !important;
-    box-shadow: 0 4px 14px rgba(0,0,0,.04);
-}
-
-[data-testid="stExpander"] {
-    overflow: hidden;
-    border-radius: 12px;
-    border-color: var(--pb-line);
-}
-
-[data-testid="stAltairChart"] {
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-hr {
-    border-color: var(--pb-line) !important;
-}
-
-* {
-    scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--text-color) 18%, transparent) transparent;
-}
-
-*::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-*::-webkit-scrollbar-thumb {
-    border: 2px solid transparent;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--text-color) 18%, transparent);
-    background-clip: padding-box;
-}
+[data-testid="stDataFrame"] [role="grid"] { border:0 !important; }
+[data-testid="stTabs"] [data-baseweb="tab-list"] { gap:.35rem; padding:.26rem; border:1px solid var(--pb-line); border-radius:12px; background:color-mix(in srgb,var(--secondary-background-color) 50%,transparent); }
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { display:none; }
+[data-testid="stTabs"] [data-baseweb="tab"] { height:2.45rem; padding:0 .82rem; border-radius:9px; font-size:.76rem; font-weight:640; color:var(--pb-muted); }
+[data-testid="stTabs"] [aria-selected="true"] { color:var(--text-color) !important; background:color-mix(in srgb,var(--background-color) 74%,transparent) !important; box-shadow:0 4px 14px rgba(0,0,0,.04); }
+[data-testid="stExpander"] { overflow:hidden; border-radius:12px; border-color:var(--pb-line); }
+[data-testid="stAltairChart"] { border-radius:12px; overflow:hidden; }
+hr { border-color:var(--pb-line) !important; }
+* { scrollbar-width:thin; scrollbar-color:color-mix(in srgb,var(--text-color) 18%,transparent) transparent; }
+*::-webkit-scrollbar { width:8px; height:8px; }
+*::-webkit-scrollbar-thumb { border:2px solid transparent; border-radius:999px; background:color-mix(in srgb,var(--text-color) 18%,transparent); background-clip:padding-box; }
 
 /* ---------- Motion ---------- */
-@keyframes pbRise {
-    from { opacity: 0; transform: translateY(7px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
+@keyframes pbRise { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
 .pb-hero,
 .pb-section-head,
-[data-testid="stMetric"] {
-    animation: pbRise .32s ease both;
-}
-
+[data-testid="stMetric"] { animation:pbRise .32s ease both; }
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation-duration: .01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: .01ms !important;
-        scroll-behavior: auto !important;
-    }
+    *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
 }
-
 @media (max-width: 1100px) {
-    .pb-hero-grid {
-        grid-template-columns: 1fr;
-    }
-    .pb-hero-panel {
-        display: none;
-    }
+    .pb-hero-grid { grid-template-columns:1fr; }
+    .pb-hero-panel { display:none; }
 }
-
 @media (max-width: 900px) {
-    [data-testid="stAppViewBlockContainer"] {
-        padding: .85rem 1rem 3rem;
-    }
-    section[data-testid="stSidebar"] {
-        width: 300px !important;
-        min-width: 300px !important;
-    }
-    .pb-hero {
-        padding: 1.35rem 1.2rem 1.22rem;
-        border-radius: 18px;
-    }
-    .pb-section-head {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-    .pb-result-banner {
-        align-items: flex-start;
-        flex-direction: column;
-    }
+    [data-testid="stAppViewBlockContainer"] { padding:.85rem 1rem 3rem; }
+    section[data-testid="stSidebar"] { width:300px !important; min-width:300px !important; }
+    .pb-hero { padding:1.35rem 1.2rem 1.22rem; border-radius:18px; }
+    .pb-section-head { align-items:flex-start; flex-direction:column; }
+    .pb-result-banner { align-items:flex-start; flex-direction:column; }
 }
 </style>
 """
@@ -933,69 +415,90 @@ with st.sidebar:
         """
         <div class="pb-side-brand">
             <div class="pb-side-logo">
-                <svg viewBox="0 0 32 32" width="23" height="23" aria-hidden="true">
+                <svg viewBox="0 0 32 32" width="21" height="21" aria-hidden="true">
                     <path d="M5.5 21.5L11 16l4 3.5L22.5 10l4 3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M21 7.5h6v6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" opacity=".72"/>
                 </svg>
             </div>
             <div>
                 <div class="pb-side-title">PowerBid Lab</div>
-                <div class="pb-side-subtitle">Decision Control Center</div>
+                <div class="pb-side-subtitle">BIDDING CONTROL CENTER</div>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="pb-side-section">01 · Market setup</div>', unsafe_allow_html=True)
-    demand_mw = st.number_input(
-        "市场负荷 / MW", min_value=0.0, value=base.demand_mw, step=10.0
-    )
-    interval_hours = st.number_input(
-        "结算时段 / h", min_value=0.25, value=base.interval_hours, step=0.25
-    )
-    target_unit_id = st.selectbox(
-        "目标机组", [offer.unit_id for offer in base.offers], index=0
-    )
-    engine_name = st.selectbox("出清引擎", ["内置统一出清价", "PyPSA"])
-    decision_mode = st.selectbox("决策模式", ["单场景利润最大化", "不确定性 / 风险分析"])
+    with st.container(border=True, key="sidebar_market"):
+        st.markdown(
+            """
+            <div class="pb-side-group-head">
+                <div class="pb-side-group-title"><span class="pb-side-index">01</span>市场设置</div>
+                <span class="pb-side-group-meta">MARKET</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        demand_mw = st.number_input("市场负荷 / MW", min_value=0.0, value=base.demand_mw, step=10.0)
+        interval_hours = st.number_input("结算时段 / h", min_value=0.25, value=base.interval_hours, step=0.25)
+        target_unit_id = st.selectbox("目标机组", [offer.unit_id for offer in base.offers], index=0)
+        engine_name = st.selectbox("出清引擎", ["内置统一出清价", "PyPSA"])
+        decision_mode = st.selectbox("决策模式", ["单场景利润最大化", "不确定性 / 风险分析"])
 
-    st.markdown('<div class="pb-side-section">02 · Bid search</div>', unsafe_allow_html=True)
-    bid_start = st.number_input("最低报价", min_value=0.0, value=180.0, step=10.0)
-    bid_stop = st.number_input("最高报价", min_value=0.0, value=400.0, step=10.0)
-    bid_step = st.number_input("报价步长", min_value=0.1, value=10.0, step=1.0)
+    with st.container(border=True, key="sidebar_bid"):
+        st.markdown(
+            """
+            <div class="pb-side-group-head">
+                <div class="pb-side-group-title"><span class="pb-side-index">02</span>报价搜索</div>
+                <span class="pb-side-group-meta">SEARCH</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        bid_start = st.number_input("最低报价", min_value=0.0, value=180.0, step=10.0)
+        bid_stop = st.number_input("最高报价", min_value=0.0, value=400.0, step=10.0)
+        bid_step = st.number_input("报价步长", min_value=0.1, value=10.0, step=1.0)
 
     if decision_mode == "不确定性 / 风险分析":
-        st.markdown('<div class="pb-side-section">03 · Risk controls</div>', unsafe_allow_html=True)
-        demand_uncertainty = st.slider("负荷上下波动", 0, 40, 15, 5) / 100.0
-        competitor_uncertainty = st.slider("竞争报价上下波动", 0, 40, 15, 5) / 100.0
-        risk_aversion = st.slider(
-            "风险厌恶程度",
-            0.0,
-            1.0,
-            0.35,
-            0.05,
-            help="0 = 只看平均利润；1 = 更重视最差一段市场情形。",
-        )
-        tail_fraction = st.slider(
-            "下行情景比例",
-            0.10,
-            1.00,
-            0.25,
-            0.05,
-            help="用于计算最差一部分情景的平均利润。",
-        )
+        with st.container(border=True, key="sidebar_risk"):
+            st.markdown(
+                """
+                <div class="pb-side-group-head">
+                    <div class="pb-side-group-title"><span class="pb-side-index">03</span>风险控制</div>
+                    <span class="pb-side-group-meta">RISK</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            demand_uncertainty = st.slider("负荷上下波动", 0, 40, 15, 5) / 100.0
+            competitor_uncertainty = st.slider("竞争报价上下波动", 0, 40, 15, 5) / 100.0
+            risk_aversion = st.slider(
+                "风险厌恶程度", 0.0, 1.0, 0.35, 0.05,
+                help="0 = 只看平均利润；1 = 更重视最差一段市场情形。",
+            )
+            tail_fraction = st.slider(
+                "下行情景比例", 0.10, 1.00, 0.25, 0.05,
+                help="用于计算最差一部分情景的平均利润。",
+            )
 
     st.markdown(
         f"""
-        <div class="pb-side-status">
-            <div><span class="pb-live-dot"></span><strong>Engine ready</strong></div>
-            <span>{source_label}</span>
+        <div class="pb-side-summary">
+            <div class="pb-side-summary-head">
+                <span>当前配置</span>
+                <span class="pb-side-ready"><span class="pb-live-dot"></span>READY</span>
+            </div>
+            <div class="pb-side-summary-grid">
+                <div class="pb-side-summary-item"><span>目标机组</span><strong>{target_unit_id}</strong></div>
+                <div class="pb-side-summary-item"><span>市场负荷</span><strong>{demand_mw:,.0f} MW</strong></div>
+                <div class="pb-side-summary-item"><span>报价区间</span><strong>{bid_start:g} – {bid_stop:g}</strong></div>
+                <div class="pb-side-summary-item"><span>报价步长</span><strong>{bid_step:g}</strong></div>
+            </div>
         </div>
+        <div class="pb-side-footnote">{engine_name} · {source_label}</div>
         """,
         unsafe_allow_html=True,
     )
-    st.caption("PowerBid Lab 0.1 · 教学 / 研讨原型")
 
 st.markdown(
     f"""
@@ -1155,26 +658,14 @@ if run:
                 description="Interactive teaching scenario built in the Streamlit UI.",
                 data_source="synthetic",
             )
-            engine = (
-                PyPSAClearingEngine()
-                if engine_name == "PyPSA"
-                else UniformPriceClearingEngine()
-            )
+            engine = PyPSAClearingEngine() if engine_name == "PyPSA" else UniformPriceClearingEngine()
             candidates = price_grid(float(bid_start), float(bid_stop), float(bid_step))
 
             if decision_mode == "单场景利润最大化":
                 result = GridSearchBidOptimizer(engine).optimize(scenario, candidates)
             else:
-                demand_multipliers = (
-                    1.0 - demand_uncertainty,
-                    1.0,
-                    1.0 + demand_uncertainty,
-                )
-                competitor_multipliers = (
-                    1.0 - competitor_uncertainty,
-                    1.0,
-                    1.0 + competitor_uncertainty,
-                )
+                demand_multipliers = (1.0 - demand_uncertainty, 1.0, 1.0 + demand_uncertainty)
+                competitor_multipliers = (1.0 - competitor_uncertainty, 1.0, 1.0 + competitor_uncertainty)
                 stress_cases = build_stress_cases(
                     scenario,
                     demand_multipliers=demand_multipliers,
@@ -1186,7 +677,7 @@ if run:
                     tail_fraction=tail_fraction,
                     min_feasible_probability=1.0,
                 ).optimize(stress_cases, candidates)
-    except Exception as exc:  # UI boundary: show actionable error instead of crashing
+    except Exception as exc:
         st.error(f"本轮优化没有完成：{exc}")
     else:
         section_header(
@@ -1199,10 +690,7 @@ if run:
             best = result.best
             result_cols = st.columns(4)
             result_cols[0].metric("推荐报价", f"{best.bid_price:.2f}")
-            result_cols[1].metric(
-                "出清价格",
-                "—" if best.clearing_price is None else f"{best.clearing_price:.2f}",
-            )
+            result_cols[1].metric("出清价格", "—" if best.clearing_price is None else f"{best.clearing_price:.2f}")
             result_cols[2].metric("预计中标", f"{best.accepted_mw:.2f} MW")
             result_cols[3].metric("预计利润", f"{best.profit:,.2f}")
 
@@ -1240,29 +728,15 @@ if run:
                         st.caption("观察报价变化如何影响目标机组利润。")
                         profit_area = (
                             alt.Chart(trials_df)
-                            .mark_area(
-                                line={"color": "#3b82f6", "strokeWidth": 2.4},
-                                color="#3b82f6",
-                                opacity=0.16,
-                            )
+                            .mark_area(line={"color": "#3b82f6", "strokeWidth": 2.4}, color="#3b82f6", opacity=0.16)
                             .encode(
                                 x=alt.X("报价:Q", title="报价"),
                                 y=alt.Y("利润:Q", title="利润", scale=alt.Scale(zero=False)),
-                                tooltip=[
-                                    alt.Tooltip("报价:Q", format=".2f"),
-                                    alt.Tooltip("利润:Q", format=",.2f"),
-                                ],
+                                tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("利润:Q", format=",.2f")],
                             )
                         )
-                        best_rule = (
-                            alt.Chart(pd.DataFrame({"报价": [best.bid_price]}))
-                            .mark_rule(color="#14b8a6", strokeDash=[6, 5], strokeWidth=1.5)
-                            .encode(x="报价:Q")
-                        )
-                        st.altair_chart(
-                            chart_style(alt.layer(profit_area, best_rule)),
-                            use_container_width=True,
-                        )
+                        best_rule = alt.Chart(pd.DataFrame({"报价": [best.bid_price]})).mark_rule(color="#14b8a6", strokeDash=[6, 5], strokeWidth=1.5).encode(x="报价:Q")
+                        st.altair_chart(chart_style(alt.layer(profit_area, best_rule)), use_container_width=True)
 
                 with right:
                     with st.container(border=True):
@@ -1274,10 +748,7 @@ if run:
                             .encode(
                                 x=alt.X("报价:Q", title="报价"),
                                 y=alt.Y("中标电量MW:Q", title="中标电量 / MW"),
-                                tooltip=[
-                                    alt.Tooltip("报价:Q", format=".2f"),
-                                    alt.Tooltip("中标电量MW:Q", format=".2f"),
-                                ],
+                                tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("中标电量MW:Q", format=".2f")],
                             )
                         )
                         st.altair_chart(chart_style(quantity_chart), use_container_width=True)
@@ -1344,8 +815,7 @@ if run:
             st.markdown(
                 f"""
                 <div class="pb-result-banner">
-                    <span><strong>风险摘要</strong> · 风险得分 {best.score:,.2f} ·
-                    可行概率 {best.feasible_probability:.0%}</span>
+                    <span><strong>风险摘要</strong> · 风险得分 {best.score:,.2f} · 可行概率 {best.feasible_probability:.0%}</span>
                     <span>预计中标 {best.expected_accepted_mw:.2f} MW</span>
                 </div>
                 """,
@@ -1371,16 +841,8 @@ if run:
                             .encode(
                                 x=alt.X("报价:Q", title="报价"),
                                 y=alt.Y("利润:Q", title="利润", scale=alt.Scale(zero=False)),
-                                color=alt.Color(
-                                    "指标:N",
-                                    title=None,
-                                    scale=alt.Scale(range=["#3b82f6", "#8b5cf6", "#ef4444"]),
-                                ),
-                                tooltip=[
-                                    alt.Tooltip("报价:Q", format=".2f"),
-                                    alt.Tooltip("指标:N"),
-                                    alt.Tooltip("利润:Q", format=",.2f"),
-                                ],
+                                color=alt.Color("指标:N", title=None, scale=alt.Scale(range=["#3b82f6", "#8b5cf6", "#ef4444"])),
+                                tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("指标:N"), alt.Tooltip("利润:Q", format=",.2f")],
                             )
                         )
                         st.altair_chart(chart_style(risk_chart), use_container_width=True)
@@ -1391,22 +853,11 @@ if run:
                         st.caption("综合期望利润与下行情景利润后的决策指标。")
                         score_chart = (
                             alt.Chart(risk_df)
-                            .mark_area(
-                                line={"color": "#14b8a6", "strokeWidth": 2.4},
-                                color="#14b8a6",
-                                opacity=0.16,
-                            )
+                            .mark_area(line={"color": "#14b8a6", "strokeWidth": 2.4}, color="#14b8a6", opacity=0.16)
                             .encode(
                                 x=alt.X("报价:Q", title="报价"),
-                                y=alt.Y(
-                                    "风险得分:Q",
-                                    title="风险得分",
-                                    scale=alt.Scale(zero=False),
-                                ),
-                                tooltip=[
-                                    alt.Tooltip("报价:Q", format=".2f"),
-                                    alt.Tooltip("风险得分:Q", format=",.2f"),
-                                ],
+                                y=alt.Y("风险得分:Q", title="风险得分", scale=alt.Scale(zero=False)),
+                                tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("风险得分:Q", format=",.2f")],
                             )
                         )
                         st.altair_chart(chart_style(score_chart), use_container_width=True)
@@ -1417,12 +868,7 @@ if run:
                     st.caption("逐个检查推荐报价在不同负荷和竞争报价状态下的出清结果。")
                     st.dataframe(
                         outcome_df.style.format(
-                            {
-                                "概率权重": "{:.1%}",
-                                "出清价格": "{:.2f}",
-                                "中标MW": "{:.2f}",
-                                "利润": "{:,.2f}",
-                            },
+                            {"概率权重": "{:.1%}", "出清价格": "{:.2f}", "中标MW": "{:.2f}", "利润": "{:,.2f}"},
                             na_rep="—",
                         ),
                         use_container_width=True,
