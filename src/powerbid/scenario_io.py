@@ -23,4 +23,6 @@ def load_scenario(path: str | Path) -> MarketScenario:
         interval_hours=float(payload.get("interval_hours", 1.0)),
         target_unit_id=str(payload["target_unit_id"]),
         offers=offers,
+        description=str(payload.get("description", "")),
+        data_source=str(payload.get("data_source", "unknown")),
     )
