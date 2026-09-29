@@ -30,13 +30,19 @@ st.set_page_config(
 APP_CSS = r"""
 <style>
 :root {
-    --pb-accent: #3b82f6;
-    --pb-accent-2: #14b8a6;
-    --pb-violet: #8b5cf6;
-    --pb-danger: #ef4444;
-    --pb-radius-xl: 22px;
-    --pb-radius-lg: 16px;
-    --pb-radius-md: 12px;
+    --pb-blue: #4f8cff;
+    --pb-cyan: #27d3c2;
+    --pb-violet: #8b7cf6;
+    --pb-red: #f06b75;
+    --pb-amber: #f0b45f;
+    --pb-radius-xl: 24px;
+    --pb-radius-lg: 18px;
+    --pb-radius-md: 13px;
+    --pb-line: color-mix(in srgb, var(--text-color) 9%, transparent);
+    --pb-line-strong: color-mix(in srgb, var(--text-color) 14%, transparent);
+    --pb-muted: color-mix(in srgb, var(--text-color) 56%, transparent);
+    --pb-surface: color-mix(in srgb, var(--secondary-background-color) 72%, transparent);
+    --pb-surface-2: color-mix(in srgb, var(--secondary-background-color) 88%, transparent);
 }
 
 html, body, [class*="css"] {
@@ -44,115 +50,329 @@ html, body, [class*="css"] {
         "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    letter-spacing: -.008em;
+}
+
 .stApp {
     background:
-        radial-gradient(circle at 18% -8%, rgba(59, 130, 246, .10), transparent 30rem),
-        radial-gradient(circle at 92% 4%, rgba(20, 184, 166, .08), transparent 28rem),
-        var(--background-color);
+        radial-gradient(circle at 76% -12%, rgba(79, 140, 255, .08), transparent 29rem),
+        radial-gradient(circle at 12% 18%, rgba(39, 211, 194, .045), transparent 25rem),
+        linear-gradient(180deg, color-mix(in srgb, var(--background-color) 98%, #0b1320), var(--background-color));
+}
+
+.stApp::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: .15;
+    background-image:
+        linear-gradient(var(--pb-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--pb-line) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.18), transparent 58%);
 }
 
 [data-testid="stHeader"] {
+    height: 2.4rem;
     background: transparent;
 }
 
-[data-testid="stAppViewBlockContainer"] {
-    max-width: 1480px;
-    padding-top: 2.1rem;
-    padding-bottom: 4rem;
+[data-testid="stDecoration"] {
+    display: none;
 }
 
-[data-testid="stSidebar"] {
-    background: color-mix(in srgb, var(--secondary-background-color) 92%, transparent);
-    border-right: 1px solid color-mix(in srgb, var(--text-color) 10%, transparent);
+#MainMenu,
+footer {
+    visibility: hidden;
+}
+
+[data-testid="stAppViewBlockContainer"] {
+    max-width: 1510px;
+    padding: 1.2rem 2.2rem 4.5rem;
+}
+
+/* ---------- Sidebar ---------- */
+section[data-testid="stSidebar"] {
+    width: 322px !important;
+    min-width: 322px !important;
+    background:
+        linear-gradient(180deg, rgba(79, 140, 255, .035), transparent 24rem),
+        color-mix(in srgb, var(--secondary-background-color) 94%, var(--background-color));
+    border-right: 1px solid var(--pb-line);
+    box-shadow: 18px 0 50px rgba(0, 0, 0, .035);
+}
+
+section[data-testid="stSidebar"] > div {
+    padding-top: .9rem;
 }
 
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-    gap: .75rem;
+    gap: .64rem;
 }
 
 [data-testid="stSidebar"] .stMarkdown p {
-    margin-bottom: .15rem;
+    margin-bottom: .1rem;
+}
+
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+    font-size: .77rem !important;
+    font-weight: 650 !important;
+    color: color-mix(in srgb, var(--text-color) 72%, transparent) !important;
 }
 
 .pb-side-brand {
     display: flex;
     align-items: center;
-    gap: .8rem;
-    padding: .35rem .15rem .9rem;
+    gap: .78rem;
+    padding: .35rem .08rem 1.05rem;
+    margin-bottom: .15rem;
+    border-bottom: 1px solid var(--pb-line);
 }
 
 .pb-side-logo {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
     display: grid;
     place-items: center;
-    font-weight: 800;
+    overflow: hidden;
+    font-weight: 850;
+    font-size: .95rem;
     color: white;
-    background: linear-gradient(145deg, #2563eb, #14b8a6);
-    box-shadow: 0 10px 28px rgba(37, 99, 235, .22);
+    background: linear-gradient(145deg, #3f72f2 0%, #4f8cff 44%, #1ebcab 100%);
+    box-shadow: 0 10px 26px rgba(46, 113, 255, .20), inset 0 1px rgba(255,255,255,.22);
+}
+
+.pb-side-logo::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.14);
 }
 
 .pb-side-title {
-    font-size: .95rem;
+    font-size: .96rem;
     font-weight: 760;
-    letter-spacing: -.01em;
+    letter-spacing: -.025em;
     color: var(--text-color);
 }
 
 .pb-side-subtitle {
-    margin-top: .1rem;
-    font-size: .73rem;
-    color: color-mix(in srgb, var(--text-color) 56%, transparent);
+    margin-top: .13rem;
+    font-size: .68rem;
+    font-weight: 570;
+    letter-spacing: .035em;
+    color: color-mix(in srgb, var(--text-color) 46%, transparent);
 }
 
 .pb-side-section {
-    margin: .35rem 0 .15rem;
-    font-size: .70rem;
-    font-weight: 750;
-    letter-spacing: .09em;
+    display: flex;
+    align-items: center;
+    gap: .52rem;
+    margin: .82rem 0 .05rem;
+    padding-top: .72rem;
+    border-top: 1px solid var(--pb-line);
+    font-size: .66rem;
+    font-weight: 780;
+    letter-spacing: .115em;
     text-transform: uppercase;
-    color: color-mix(in srgb, var(--text-color) 48%, transparent);
+    color: color-mix(in srgb, var(--text-color) 43%, transparent);
+}
+
+.pb-side-section::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--pb-blue);
+    box-shadow: 0 0 0 4px rgba(79,140,255,.08);
+}
+
+.pb-side-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .8rem;
+    padding: .72rem .78rem;
+    margin-top: .3rem;
+    border: 1px solid var(--pb-line);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--background-color) 42%, transparent);
+    font-size: .69rem;
+    color: var(--pb-muted);
+}
+
+.pb-side-status strong {
+    color: color-mix(in srgb, var(--text-color) 78%, transparent);
+    font-weight: 650;
+}
+
+.pb-live-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: .42rem;
+    border-radius: 999px;
+    background: var(--pb-cyan);
+    box-shadow: 0 0 0 4px rgba(39, 211, 194, .10);
+}
+
+/* ---------- Inputs ---------- */
+[data-baseweb="input"] > div,
+[data-baseweb="select"] > div,
+[data-testid="stNumberInput"] > div > div,
+[data-testid="stTextInput"] > div > div {
+    min-height: 2.65rem;
+    border-radius: 11px !important;
+    border-color: var(--pb-line-strong) !important;
+    background: color-mix(in srgb, var(--background-color) 70%, transparent) !important;
+    box-shadow: inset 0 1px rgba(255,255,255,.018);
+    transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+[data-baseweb="input"] > div:focus-within,
+[data-baseweb="select"] > div:focus-within {
+    border-color: color-mix(in srgb, var(--pb-blue) 58%, transparent) !important;
+    box-shadow: 0 0 0 3px rgba(79, 140, 255, .08) !important;
+}
+
+[data-testid="stNumberInput"] button {
+    width: 2rem;
+    height: 2rem;
+    margin: .2rem;
+    border: 1px solid var(--pb-line) !important;
+    border-radius: 8px !important;
+    background: color-mix(in srgb, var(--secondary-background-color) 34%, transparent) !important;
+    opacity: .72;
+    transition: opacity .15s ease, background .15s ease;
+}
+
+[data-testid="stNumberInput"] button:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--secondary-background-color) 66%, transparent) !important;
+}
+
+[data-baseweb="popover"] [role="listbox"] {
+    padding: .35rem;
+    border: 1px solid var(--pb-line-strong);
+    border-radius: 12px;
+    background: var(--secondary-background-color);
+    box-shadow: 0 18px 45px rgba(0,0,0,.16);
+}
+
+[data-baseweb="popover"] [role="option"] {
+    border-radius: 8px;
+    font-size: .78rem;
+}
+
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div {
+    height: 4px;
+}
+
+/* ---------- Top bar / hero ---------- */
+.pb-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 42px;
+    margin-bottom: .9rem;
+    padding: 0 .15rem;
+}
+
+.pb-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    font-size: .72rem;
+    font-weight: 610;
+    color: var(--pb-muted);
+}
+
+.pb-breadcrumb strong {
+    color: color-mix(in srgb, var(--text-color) 82%, transparent);
+    font-weight: 700;
+}
+
+.pb-top-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .48rem;
+    padding: .38rem .62rem;
+    border: 1px solid var(--pb-line);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--secondary-background-color) 58%, transparent);
+    font-size: .68rem;
+    font-weight: 650;
+    color: var(--pb-muted);
 }
 
 .pb-hero {
     position: relative;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--text-color) 10%, transparent);
-    border-radius: 26px;
-    padding: 2.15rem 2.25rem 1.95rem;
-    margin-bottom: 1.15rem;
+    border: 1px solid var(--pb-line);
+    border-radius: var(--pb-radius-xl);
+    padding: 1.7rem 1.8rem 1.55rem;
+    margin-bottom: 1rem;
     background:
-        linear-gradient(
-            125deg,
-            rgba(59, 130, 246, .10),
-            rgba(20, 184, 166, .045) 48%,
-            transparent 75%
-        ),
-        color-mix(in srgb, var(--secondary-background-color) 78%, transparent);
-    box-shadow: 0 20px 60px rgba(15, 23, 42, .06);
+        linear-gradient(115deg, rgba(79, 140, 255, .105), rgba(39, 211, 194, .035) 44%, transparent 68%),
+        color-mix(in srgb, var(--secondary-background-color) 72%, transparent);
+    box-shadow: 0 22px 54px rgba(0, 0, 0, .055), inset 0 1px rgba(255,255,255,.025);
+}
+
+.pb-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto auto;
+    width: 420px;
+    height: 100%;
+    opacity: .40;
+    background-image:
+        linear-gradient(rgba(79,140,255,.10) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,140,255,.10) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(90deg, transparent, #000 50%);
+    pointer-events: none;
 }
 
 .pb-hero::after {
     content: "";
     position: absolute;
-    width: 260px;
-    height: 260px;
-    right: -90px;
-    top: -120px;
+    width: 250px;
+    height: 250px;
+    right: -88px;
+    top: -118px;
     border-radius: 999px;
-    background: radial-gradient(circle, rgba(59, 130, 246, .16), transparent 68%);
+    background: radial-gradient(circle, rgba(79, 140, 255, .15), transparent 66%);
     pointer-events: none;
+}
+
+.pb-hero-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 305px;
+    gap: 2rem;
+    align-items: stretch;
 }
 
 .pb-eyebrow {
     display: inline-flex;
     align-items: center;
-    gap: .45rem;
-    color: var(--pb-accent);
-    font-size: .72rem;
-    font-weight: 780;
-    letter-spacing: .12em;
+    gap: .48rem;
+    color: var(--pb-blue);
+    font-size: .68rem;
+    font-weight: 790;
+    letter-spacing: .125em;
     text-transform: uppercase;
 }
 
@@ -160,112 +380,279 @@ html, body, [class*="css"] {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--pb-accent-2);
-    box-shadow: 0 0 0 5px rgba(20, 184, 166, .10);
+    background: var(--pb-cyan);
+    box-shadow: 0 0 0 5px rgba(39, 211, 194, .09);
 }
 
 .pb-hero h1 {
-    margin: .55rem 0 .5rem;
-    font-size: clamp(2.05rem, 4vw, 3.25rem);
+    margin: .52rem 0 .48rem;
+    font-size: clamp(2rem, 3.5vw, 2.85rem);
     line-height: 1.02;
-    letter-spacing: -.045em;
+    letter-spacing: -.052em;
     color: var(--text-color);
 }
 
 .pb-hero-copy {
-    max-width: 760px;
+    max-width: 790px;
     margin: 0;
-    font-size: .96rem;
-    line-height: 1.75;
-    color: color-mix(in srgb, var(--text-color) 65%, transparent);
+    font-size: .90rem;
+    line-height: 1.72;
+    color: color-mix(in srgb, var(--text-color) 62%, transparent);
 }
 
 .pb-chip-row {
     display: flex;
     flex-wrap: wrap;
-    gap: .55rem;
-    margin-top: 1.25rem;
+    gap: .48rem;
+    margin-top: 1.08rem;
 }
 
 .pb-chip {
     display: inline-flex;
     align-items: center;
-    gap: .42rem;
-    padding: .42rem .68rem;
+    gap: .38rem;
+    padding: .36rem .62rem;
     border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--text-color) 10%, transparent);
-    background: color-mix(in srgb, var(--background-color) 70%, transparent);
-    font-size: .76rem;
-    font-weight: 650;
-    color: color-mix(in srgb, var(--text-color) 76%, transparent);
+    border: 1px solid var(--pb-line);
+    background: color-mix(in srgb, var(--background-color) 54%, transparent);
+    font-size: .70rem;
+    font-weight: 630;
+    color: color-mix(in srgb, var(--text-color) 72%, transparent);
 }
 
 .pb-chip-dot {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: var(--pb-accent);
+    background: var(--pb-blue);
 }
 
+.pb-hero-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 142px;
+    padding: 1rem 1.05rem;
+    border-radius: 16px;
+    border: 1px solid var(--pb-line);
+    background: color-mix(in srgb, var(--background-color) 56%, transparent);
+    backdrop-filter: blur(16px);
+}
+
+.pb-hero-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .8rem;
+    font-size: .66rem;
+    font-weight: 720;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--pb-muted);
+}
+
+.pb-hero-panel-head span:last-child {
+    color: var(--pb-cyan);
+}
+
+.pb-hero-panel-value {
+    margin: .72rem 0 .1rem;
+    font-size: 1.55rem;
+    font-weight: 730;
+    letter-spacing: -.04em;
+    color: var(--text-color);
+}
+
+.pb-hero-panel-sub {
+    font-size: .70rem;
+    line-height: 1.5;
+    color: var(--pb-muted);
+}
+
+.pb-mini-bars {
+    display: flex;
+    align-items: end;
+    gap: 5px;
+    height: 27px;
+    margin-top: .8rem;
+}
+
+.pb-mini-bars i {
+    display: block;
+    flex: 1;
+    border-radius: 3px 3px 1px 1px;
+    background: linear-gradient(to top, rgba(79,140,255,.32), rgba(39,211,194,.75));
+}
+
+.pb-mini-bars i:nth-child(1) { height: 34%; }
+.pb-mini-bars i:nth-child(2) { height: 52%; }
+.pb-mini-bars i:nth-child(3) { height: 43%; }
+.pb-mini-bars i:nth-child(4) { height: 73%; }
+.pb-mini-bars i:nth-child(5) { height: 60%; }
+.pb-mini-bars i:nth-child(6) { height: 88%; }
+.pb-mini-bars i:nth-child(7) { height: 68%; }
+.pb-mini-bars i:nth-child(8) { height: 100%; }
+.pb-mini-bars i:nth-child(9) { height: 82%; }
+.pb-mini-bars i:nth-child(10) { height: 92%; }
+
+/* ---------- Section headers ---------- */
 .pb-section-head {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 1rem;
-    margin: 1.85rem 0 .8rem;
+    margin: 1.72rem 0 .76rem;
 }
 
 .pb-section-kicker {
-    font-size: .69rem;
-    font-weight: 760;
+    display: inline-flex;
+    align-items: center;
+    gap: .42rem;
+    font-size: .66rem;
+    font-weight: 780;
     text-transform: uppercase;
-    letter-spacing: .11em;
-    color: var(--pb-accent);
-    margin-bottom: .24rem;
+    letter-spacing: .115em;
+    color: var(--pb-blue);
+    margin-bottom: .23rem;
+}
+
+.pb-section-kicker::after {
+    content: "";
+    width: 30px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(79,140,255,.55), transparent);
 }
 
 .pb-section-title {
-    font-size: 1.17rem;
-    font-weight: 760;
-    letter-spacing: -.02em;
+    font-size: 1.16rem;
+    font-weight: 735;
+    letter-spacing: -.025em;
     color: var(--text-color);
 }
 
 .pb-section-desc {
-    margin-top: .2rem;
-    max-width: 720px;
-    font-size: .81rem;
-    line-height: 1.55;
-    color: color-mix(in srgb, var(--text-color) 55%, transparent);
-}
-
-.pb-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .55rem 1.15rem;
-    padding: .88rem 1rem;
-    margin: .65rem 0 .9rem;
-    border-radius: 14px;
-    border: 1px solid color-mix(in srgb, var(--text-color) 9%, transparent);
-    background: color-mix(in srgb, var(--secondary-background-color) 70%, transparent);
-    color: color-mix(in srgb, var(--text-color) 64%, transparent);
+    margin-top: .23rem;
+    max-width: 760px;
     font-size: .78rem;
+    line-height: 1.55;
+    color: color-mix(in srgb, var(--text-color) 52%, transparent);
 }
 
-.pb-meta strong {
+/* ---------- Cards / metrics ---------- */
+[data-testid="stMetric"] {
+    position: relative;
+    overflow: hidden;
+    min-height: 116px;
+    padding: 1.02rem 1.08rem;
+    border: 1px solid var(--pb-line);
+    border-radius: var(--pb-radius-lg);
+    background:
+        linear-gradient(145deg, rgba(79,140,255,.042), transparent 52%),
+        color-mix(in srgb, var(--secondary-background-color) 68%, transparent);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .035), inset 0 1px rgba(255,255,255,.02);
+    transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+[data-testid="stMetric"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 18px;
+    right: 18px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(79,140,255,.34), transparent);
+}
+
+[data-testid="stMetric"]:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--pb-blue) 24%, var(--pb-line));
+    background:
+        linear-gradient(145deg, rgba(79,140,255,.065), transparent 55%),
+        color-mix(in srgb, var(--secondary-background-color) 72%, transparent);
+}
+
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2) [data-testid="stMetric"]::before {
+    background: linear-gradient(90deg, transparent, rgba(39,211,194,.38), transparent);
+}
+
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) [data-testid="stMetric"]::before {
+    background: linear-gradient(90deg, transparent, rgba(139,124,246,.38), transparent);
+}
+
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(4) [data-testid="stMetric"]::before {
+    background: linear-gradient(90deg, transparent, rgba(240,180,95,.36), transparent);
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: .72rem;
+    font-weight: 650;
+    color: color-mix(in srgb, var(--text-color) 50%, transparent);
+}
+
+[data-testid="stMetricValue"] {
+    margin-top: .27rem;
+    font-size: 1.75rem;
+    font-weight: 690;
+    letter-spacing: -.04em;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border-radius: var(--pb-radius-lg) !important;
+    border-color: var(--pb-line) !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.012), transparent 7rem),
+        color-mix(in srgb, var(--secondary-background-color) 56%, transparent);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .035), inset 0 1px rgba(255,255,255,.015);
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] > div {
+    padding: .2rem;
+}
+
+.st-key-offer_card [data-testid="stVerticalBlockBorderWrapper"] {
+    background:
+        linear-gradient(135deg, rgba(79,140,255,.035), transparent 36%),
+        color-mix(in srgb, var(--secondary-background-color) 57%, transparent);
+}
+
+.st-key-run_card [data-testid="stVerticalBlockBorderWrapper"] {
+    border-color: color-mix(in srgb, var(--pb-blue) 16%, var(--pb-line)) !important;
+    background:
+        linear-gradient(100deg, rgba(79,140,255,.065), rgba(39,211,194,.018) 46%, transparent 74%),
+        color-mix(in srgb, var(--secondary-background-color) 62%, transparent);
+}
+
+.pb-card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: .1rem;
+}
+
+.pb-card-title {
+    font-size: .88rem;
+    font-weight: 710;
     color: var(--text-color);
-    font-weight: 700;
+}
+
+.pb-card-meta {
+    padding: .28rem .5rem;
+    border-radius: 999px;
+    border: 1px solid var(--pb-line);
+    font-size: .64rem;
+    color: var(--pb-muted);
 }
 
 .pb-note {
     display: flex;
     gap: .75rem;
     align-items: flex-start;
-    padding: .95rem 1rem;
-    margin: .8rem 0 .95rem;
-    border-radius: 14px;
-    border: 1px solid rgba(59, 130, 246, .18);
-    background: rgba(59, 130, 246, .055);
+    padding: .88rem .95rem;
+    margin: .78rem 0 .9rem;
+    border-radius: 13px;
+    border: 1px solid rgba(79, 140, 255, .15);
+    background: linear-gradient(90deg, rgba(79, 140, 255, .055), rgba(39,211,194,.018));
 }
 
 .pb-note-mark {
@@ -275,37 +662,38 @@ html, body, [class*="css"] {
     border-radius: 8px;
     display: grid;
     place-items: center;
-    color: var(--pb-accent);
-    background: rgba(59, 130, 246, .11);
-    font-size: .76rem;
+    color: var(--pb-blue);
+    background: rgba(79, 140, 255, .10);
+    font-size: .72rem;
     font-weight: 800;
 }
 
 .pb-note-copy {
-    font-size: .80rem;
+    font-size: .77rem;
     line-height: 1.62;
-    color: color-mix(in srgb, var(--text-color) 63%, transparent);
+    color: color-mix(in srgb, var(--text-color) 57%, transparent);
 }
 
 .pb-note-copy strong {
-    color: var(--text-color);
+    color: color-mix(in srgb, var(--text-color) 84%, transparent);
+    font-weight: 700;
 }
 
 .pb-action-copy {
-    padding: .2rem 0 .4rem;
+    padding: .16rem 0 .3rem;
 }
 
 .pb-action-title {
-    font-size: .93rem;
-    font-weight: 730;
+    font-size: .91rem;
+    font-weight: 715;
     color: var(--text-color);
 }
 
 .pb-action-desc {
     margin-top: .22rem;
-    font-size: .76rem;
-    line-height: 1.5;
-    color: color-mix(in srgb, var(--text-color) 52%, transparent);
+    font-size: .73rem;
+    line-height: 1.48;
+    color: color-mix(in srgb, var(--text-color) 48%, transparent);
 }
 
 .pb-result-banner {
@@ -313,111 +701,167 @@ html, body, [class*="css"] {
     justify-content: space-between;
     gap: 1rem;
     align-items: center;
-    padding: .9rem 1rem;
-    margin: .35rem 0 .8rem;
-    border-radius: 14px;
-    background: linear-gradient(90deg, rgba(20, 184, 166, .08), rgba(59, 130, 246, .06));
-    border: 1px solid rgba(20, 184, 166, .17);
-    font-size: .78rem;
-    color: color-mix(in srgb, var(--text-color) 62%, transparent);
+    padding: .82rem .92rem;
+    margin: .3rem 0 .78rem;
+    border-radius: 13px;
+    background: linear-gradient(90deg, rgba(39, 211, 194, .065), rgba(79, 140, 255, .045));
+    border: 1px solid rgba(39, 211, 194, .14);
+    font-size: .74rem;
+    color: color-mix(in srgb, var(--text-color) 56%, transparent);
 }
 
 .pb-result-banner strong {
     color: var(--text-color);
 }
 
-[data-testid="stMetric"] {
-    min-height: 122px;
-    padding: 1rem 1.05rem;
-    border: 1px solid color-mix(in srgb, var(--text-color) 9%, transparent);
-    border-radius: var(--pb-radius-lg);
-    background: color-mix(in srgb, var(--secondary-background-color) 72%, transparent);
-    box-shadow: 0 10px 34px rgba(15, 23, 42, .035);
-}
-
-[data-testid="stMetricLabel"] {
-    font-size: .76rem;
-    color: color-mix(in srgb, var(--text-color) 55%, transparent);
-}
-
-[data-testid="stMetricValue"] {
-    letter-spacing: -.025em;
-}
-
-[data-testid="stVerticalBlockBorderWrapper"] {
-    border-radius: var(--pb-radius-lg) !important;
-    border-color: color-mix(in srgb, var(--text-color) 9%, transparent) !important;
-    background: color-mix(in srgb, var(--secondary-background-color) 58%, transparent);
-    box-shadow: 0 12px 38px rgba(15, 23, 42, .035);
-}
-
+/* ---------- Buttons ---------- */
 .stButton > button,
 .stDownloadButton > button {
-    min-height: 2.75rem;
-    border-radius: 12px;
-    font-weight: 700;
-    letter-spacing: -.005em;
-    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    min-height: 2.72rem;
+    border-radius: 11px;
+    border-color: var(--pb-line-strong);
+    font-weight: 680;
+    letter-spacing: -.008em;
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
 }
 
 .stButton > button[kind="primary"] {
-    border: 0;
+    border: 1px solid rgba(117, 171, 255, .20);
     color: white;
-    background: linear-gradient(100deg, #2563eb, #3b82f6 55%, #0ea5a5);
-    box-shadow: 0 10px 26px rgba(37, 99, 235, .18);
+    background: linear-gradient(100deg, #356fe6 0%, #4f8cff 62%, #34aeb1 118%);
+    box-shadow: 0 10px 24px rgba(43, 105, 224, .18), inset 0 1px rgba(255,255,255,.12);
 }
 
 .stButton > button:hover,
 .stDownloadButton > button:hover {
     transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--pb-blue) 42%, var(--pb-line));
 }
 
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 14px 32px rgba(37, 99, 235, .24);
+    box-shadow: 0 13px 28px rgba(43, 105, 224, .24), inset 0 1px rgba(255,255,255,.16);
 }
 
-[data-baseweb="input"] > div,
-[data-baseweb="select"] > div {
-    border-radius: 11px !important;
-}
-
+/* ---------- Data / charts / tabs ---------- */
 [data-testid="stDataFrame"],
 [data-testid="stDataEditor"] {
     overflow: hidden;
-    border-radius: 14px;
+    border: 1px solid var(--pb-line);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--background-color) 45%, transparent);
+}
+
+[data-testid="stDataEditor"] [role="grid"],
+[data-testid="stDataFrame"] [role="grid"] {
+    border: 0 !important;
 }
 
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     gap: .35rem;
-    border-bottom: 1px solid color-mix(in srgb, var(--text-color) 9%, transparent);
+    padding: .26rem;
+    border: 1px solid var(--pb-line);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--secondary-background-color) 50%, transparent);
+}
+
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+    display: none;
 }
 
 [data-testid="stTabs"] [data-baseweb="tab"] {
-    height: 2.7rem;
-    padding: 0 .9rem;
-    border-radius: 10px 10px 0 0;
-    font-size: .82rem;
+    height: 2.45rem;
+    padding: 0 .82rem;
+    border-radius: 9px;
+    font-size: .76rem;
+    font-weight: 640;
+    color: var(--pb-muted);
+}
+
+[data-testid="stTabs"] [aria-selected="true"] {
+    color: var(--text-color) !important;
+    background: color-mix(in srgb, var(--background-color) 74%, transparent) !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,.04);
 }
 
 [data-testid="stExpander"] {
-    border-radius: 13px;
-    border-color: color-mix(in srgb, var(--text-color) 9%, transparent);
+    overflow: hidden;
+    border-radius: 12px;
+    border-color: var(--pb-line);
+}
+
+[data-testid="stAltairChart"] {
+    border-radius: 12px;
     overflow: hidden;
 }
 
 hr {
-    border-color: color-mix(in srgb, var(--text-color) 8%, transparent) !important;
+    border-color: var(--pb-line) !important;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--text-color) 18%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-color) 18%, transparent);
+    background-clip: padding-box;
+}
+
+/* ---------- Motion ---------- */
+@keyframes pbRise {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.pb-hero,
+.pb-section-head,
+[data-testid="stMetric"] {
+    animation: pbRise .32s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+@media (max-width: 1100px) {
+    .pb-hero-grid {
+        grid-template-columns: 1fr;
+    }
+    .pb-hero-panel {
+        display: none;
+    }
 }
 
 @media (max-width: 900px) {
     [data-testid="stAppViewBlockContainer"] {
-        padding-top: 1.25rem;
+        padding: .85rem 1rem 3rem;
+    }
+    section[data-testid="stSidebar"] {
+        width: 300px !important;
+        min-width: 300px !important;
     }
     .pb-hero {
-        padding: 1.55rem 1.35rem 1.4rem;
-        border-radius: 20px;
+        padding: 1.35rem 1.2rem 1.22rem;
+        border-radius: 18px;
     }
     .pb-section-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .pb-result-banner {
         align-items: flex-start;
         flex-direction: column;
     }
@@ -445,16 +889,33 @@ def section_header(kicker: str, title: str, description: str) -> None:
 
 def chart_style(chart: alt.Chart) -> alt.Chart:
     return (
-        chart.properties(height=300)
+        chart.properties(height=292)
+        .configure(background="transparent")
         .configure_view(strokeWidth=0)
         .configure_axis(
-            labelFontSize=11,
-            titleFontSize=11,
-            gridOpacity=0.12,
-            domainOpacity=0.15,
-            tickOpacity=0.15,
+            labelFont="Inter",
+            titleFont="Inter",
+            labelFontSize=10,
+            titleFontSize=10,
+            labelColor="#8793a5",
+            titleColor="#8793a5",
+            labelPadding=8,
+            titlePadding=12,
+            gridColor="#64748b",
+            gridOpacity=0.11,
+            domain=False,
+            ticks=False,
         )
-        .configure_legend(labelFontSize=11, titleFontSize=11, orient="top")
+        .configure_legend(
+            labelFont="Inter",
+            titleFont="Inter",
+            labelFontSize=10,
+            titleFontSize=10,
+            labelColor="#8793a5",
+            titleColor="#8793a5",
+            orient="top",
+            padding=4,
+        )
     )
 
 
@@ -471,7 +932,12 @@ with st.sidebar:
     st.markdown(
         """
         <div class="pb-side-brand">
-            <div class="pb-side-logo">P</div>
+            <div class="pb-side-logo">
+                <svg viewBox="0 0 32 32" width="23" height="23" aria-hidden="true">
+                    <path d="M5.5 21.5L11 16l4 3.5L22.5 10l4 3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 7.5h6v6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" opacity=".72"/>
+                </svg>
+            </div>
             <div>
                 <div class="pb-side-title">PowerBid Lab</div>
                 <div class="pb-side-subtitle">Decision Control Center</div>
@@ -481,7 +947,7 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="pb-side-section">Market setup</div>', unsafe_allow_html=True)
+    st.markdown('<div class="pb-side-section">01 · Market setup</div>', unsafe_allow_html=True)
     demand_mw = st.number_input(
         "市场负荷 / MW", min_value=0.0, value=base.demand_mw, step=10.0
     )
@@ -494,13 +960,13 @@ with st.sidebar:
     engine_name = st.selectbox("出清引擎", ["内置统一出清价", "PyPSA"])
     decision_mode = st.selectbox("决策模式", ["单场景利润最大化", "不确定性 / 风险分析"])
 
-    st.markdown('<div class="pb-side-section">Bid search</div>', unsafe_allow_html=True)
+    st.markdown('<div class="pb-side-section">02 · Bid search</div>', unsafe_allow_html=True)
     bid_start = st.number_input("最低报价", min_value=0.0, value=180.0, step=10.0)
     bid_stop = st.number_input("最高报价", min_value=0.0, value=400.0, step=10.0)
     bid_step = st.number_input("报价步长", min_value=0.1, value=10.0, step=1.0)
 
     if decision_mode == "不确定性 / 风险分析":
-        st.markdown('<div class="pb-side-section">Risk controls</div>', unsafe_allow_html=True)
+        st.markdown('<div class="pb-side-section">03 · Risk controls</div>', unsafe_allow_html=True)
         demand_uncertainty = st.slider("负荷上下波动", 0, 40, 15, 5) / 100.0
         competitor_uncertainty = st.slider("竞争报价上下波动", 0, 40, 15, 5) / 100.0
         risk_aversion = st.slider(
@@ -520,23 +986,46 @@ with st.sidebar:
             help="用于计算最差一部分情景的平均利润。",
         )
 
-    st.markdown("---")
-    st.caption(f"数据来源 · {source_label}")
+    st.markdown(
+        f"""
+        <div class="pb-side-status">
+            <div><span class="pb-live-dot"></span><strong>Engine ready</strong></div>
+            <span>{source_label}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.caption("PowerBid Lab 0.1 · 教学 / 研讨原型")
 
 st.markdown(
     f"""
+    <div class="pb-topbar">
+        <div class="pb-breadcrumb"><span>PowerBid</span><span>/</span><strong>报价决策工作台</strong></div>
+        <div class="pb-top-status"><span class="pb-live-dot"></span>模型服务正常 · 实时计算</div>
+    </div>
     <section class="pb-hero">
-        <div class="pb-eyebrow"><span class="pb-eyebrow-dot"></span>Power Market Decision Lab</div>
-        <h1>PowerBid Lab</h1>
-        <p class="pb-hero-copy">
-            面向发电商的报价决策工作台。把候选报价送入出清环境，用中标结果、利润与下行情景
-            反推更稳健的报价选择，让每一次推荐都能追溯到具体数据与计算过程。
-        </p>
-        <div class="pb-chip-row">
-            <span class="pb-chip"><span class="pb-chip-dot"></span>{engine_name}</span>
-            <span class="pb-chip">{decision_mode}</span>
-            <span class="pb-chip">数据 · {source_label}</span>
+        <div class="pb-hero-grid">
+            <div>
+                <div class="pb-eyebrow"><span class="pb-eyebrow-dot"></span>Power Market Decision Lab</div>
+                <h1>发电侧报价决策控制台</h1>
+                <p class="pb-hero-copy">
+                    将候选报价送入统一出清环境，以中标电量、出清价格和利润反馈寻找更稳健的报价策略。
+                    每一次推荐都保留数据来源、出清过程与风险情景，便于复盘和教学研讨。
+                </p>
+                <div class="pb-chip-row">
+                    <span class="pb-chip"><span class="pb-chip-dot"></span>{engine_name}</span>
+                    <span class="pb-chip">{decision_mode}</span>
+                    <span class="pb-chip">数据源 · {source_label}</span>
+                </div>
+            </div>
+            <aside class="pb-hero-panel">
+                <div class="pb-hero-panel-head"><span>Current workspace</span><span>READY</span></div>
+                <div>
+                    <div class="pb-hero-panel-value">{target_unit_id} · {demand_mw:,.0f} MW</div>
+                    <div class="pb-hero-panel-sub">候选报价 {bid_start:g}–{bid_stop:g} · 步长 {bid_step:g} · {interval_hours:g} h</div>
+                    <div class="pb-mini-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                </div>
+            </aside>
         </div>
     </section>
     """,
@@ -571,13 +1060,23 @@ source_df = pd.DataFrame(
     ]
 )
 
-with st.container(border=True):
+with st.container(border=True, key="offer_card"):
     meta_left, meta_right = st.columns([4, 1])
     with meta_left:
-        st.markdown("**可编辑机组参数**")
-        st.caption("修改后不会覆盖原始样例文件，只用于本次分析。")
+        st.markdown(
+            """
+            <div class="pb-card-heading">
+                <div class="pb-card-title">机组申报参数</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.caption("修改仅作用于当前分析，不覆盖原始样例文件。")
     with meta_right:
-        st.caption(f"{len(source_df)} 台机组 · {source_label}")
+        st.markdown(
+            f'<div style="text-align:right"><span class="pb-card-meta">{len(source_df)} UNIT · {source_label}</span></div>',
+            unsafe_allow_html=True,
+        )
 
     edited_df = st.data_editor(
         source_df,
@@ -618,22 +1117,22 @@ section_header(
     "确认左侧控制参数和机组数据后开始计算。所有候选报价都会经过同一套出清与结算流程。",
 )
 
-with st.container(border=True):
-    action_left, action_right = st.columns([3, 2])
+with st.container(border=True, key="run_card"):
+    action_left, action_right = st.columns([3.4, 1.6], vertical_alignment="center")
     with action_left:
         st.markdown(
             f"""
             <div class="pb-action-copy">
-                <div class="pb-action-title">{decision_mode}</div>
+                <div class="pb-action-title"><span class="pb-live-dot"></span>决策引擎已就绪</div>
                 <div class="pb-action-desc">
-                    {engine_name} · 报价区间 {bid_start:g}–{bid_stop:g} · 步长 {bid_step:g}
+                    {decision_mode} · {engine_name} · 候选 {bid_start:g}–{bid_stop:g} / 步长 {bid_step:g}
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
     with action_right:
-        run = st.button("运行报价优化  →", type="primary", use_container_width=True)
+        run = st.button("开始优化报价", type="primary", use_container_width=True)
 
 if run:
     try:
