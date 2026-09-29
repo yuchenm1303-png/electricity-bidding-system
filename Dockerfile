@@ -8,11 +8,13 @@ WORKDIR /app
 
 COPY pyproject.toml README.md ./
 COPY src ./src
-COPY app ./app
-COPY data ./data
 
 RUN python -m pip install --upgrade pip \
     && pip install --no-cache-dir -e ".[ui]"
+
+# Keep UI/data changes in a late layer so visual iterations reuse the dependency cache.
+COPY app ./app
+COPY data ./data
 
 EXPOSE 8501
 
