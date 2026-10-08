@@ -305,18 +305,18 @@
 :root .table-search:focus-within {box-shadow:0 0 0 3px var(--motion-outline)}
 
 /* Animation keyframes */
-@keyframes pb-view-enter {from{opacity:0;transform:translate3d(0,12px,0)}to{opacity:1;transform:translateZ(0)}}
-@keyframes pb-card-arrive {from{opacity:0;transform:translate3d(0,15px,0)}to{opacity:1;transform:translateZ(0)}}
-@keyframes pb-sidebar-note-in {from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pb-view-enter {from{opacity:.98;transform:translate3d(0,8px,0)}to{opacity:1;transform:translateZ(0)}}
+@keyframes pb-card-arrive {from{opacity:.96;transform:translate3d(0,10px,0)}to{opacity:1;transform:translateZ(0)}}
+@keyframes pb-sidebar-note-in {from{opacity:.95;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pb-search-enter {from{opacity:0;transform:translate3d(0,-7px,0) scale(.985)}to{opacity:1;transform:translateZ(0) scale(1)}}
-@keyframes pb-row-appear {from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pb-row-appear {from{opacity:.95;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pb-section-slide {from{opacity:0;transform:translate3d(10px,0,0)}to{opacity:1;transform:translateZ(0)}}
 @keyframes pb-alert-enter {from{opacity:0;transform:translate3d(0,-6px,0)}to{opacity:1;transform:translateZ(0)}}
 @keyframes pb-target-pop {0%{transform:scale(.82)}60%{transform:scale(1.17)}100%{transform:scale(1)}}
 @keyframes pb-check-in {from{opacity:0;transform:scale(.55)}to{opacity:1;transform:scale(1)}}
 @keyframes pb-theme-turn {from{opacity:.45;transform:rotate(-48deg) scale(.7)}to{opacity:1;transform:rotate(0) scale(1)}}
-@keyframes pb-result-enter {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pb-number-rise {from{opacity:0;transform:translateY(9px);filter:blur(2px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+@keyframes pb-result-enter {from{opacity:.97;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pb-number-rise {from{opacity:.92;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pb-button-light {from{transform:translateX(-140%)}to{transform:translateX(140%)}}
 @keyframes pb-progress-sheen {from{transform:translateX(-140%)}to{transform:translateX(140%)}}
 @keyframes pb-gauge-unveil {from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
