@@ -13,7 +13,7 @@
 | `POST /api/pmss/inspect` | 读取脱敏 JSON 后展示 24 时段负荷、机组、历史网络诊断 | `snapshot_from_pmss`, `analyze_historical_network` | 仅只读，限约 900 KB；不得上传认证字段 |
 | `POST /api/pmss/optimize` | 24 时段同一条五段价格—电量曲线的本地报价搜索 | `optimize_segmented_bid` | 本地统一价代理模型；不会提交老师平台 |
 
-PMSS 前端使用 `PMSSInspection` / `PMSSOptimization` TypeScript 类型，定义在 `frontend/src/types.ts`，接口调用在 `frontend/src/api.ts`。修改 API 响应结构时，请同时更新这些类型与 `tests/test_pmss_api.py`，并提供成功与失败响应示例。
+PMSS 前端使用 `PMSSInspection` / `PMSSOptimization` TypeScript 类型，定义在 `frontend/src/types.ts`，接口调用在 `frontend/src/api.ts`。修改 API 响应结构时，请同时更新这些类型与 `tests/test_pmss_web_api.py`，并提供成功与失败响应示例。
 
 ### PMSS 页面含义划分（不可混淆）
 
