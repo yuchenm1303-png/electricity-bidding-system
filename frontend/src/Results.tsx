@@ -1,5 +1,6 @@
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { ArrowRight, BarChart3, CircleCheck, ClipboardList, Download, Info, Layers, TrendingUp, Zap } from "lucide-react";
+import { useReducedMotion } from "./useReducedMotion";
 import { asSingle, asRisk, numeric, csvExport, type Report, type SingleTrial, type RiskTrial } from "./types";
 
 type Props = {
@@ -64,6 +65,7 @@ function EmptyReport({ running, onRun }: Pick<Props, "running" | "onRun">) {
   </section>;
 }
 export function ResultsContent({ report, stale, running, onRun, compact = false }: Props) {
+  const reducedMotion = useReducedMotion();
   if (!report) return <EmptyReport running={running} onRun={onRun}/>;
   const risk = report.mode === "risk";
   const best = report.best;
@@ -95,9 +97,9 @@ export function ResultsContent({ report, stale, running, onRun, compact = false 
               <Tooltip contentStyle={tooltipStyle} formatter={fmt} />
               <Legend verticalAlign="top" height={38} iconType="circle" wrapperStyle={{fontSize:11,color:"#a3b5be"}} />
               <ReferenceLine x={best.bid_price} stroke="#465fff" strokeDasharray="4 5"/>
-              <Line isAnimationActive={false} type="monotone" dataKey="expected_profit" name="期望利润" stroke="#465fff" strokeWidth={2.5} dot={false} activeDot={{r:5}}/>
-              <Line isAnimationActive={false} type="monotone" dataKey="downside_profit" name="下行利润" stroke="#99a6ff" strokeWidth={2} dot={false}/>
-              <Line isAnimationActive={false} type="monotone" dataKey="worst_profit" name="最差利润" stroke="#efa6b3" strokeWidth={1.7} dot={false}/>
+              <Line isAnimationActive={!reducedMotion} animationDuration={560} animationEasing="ease-out" type="monotone" dataKey="expected_profit" name="期望利润" stroke="#465fff" strokeWidth={2.5} dot={false} activeDot={{r:5}}/>
+              <Line isAnimationActive={!reducedMotion} animationDuration={560} animationEasing="ease-out" type="monotone" dataKey="downside_profit" name="下行利润" stroke="#99a6ff" strokeWidth={2} dot={false}/>
+              <Line isAnimationActive={!reducedMotion} animationDuration={560} animationEasing="ease-out" type="monotone" dataKey="worst_profit" name="最差利润" stroke="#efa6b3" strokeWidth={1.7} dot={false}/>
             </LineChart> : <AreaChart data={data} margin={chartMargin}>
               <defs><linearGradient id="profitFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#465fff" stopOpacity={0.26}/><stop offset="95%" stopColor="#465fff" stopOpacity={0}/></linearGradient></defs>
               <CartesianGrid stroke="#e8edf4" vertical={false} strokeDasharray="3 4"/>
@@ -105,7 +107,7 @@ export function ResultsContent({ report, stale, running, onRun, compact = false 
               <YAxis tick={axis} axisLine={false} tickLine={false} tickFormatter={v => numeric(v)} width={65}/>
               <Tooltip contentStyle={tooltipStyle} formatter={fmt} />
               <ReferenceLine x={best.bid_price} stroke="#465fff" strokeDasharray="4 5" label={{value:"推荐",position:"insideTop",fill:"#465fff",fontSize:11}}/>
-              <Area isAnimationActive={false} type="monotone" dataKey="profit" name="利润" stroke="#465fff" strokeWidth={2.8} fill="url(#profitFill)" activeDot={{r:5}}/>
+              <Area isAnimationActive={!reducedMotion} animationDuration={560} animationEasing="ease-out" type="monotone" dataKey="profit" name="利润" stroke="#465fff" strokeWidth={2.8} fill="url(#profitFill)" activeDot={{r:5}}/>
             </AreaChart>}
           </ResponsiveContainer>
         </div>
@@ -121,7 +123,7 @@ export function ResultsContent({ report, stale, running, onRun, compact = false 
               <YAxis tick={axis} axisLine={false} tickLine={false} width={58} tickFormatter={v => numeric(v)}/>
               <Tooltip contentStyle={tooltipStyle} formatter={fmt}/>
               <ReferenceLine x={best.bid_price} stroke="#465fff" strokeDasharray="4 5"/>
-              <Line isAnimationActive={false} dataKey={risk ? "score" : "accepted_mw"} name={risk ? "风险得分" : "中标 MW"} type="monotone"
+              <Line isAnimationActive={!reducedMotion} animationDuration={560} animationEasing="ease-out" dataKey={risk ? "score" : "accepted_mw"} name={risk ? "风险得分" : "中标 MW"} type="monotone"
                 stroke="#465fff" strokeWidth={2.7} dot={false} activeDot={{r:5}}/>
             </LineChart>
           </ResponsiveContainer>
