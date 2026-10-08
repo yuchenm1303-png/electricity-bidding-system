@@ -11,13 +11,13 @@ type Props = {
 };
 const fmt = (val: unknown) => typeof val === "number" ? numeric(val, 2) : String(val ?? "—");
 const tooltipStyle = {
-  backgroundColor: "#19232d",
-  border: "1px solid #34414d",
+  backgroundColor: "#ffffff",
+  border: "1px solid #e4e7ec",
   borderRadius: 10,
-  color: "#e3ebed",
+  color: "#344054",
   fontSize: 12,
   padding: "10px 13px",
-  boxShadow: "0 16px 36px rgba(0,0,0,.2)",
+  boxShadow: "0 16px 36px rgba(16,24,40,.1)",
 };
 const axis = { fill: "#8999a8", fontSize: 11 };
 const chartMargin = { top: 10, right: 15, bottom: 0, left: -10 };
@@ -89,23 +89,23 @@ export function ResultsContent({ report, stale, running, onRun, compact = false 
         <div className="chart-canvas">
           <ResponsiveContainer width="100%" height="100%">
             {risk ? <LineChart data={data} margin={chartMargin}>
-              <CartesianGrid stroke="#283441" vertical={false} strokeDasharray="3 4"/>
+              <CartesianGrid stroke="#e8edf4" vertical={false} strokeDasharray="3 4"/>
               <XAxis dataKey="bid_price" tick={axis} axisLine={false} tickLine={false} tickMargin={12}/>
               <YAxis tick={axis} axisLine={false} tickLine={false} tickFormatter={v => numeric(v)} width={65}/>
               <Tooltip contentStyle={tooltipStyle} formatter={fmt} />
               <Legend verticalAlign="top" height={38} iconType="circle" wrapperStyle={{fontSize:11,color:"#a3b5be"}} />
-              <ReferenceLine x={best.bid_price} stroke="#acd8c7" strokeDasharray="4 5"/>
-              <Line type="monotone" dataKey="expected_profit" name="期望利润" stroke="#8edac3" strokeWidth={2.5} dot={false} activeDot={{r:5}}/>
-              <Line type="monotone" dataKey="downside_profit" name="下行利润" stroke="#97b7f0" strokeWidth={2} dot={false}/>
-              <Line type="monotone" dataKey="worst_profit" name="最差利润" stroke="#e4a5a2" strokeWidth={1.7} dot={false}/>
+              <ReferenceLine x={best.bid_price} stroke="#465fff" strokeDasharray="4 5"/>
+              <Line isAnimationActive={false} type="monotone" dataKey="expected_profit" name="期望利润" stroke="#465fff" strokeWidth={2.5} dot={false} activeDot={{r:5}}/>
+              <Line isAnimationActive={false} type="monotone" dataKey="downside_profit" name="下行利润" stroke="#99a6ff" strokeWidth={2} dot={false}/>
+              <Line isAnimationActive={false} type="monotone" dataKey="worst_profit" name="最差利润" stroke="#efa6b3" strokeWidth={1.7} dot={false}/>
             </LineChart> : <AreaChart data={data} margin={chartMargin}>
-              <defs><linearGradient id="profitFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#78cdb6" stopOpacity={0.26}/><stop offset="95%" stopColor="#78cdb6" stopOpacity={0}/></linearGradient></defs>
-              <CartesianGrid stroke="#283441" vertical={false} strokeDasharray="3 4"/>
+              <defs><linearGradient id="profitFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#465fff" stopOpacity={0.26}/><stop offset="95%" stopColor="#465fff" stopOpacity={0}/></linearGradient></defs>
+              <CartesianGrid stroke="#e8edf4" vertical={false} strokeDasharray="3 4"/>
               <XAxis dataKey="bid_price" tick={axis} axisLine={false} tickLine={false} tickMargin={12}/>
               <YAxis tick={axis} axisLine={false} tickLine={false} tickFormatter={v => numeric(v)} width={65}/>
               <Tooltip contentStyle={tooltipStyle} formatter={fmt} />
-              <ReferenceLine x={best.bid_price} stroke="#acd8c7" strokeDasharray="4 5" label={{value:"推荐",position:"insideTop",fill:"#acdfcf",fontSize:11}}/>
-              <Area type="monotone" dataKey="profit" name="利润" stroke="#8edac3" strokeWidth={2.8} fill="url(#profitFill)" activeDot={{r:5}}/>
+              <ReferenceLine x={best.bid_price} stroke="#465fff" strokeDasharray="4 5" label={{value:"推荐",position:"insideTop",fill:"#465fff",fontSize:11}}/>
+              <Area isAnimationActive={false} type="monotone" dataKey="profit" name="利润" stroke="#465fff" strokeWidth={2.8} fill="url(#profitFill)" activeDot={{r:5}}/>
             </AreaChart>}
           </ResponsiveContainer>
         </div>
@@ -116,13 +116,13 @@ export function ResultsContent({ report, stale, running, onRun, compact = false 
         <div className="chart-canvas">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={chartMargin}>
-              <CartesianGrid stroke="#283441" vertical={false} strokeDasharray="3 4"/>
+              <CartesianGrid stroke="#e8edf4" vertical={false} strokeDasharray="3 4"/>
               <XAxis dataKey="bid_price" tick={axis} axisLine={false} tickLine={false} tickMargin={12}/>
               <YAxis tick={axis} axisLine={false} tickLine={false} width={58} tickFormatter={v => numeric(v)}/>
               <Tooltip contentStyle={tooltipStyle} formatter={fmt}/>
-              <ReferenceLine x={best.bid_price} stroke="#acd8c7" strokeDasharray="4 5"/>
-              <Line dataKey={risk ? "score" : "accepted_mw"} name={risk ? "风险得分" : "中标 MW"} type="monotone"
-                stroke="#9abcf3" strokeWidth={2.7} dot={false} activeDot={{r:5}}/>
+              <ReferenceLine x={best.bid_price} stroke="#465fff" strokeDasharray="4 5"/>
+              <Line isAnimationActive={false} dataKey={risk ? "score" : "accepted_mw"} name={risk ? "风险得分" : "中标 MW"} type="monotone"
+                stroke="#465fff" strokeWidth={2.7} dot={false} activeDot={{r:5}}/>
             </LineChart>
           </ResponsiveContainer>
         </div>
