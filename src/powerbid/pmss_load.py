@@ -6,9 +6,10 @@ The day-ahead 24-hour load curve is da.t01..da.t24 on each node.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from math import isfinite
-from typing import Any, Mapping
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
