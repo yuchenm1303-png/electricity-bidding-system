@@ -1,0 +1,16 @@
+{
+  "unit_id": "G1",
+  "min_mw": 15,
+  "max_mw": 100,
+  "ramp_up_mw": 100,
+  "ramp_down_mw": 100,
+  "startup_ramp_mw": 100,
+  "shutdown_ramp_mw": 100,
+  "min_up_hours": 1,
+  "min_down_hours": 1,
+  "startup_cost": 100,
+  "shutdown_cost": 0,
+  "initial_on": true,
+  "initial_mw": 30,
+  "initial_state_hours": 10
+}
