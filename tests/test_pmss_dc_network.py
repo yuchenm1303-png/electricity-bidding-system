@@ -38,7 +38,7 @@ def sample_market():
     )
 
 
-def test_grid_payload(line_limit=50):
+def _grid_payload(line_limit=50):
     return {
         "schema": "powerbid.pmss.dc-grid.v1",
         "provenance": "synthetic 2-bus deterministic verification",
@@ -53,29 +53,29 @@ def test_grid_payload(line_limit=50):
 
 
 def test_network_parser_rejects_missing_unit_location():
-    example = test_grid_payload()
+    example = _grid_payload()
     example["unitBuses"].pop("G2")
     with pytest.raises(ValueError, match="unit-to-bus"):
         parse_grid(example, snapshot=sample_market())
 
 
 def test_network_parser_rejects_mismatched_nodal_load_and_disconnected_bus():
-    grid = test_grid_payload()
+    grid = _grid_payload()
     grid["buses"][1]["loadMw"][2] = 99
     with pytest.raises(ValueError, match="mismatches"):
         parse_grid(grid, snapshot=sample_market())
-    grid = test_grid_payload()
+    grid = _grid_payload()
     grid["buses"].append({"bus": "C", "loadMw": [0] * 24})
     with pytest.raises(ValueError, match="Disconnected"):
         parse_grid(grid, snapshot=sample_market())
 
 
 def test_network_parser_rejects_unsafe_line_guesses():
-    grid = test_grid_payload()
+    grid = _grid_payload()
     grid["lines"][0].pop("limitMw")
     with pytest.raises(ValueError, match="line needs|line needs|Each line"):
         parse_grid(grid)
-    grid = test_grid_payload()
+    grid = _grid_payload()
     grid["lines"][0]["x"] = 0
     with pytest.raises(ValueError, match="positive"):
         parse_grid(grid)
@@ -84,7 +84,7 @@ def test_network_parser_rejects_unsafe_line_guesses():
 def test_two_bus_dc_dispatch_congestion_and_local_lmps():
     pytest.importorskip("scipy")
     snapshot = sample_market()
-    grid = parse_grid(test_grid_payload(), snapshot=snapshot)
+    grid = parse_grid(_grid_payload(), snapshot=snapshot)
     row = solve_dc_hour(grid, snapshot, 1, target_unit_id="G1")
     assert row.accepted_mw["G1"] == pytest.approx(50, abs=1e-6)
     assert row.accepted_mw["G2"] == pytest.approx(50, abs=1e-6)
@@ -103,7 +103,7 @@ def test_two_bus_dc_dispatch_congestion_and_local_lmps():
 def test_network_counterfactual_changes_nodal_price_without_platform_call():
     pytest.importorskip("scipy")
     snapshot = sample_market()
-    grid = parse_grid(test_grid_payload(120), snapshot=snapshot)
+    grid = parse_grid(_grid_payload(120), snapshot=snapshot)
     baseline = solve_dc_hour(grid, snapshot, 1, target_unit_id="G1")
     assert baseline.accepted_mw["G1"] == pytest.approx(100)
     assert baseline.lmp_by_bus["B"] == pytest.approx(10)
@@ -119,7 +119,7 @@ def test_network_counterfactual_changes_nodal_price_without_platform_call():
 def test_infeasible_network_is_not_reported_as_profitable():
     pytest.importorskip("scipy")
     snapshot = sample_market()
-    grid = parse_grid(test_grid_payload(50), snapshot=snapshot)
+    grid = parse_grid(_grid_payload(50), snapshot=snapshot)
     with pytest.raises(ValueError, match="infeasible"):
         solve_dc_hour(
             grid, snapshot, 1, target_unit_id="G1",
