@@ -10,7 +10,12 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Any
 
-from powerbid.unit_commitment import FeasibilityAudit, TerminalMode, ThermalConstraints, audit_dispatch
+from powerbid.unit_commitment import (
+    FeasibilityAudit,
+    TerminalMode,
+    ThermalConstraints,
+    audit_dispatch,
+)
 
 
 @dataclass(frozen=True, slots=True)
