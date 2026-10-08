@@ -226,8 +226,11 @@ def test_readonly_snapshot_export_whitelists_only_safe_fields():
 
         def get_unit_bid(self, *, scope_id, unit_id):
             self.read_calls.append((scope_id, unit_id))
+            data = _bid(60 if unit_id == "G30" else 80, 100 if unit_id == "G30" else 200)
+            data["datas"][0]["debugToken"] = "NOT_FOR_EXPORT"
+            data["datas"][0]["segmentDatas"][0]["debugToken"] = "NOT_FOR_EXPORT"
             return {
-                **_bid(60 if unit_id == "G30" else 80, 100 if unit_id == "G30" else 200),
+                **data,
                 "token": "NOT_FOR_EXPORT",
                 "minTechPowerCost": 4,
                 "startCostHot": 5,
