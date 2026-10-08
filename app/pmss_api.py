@@ -8,16 +8,23 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+from threading import BoundedSemaphore
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from starlette.concurrency import run_in_threadpool
 
+from powerbid.network_dispatch import network_from_dict
+from powerbid.network_feedback import compare_dc_baseline_to_pmss
+from powerbid.network_strategy import evaluate_network_plan, verify_network_inputs
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
-from powerbid.pmss_integration import snapshot_from_pmss
+from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_strategy import optimize_segmented_bid
+from powerbid.strategy_lab import DemandStress
 
 router = APIRouter(prefix="/api/pmss")
+_NETWORK_LIMITER = BoundedSemaphore(value=1)
 MAX_REQUEST_BYTES = 900_000
 SENSITIVE_KEYS = {
     "cookie", "cookies", "setcookie", "token", "accesstoken",
@@ -27,7 +34,7 @@ SENSITIVE_KEYS = {
 ALLOWED_ROOT_KEYS = {
     "unitTree", "unitBids", "marketSystem", "demandForecastMw",
     "forecastSource", "historicalBacktestOnly", "caseDate",
-    "results", "loadSourceKind", "loadNodeCount",
+    "results", "loadSourceKind", "loadNodeCount", "dcNetwork",
 }
 
 
@@ -41,6 +48,20 @@ class OptimizeInput(SnapshotInput):
     candidate_prices: list[float] = Field(min_length=1, max_length=21)
     iterations: int = Field(default=2, ge=1, le=3)
     quantity_step_mw: float | None = Field(default=None, gt=0, le=50_000)
+
+
+class SegmentInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    start_power: float = Field(ge=0)
+    end_power: float = Field(gt=0)
+    price: float = Field(ge=0, le=10000)
+
+
+class NetworkInput(SnapshotInput):
+    target_unit_id: str = Field(min_length=1, max_length=120)
+    recommended_segments: list[SegmentInput] | None = Field(
+        default=None, min_length=1, max_length=5
+    )
 
 
 async def _read_payload(request: Request) -> dict[str, Any]:
@@ -128,6 +149,14 @@ async def inspect_snapshot(request: Request) -> dict[str, Any]:
         params = SnapshotInput.model_validate(await _read_payload(request))
         snapshot = _parse_snapshot(params.snapshot)
         network = _real_network(params.snapshot)
+        grid_raw = params.snapshot.get("dcNetwork")
+        if grid_raw is not None:
+            verified_grid = network_from_dict(grid_raw)
+            verify_network_inputs(snapshot, verified_grid, snapshot.units[0].unit_id)
+            if len(verified_grid.buses) > 60 or len(verified_grid.lines) > 90:
+                raise ValueError("Online DC analysis is limited to 60 buses / 90 lines")
+        else:
+            verified_grid = None
     except (ValidationError, KeyError, TypeError, ValueError, StopIteration) as exc:
         raise HTTPException(422, detail=str(exc)) from exc
     return {
@@ -140,6 +169,9 @@ async def inspect_snapshot(request: Request) -> dict[str, Any]:
         "market_type": snapshot.limits.market_type,
         "max_segments": snapshot.limits.max_segments,
         "network": network,
+        "dc_grid_available": verified_grid is not None,
+        "dc_grid_buses": len(verified_grid.buses) if verified_grid else 0,
+        "dc_grid_lines": len(verified_grid.lines) if verified_grid else 0,
         "requires_explicit_pmss_validation": True,
     }
 
@@ -190,4 +222,117 @@ async def optimize_snapshot(request: Request) -> dict[str, Any]:
         "pmss_write_performed": False,
         "pmss_clearing_executed": False,
         "counterfactual_pmss_result_available": False,
+    }
+
+
+def _summary_dc_study(study, grid, target):
+    day = study.scenarios[0]
+    limits = {line.line_id: line.limit_mw for line in grid.lines}
+    hours = []
+    for hour in day.hours:
+        binding = [
+            line for line, flow in hour.branch_flows_mw.items()
+            if abs(flow) >= limits[line] - max(0.01, limits[line] * 1e-5)
+        ]
+        hours.append({
+            "period": hour.period,
+            "target_mw": hour.dispatched_mw,
+            "target_lmp": hour.target_lmp,
+            "target_profit": hour.margin,
+            "binding_line_count": len(binding),
+            "binding_lines": binding,
+        })
+    return {
+        "target_unit_id": target,
+        "total_profit": day.total_margin,
+        "total_accepted_mwh": day.accepted_mwh,
+        "max_line_utilization": max(
+            abs(hour.branch_flows_mw[line]) / limit
+            for hour in day.hours for line, limit in limits.items()
+        ),
+        "hours_with_binding_lines": sum(bool(h["binding_lines"]) for h in hours),
+        "hours": hours,
+        "study_type": study.model_label,
+    }
+
+
+def _run_dc_study(snapshot, network, target, candidate):
+    normal = (DemandStress("normal"),)
+    baseline = evaluate_network_plan(
+        snapshot, network, target,
+        "PMSS 原始已申报曲线（DC模型重算）",
+        snapshot.bids[target], normal,
+    )
+    recommended = None
+    error = None
+    if candidate is not None:
+        try:
+            plan = (PeriodBid(1, 24, tuple(candidate)),)
+            recommended = evaluate_network_plan(
+                snapshot, network, target,
+                "本地候选报价 DC 对照（非 PMSS）",
+                plan, normal,
+            )
+        except ValueError as exc:
+            error = str(exc)
+    return baseline, recommended, error
+
+
+@router.post("/network-evaluate")
+async def evaluate_network_snapshot(request: Request) -> dict[str, Any]:
+    """Actual-parameter DC approximation, using the existing network engine."""
+    try:
+        params = NetworkInput.model_validate(await _read_payload(request))
+        snapshot = _parse_snapshot(params.snapshot)
+        raw = params.snapshot.get("dcNetwork")
+        if raw is None:
+            raise ValueError("快照未携带经核验的 dcNetwork，请先运行服务器只读映射脚本")
+        network = network_from_dict(raw)
+        verify_network_inputs(snapshot, network, params.target_unit_id)
+        if len(network.buses) > 60 or len(network.lines) > 90:
+            raise ValueError("在线 DC 网络分析最多支持60节点、90线路")
+        candidate = (
+            tuple(
+                BidSegment(s.start_power, s.end_power, s.price)
+                for s in params.recommended_segments
+            )
+            if params.recommended_segments is not None else None
+        )
+        if not _NETWORK_LIMITER.acquire(blocking=False):
+            raise HTTPException(429, "网络约束模型繁忙，请稍后重试")
+        try:
+            baseline, proposed, error = await run_in_threadpool(
+                _run_dc_study, snapshot, network, params.target_unit_id, candidate
+            )
+        finally:
+            _NETWORK_LIMITER.release()
+        historical = None
+        observed = params.snapshot.get("results")
+        if observed is not None:
+            try:
+                historical = asdict(compare_dc_baseline_to_pmss(
+                    snapshot, network, baseline, params.target_unit_id, observed
+                ))
+            except (ValueError, KeyError, TypeError):
+                # Do not invent a zero error when historic rows are incomplete.
+                historical = None
+    except (ValidationError, KeyError, TypeError, ValueError, StopIteration) as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    return {
+        "baseline": _summary_dc_study(baseline, network, params.target_unit_id),
+        "recommended": (
+            _summary_dc_study(proposed, network, params.target_unit_id)
+            if proposed else None
+        ),
+        "recommended_error": error,
+        "historical_calibration": historical,
+        "topology_source": network.topology_source,
+        "network_model": "Existing PowerBid network_dispatch lossless DC-OPF",
+        "excluded_constraints": [
+            "joint 24h commitment", "ramping", "reserve", "losses",
+            "AC voltage/reactive power", "PMSS rule-specific pricing",
+        ],
+        "pmss_write_performed": False,
+        "pmss_clearing_executed": False,
+        "pmss_counterfactual_verified": False,
     }

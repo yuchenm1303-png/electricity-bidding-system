@@ -1,4 +1,4 @@
-import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization } from "./types";
+import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison } from "./types";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -53,5 +53,17 @@ export async function optimizePMSS(
   return unpack<PMSSOptimization>(await fetch(BASE + "api/pmss/optimize", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ snapshot, target_unit_id, candidate_prices, iterations }),
+  }));
+}
+
+export async function evaluatePMSSNetwork(
+  snapshot: Record<string, unknown>,
+  target_unit_id: string,
+  recommended_segments: {start_power: number; end_power: number; price: number}[],
+): Promise<PMSSNetworkComparison> {
+  return unpack<PMSSNetworkComparison>(await fetch(BASE + "api/pmss/network-evaluate", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({snapshot, target_unit_id, recommended_segments}),
   }));
 }

@@ -141,3 +141,58 @@ def test_pmss_rejects_wrong_mime_and_does_not_expose_server_snapshot():
     assert response.status_code == 415
     assert client.get("/api/pmss/inspect").status_code == 405
     assert client.get("/api/pmss/snapshot").status_code == 404
+
+
+def _synthetic_network_case():
+    case = safe_snapshot()
+    case["dcNetwork"] = {
+        "buses": ["A", "B"],
+        "lines": [{
+            "lineId": "L1", "fromBus": "A", "toBus": "B",
+            "reactancePu": 0.1, "limitMw": 50,
+        }],
+        "unitBus": {"G30": "A", "G31": "B"},
+        "hourlyDemandMw": {"A": [0] * 24, "B": [180] * 24},
+        "slackBus": "A", "baseMva": 1,
+        "topologySource": "synthetic 2-bus test; normalization only",
+        "demandSource": case["forecastSource"],
+    }
+    return case
+
+
+def test_react_pmss_network_evaluation_uses_existing_dc_engine():
+    pytest.importorskip("scipy")
+    case = _synthetic_network_case()
+    inspected = client.post("/api/pmss/inspect", json={"snapshot": case})
+    assert inspected.status_code == 200, inspected.text
+    assert inspected.json()["dc_grid_available"] is True
+    assert inspected.json()["dc_grid_buses"] == 2
+    response = client.post("/api/pmss/network-evaluate", json={
+        "snapshot": case, "target_unit_id": "G30",
+        "recommended_segments": [
+            {"start_power": 0, "end_power": 100, "price": 100},
+        ],
+    })
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert len(data["baseline"]["hours"]) == 24
+    assert len(data["recommended"]["hours"]) == 24
+    assert data["baseline"]["hours"][0]["target_mw"] == pytest.approx(50)
+    assert data["recommended"]["hours"][0]["target_mw"] == pytest.approx(0)
+    assert data["baseline"]["hours_with_binding_lines"] == 24
+    assert data["pmss_write_performed"] is False
+    assert data["pmss_clearing_executed"] is False
+    assert data["pmss_counterfactual_verified"] is False
+
+
+def test_network_endpoint_refuses_missing_or_inconsistent_nodal_load():
+    bare = safe_snapshot()
+    assert client.post("/api/pmss/network-evaluate", json={
+        "snapshot": bare, "target_unit_id": "G30",
+    }).status_code == 422
+    case = _synthetic_network_case()
+    case["dcNetwork"]["hourlyDemandMw"]["B"][0] = 179
+    assert client.post("/api/pmss/network-evaluate", json={
+        "snapshot": case, "target_unit_id": "G30",
+    }).status_code == 422
+    assert client.get("/api/pmss/network-evaluate").status_code == 405
