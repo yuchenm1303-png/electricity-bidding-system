@@ -47,7 +47,7 @@ class FakeResults:
                 {
                     "elementId": "unit-1",
                     "elementName": "Test unit",
-                    "marketTypeAtom": "DA",
+                    "marketTypeAtom": "DA" if kwargs["da_ids"] else "RT",
                     "power": _metric(10),
                     "price": _metric(50),
                     "income": _metric(500),
@@ -63,7 +63,7 @@ class FakeResults:
                 {
                     "elementId": "bus-1",
                     "elementName": "Test bus",
-                    "marketTypeAtom": "DA",
+                    "marketTypeAtom": "DA" if kwargs["da_ids"] else "RT",
                     "powerFlow": _metric(53),
                 }
             ],
@@ -77,7 +77,7 @@ class FakeResults:
                 {
                     "elementId": "line-1",
                     "elementName": "Test branch",
-                    "marketTypeAtom": "DA",
+                    "marketTypeAtom": "DA" if kwargs["da_ids"] else "RT",
                     "powerFlow": _metric(-40),
                     "beginNodePrice": _metric(53),
                     "endNodePrice": _metric(51),
