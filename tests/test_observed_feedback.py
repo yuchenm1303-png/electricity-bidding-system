@@ -1,6 +1,4 @@
 """Observed PMSS feedback remains read-only and non-predictive."""
-from dataclasses import replace
-
 import pytest
 
 from powerbid.observed_feedback import audit_observed_dispatch, observed_unit_day
