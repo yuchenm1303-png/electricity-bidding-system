@@ -14,6 +14,7 @@ RUN python -m pip install --upgrade pip \
 
 # Keep UI/data changes in a late layer so visual iterations reuse the dependency cache.
 COPY app ./app
+COPY .streamlit ./.streamlit
 COPY data ./data
 
 EXPOSE 8501
