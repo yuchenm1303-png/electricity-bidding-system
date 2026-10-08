@@ -1,5 +1,7 @@
 import type { Scenario, Settings, Report } from "./types";
 
+const BASE = import.meta.env.BASE_URL;
+
 async function unpack<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
