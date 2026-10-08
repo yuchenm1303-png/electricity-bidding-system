@@ -45,3 +45,17 @@ powerbid.pmss_strategy 使用现有单区域统一价引擎，把各机组的每
 3. 服务器只读数据安全导出为完整快照，并验证前端全链路。
 4. 纳入 LMP、线路和机组运行约束。
 5. 只有另行明确授权才可测试真实写入或执行 PMSS 出清。
+
+## 安全只读快照导出命令
+
+在已授权且能够访问 PMSS 的可信服务器上安装项目的 platform 依赖，
+通过环境变量 PMSS_BASE_URL、PMSS_PROXY_URL、PMSS_COOKIE_FILE 指向运行环境配置。
+PMSS_COOKIE_FILE 必须在 Git 仓库外部，由运维人员单独维护，不得提交或上传到前端。
+
+在服务器上运行 scripts/export_pmss_snapshot.py，并提供 --forecast-json（24元素数组）、
+--forecast-source、--case-date 和 --output（仓库外的私有路径）。
+脚本只会调用 get_context / get_unit_bid 只读 API，并输出经白名单过滤的
+unitTree / unitBids / marketSystem / demandForecastMw / forecastSource。
+输出文件权限0600；随后可以上传到新增 Streamlit PMSS 页面做本地计算。
+
+当前服务器缺少该 CLI 所需的认证配置文件验证，尚未声明已完成真实导出。
