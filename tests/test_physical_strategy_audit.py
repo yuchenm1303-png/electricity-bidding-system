@@ -48,7 +48,7 @@ def test_screened_policy_probabilities_stay_within_one_and_are_grounded():
 
 def test_screen_rejects_physically_unrealistic_minimum():
     result = compare_strategies(
-        _snapshot(),
+        replace(_snapshot(), demand_forecast_mw=(50.0,) * 24),
         "G1",
         markups=(0.0,),
         scenarios=(DemandStress("normal"),),
