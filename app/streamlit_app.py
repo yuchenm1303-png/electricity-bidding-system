@@ -131,7 +131,7 @@ with st.sidebar:
             </div>
             <div>
                 <div class="pb-side-title">PowerBid Lab</div>
-                <div class="pb-side-subtitle">MARKET DECISION STUDIO</div>
+                <div class="pb-side-subtitle">MARKET STRATEGY STUDIO</div>
             </div>
         </div>
         """,
@@ -142,7 +142,7 @@ with st.sidebar:
         st.markdown(
             """
             <div class="pb-side-group-head">
-                <div class="pb-side-group-title"><span class="pb-side-index">01</span>市场设置</div>
+                <div class="pb-side-group-title"><span class="pb-side-index">01</span>市场参数</div>
                 <span class="pb-side-group-meta">MARKET</span>
             </div>
             """,
@@ -160,7 +160,7 @@ with st.sidebar:
         st.markdown(
             """
             <div class="pb-side-group-head">
-                <div class="pb-side-group-title"><span class="pb-side-index">02</span>报价区间</div>
+                <div class="pb-side-group-title"><span class="pb-side-index">02</span>策略搜索</div>
                 <span class="pb-side-group-meta">SEARCH</span>
             </div>
             """,
@@ -198,8 +198,8 @@ with st.sidebar:
         f"""
         <div class="pb-side-summary">
             <div class="pb-side-summary-head">
-                <span>当前配置</span>
-                <span class="pb-side-ready"><span class="pb-live-dot"></span>READY</span>
+                <span>本次模拟</span>
+                <span class="pb-side-ready"><span class="pb-live-dot"></span>已配置</span>
             </div>
             <div class="pb-side-summary-grid">
                 <div class="pb-side-summary-item">
@@ -298,7 +298,7 @@ summary_cols[3].markdown(
 section_header(
     "01 / MARKET INPUTS",
     "机组与报价数据",
-    "直接编辑各机组的申报容量、当前报价和真实边际成本。目标机组的报价会在运行时被候选价格逐一替换。",
+    "编辑真实边际成本、申报容量与当前报价。仅目标机组的报价参与优化搜索。",
 )
 
 source_df = pd.DataFrame(
@@ -319,17 +319,17 @@ with st.container(border=True, key="offer_card"):
         st.markdown(
             """
             <div class="pb-card-heading">
-                <div class="pb-card-title">机组申报参数</div>
+                <div class="pb-card-title">机组参数清单</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.caption("修改仅作用于当前分析，不覆盖原始样例文件。")
+        st.caption("点击单元格即可编辑 · 改动仅保留在当前研究会话。")
     with meta_right:
         st.markdown(
             (
                 f'<div style="text-align:right"><span class="pb-card-meta">'
-                f'{len(source_df)} UNIT · {source_label}</span></div>'
+                f'{len(source_df)} 台机组 · {source_label}</span></div>'
             ),
             unsafe_allow_html=True,
         )
@@ -341,7 +341,7 @@ with st.container(border=True, key="offer_card"):
         num_rows="dynamic",
         key="offer_editor",
         column_config={
-            "unit_id": st.column_config.TextColumn("机组", help="机组唯一标识"),
+            "unit_id": st.column_config.TextColumn("机组编号", help="机组唯一标识"),
             "quantity_mw": st.column_config.NumberColumn(
                 "申报容量 / MW", min_value=0.0, format="%.2f"
             ),
@@ -357,7 +357,7 @@ with st.container(border=True, key="offer_card"):
 st.markdown(
     """
     <div class="pb-note">
-        <div class="pb-note-mark">◎</div>
+        <div class="pb-note-mark">i</div>
         <div class="pb-note-copy">
             <strong>计算逻辑：</strong>单场景模式寻找当前市场输入下利润最高的报价；风险模式会同时改变负荷和竞争者报价，
             用多种压力情景检查同一报价是否仍然稳健。当前压力情景属于敏感性分析，不代表真实市场预测。
@@ -369,8 +369,8 @@ st.markdown(
 
 section_header(
     "02 / RUN OPTIMIZATION",
-    "运行报价优化",
-    "确认左侧控制参数和机组数据后开始计算。所有候选报价都会经过同一套出清与结算流程。",
+    "运行策略分析",
+    "使用当前参数运行出清模型，比较每种报价对应的收益与中标情况。",
 )
 
 valid_range = bid_start <= bid_stop
@@ -386,7 +386,7 @@ with st.container(border=True, key="run_card"):
         st.markdown(
             f"""
             <div class="pb-action-copy">
-                <div class="pb-action-title"><span class="pb-live-dot"></span>决策引擎已就绪</div>
+                <div class="pb-action-title"><span class="pb-live-dot"></span>准备开始策略计算</div>
                 <div class="pb-action-desc">
                     {decision_mode} · {engine_name} ·
                     候选 {bid_start:g}–{bid_stop:g} / 步长 {bid_step:g}
@@ -397,7 +397,7 @@ with st.container(border=True, key="run_card"):
         )
     with action_right:
         run = st.button(
-            "开始优化报价  ↗",
+            "运行报价分析  ↗",
             type="primary",
             use_container_width=True,
             disabled=not (valid_range and valid_target),
@@ -481,8 +481,8 @@ if saved_report is not None:
 
     section_header(
         "03 / STRATEGY REPORT",
-        "报价决策结果",
-        "先看推荐结果，再下钻到收益曲线、风险区间和全部试算明细。",
+        "策略分析报告",
+        "查看推荐报价、收益曲线及完整试算明细。报告来自本次模拟，不代表实际市场预测。",
     )
 
     if report_mode == "单场景利润最大化":
@@ -531,8 +531,8 @@ if saved_report is not None:
                     profit_area = (
                         alt.Chart(trials_df)
                         .mark_area(
-                            line={"color": "#58dfc7", "strokeWidth": 2.4},
-                            color="#58dfc7", opacity=0.16,
+                            line={"color": "#87d7c2", "strokeWidth": 2.4},
+                            color="#87d7c2", opacity=0.16,
                         )
                         .encode(
                             x=alt.X("报价:Q", title="报价"),
@@ -545,7 +545,7 @@ if saved_report is not None:
                     )
                     best_rule = (
                         alt.Chart(pd.DataFrame({"报价": [best.bid_price]}))
-                        .mark_rule(color="#8aabfa", strokeDash=[6, 5], strokeWidth=1.5)
+                        .mark_rule(color="#91b5f0", strokeDash=[6, 5], strokeWidth=1.5)
                         .encode(x="报价:Q")
                     )
                     st.altair_chart(
@@ -559,7 +559,7 @@ if saved_report is not None:
                     st.caption("用于识别报价提高后可能出现的中标量拐点。")
                     quantity_chart = (
                         alt.Chart(trials_df)
-                        .mark_line(point=True, strokeWidth=2.4, color="#8aabfa")
+                        .mark_line(point=True, strokeWidth=2.4, color="#91b5f0")
                         .encode(
                             x=alt.X("报价:Q", title="报价"),
                             y=alt.Y("中标电量MW:Q", title="中标电量 / MW"),
@@ -663,7 +663,7 @@ if saved_report is not None:
                             color=alt.Color(
                                 "指标:N",
                                 title=None,
-                                scale=alt.Scale(range=["#58dfc7", "#b09afc", "#fd8c98"]),
+                                scale=alt.Scale(range=["#87d7c2", "#c4a9de", "#dc9299"]),
                             ),
                             tooltip=[
                                 alt.Tooltip("报价:Q", format=".2f"),
@@ -681,8 +681,8 @@ if saved_report is not None:
                     score_chart = (
                         alt.Chart(risk_df)
                         .mark_area(
-                            line={"color": "#8aabfa", "strokeWidth": 2.4},
-                            color="#8aabfa", opacity=0.16,
+                            line={"color": "#91b5f0", "strokeWidth": 2.4},
+                            color="#91b5f0", opacity=0.16,
                         )
                         .encode(
                             x=alt.X("报价:Q", title="报价"),
@@ -742,9 +742,9 @@ else:
         """
         <div class="pb-empty">
             <div class="pb-empty-symbol" aria-hidden="true">↗</div>
-            <div class="pb-empty-title">准备好探索更优报价了吗？</div>
+            <div class="pb-empty-title">完成配置，开始分析</div>
             <div class="pb-empty-desc">
-                配置市场参数、调整机组申报数据，然后运行决策模型。
+                确认市场参数与机组报价后，运行模拟分析。
                 <br>
                 推荐报价、收益曲线和情景分析将在这里呈现。
             </div>
@@ -762,7 +762,7 @@ st.markdown(
     """
     <div style="height:1.8rem"></div>
     <div class="pb-footer">
-        POWERBID LAB <span style="margin:0 .7rem">·</span> DECISIONS BACKED BY SIMULATION
+        POWERBID STUDIO <span style="margin:0 .7rem">·</span> SIMULATION FIRST
         <span style="margin:0 .7rem">·</span> FOR TEACHING &amp; RESEARCH
     </div>
     """,
