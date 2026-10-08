@@ -13,6 +13,12 @@ authors = [{ name = "yuchenm1303-png" }]
 dependencies = []
 
 [project.optional-dependencies]
+web = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.34,<1",
+  "pydantic>=2.9,<3",
+  "httpx>=0.28,<1",
+]
 ui = [
   "streamlit>=1.38",
   "pandas>=2.2",
