@@ -243,6 +243,32 @@ button:focus-visible,[role="tab"]:focus-visible { outline:2px solid var(--pb-min
 .pb-result-banner { display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.1rem;margin:.45rem 0 1rem;border:1px solid rgba(88,223,199,.2);border-radius:14px;background:linear-gradient(110deg,rgba(88,223,199,.075),rgba(88,223,199,.018));color:var(--pb-muted);font-size:.74rem; }
 .pb-result-banner strong { color:var(--pb-mint); }
 
+
+/* A real pre-run state rather than an empty white canvas */
+.pb-empty {
+  position:relative;overflow:hidden;text-align:center;padding:clamp(2.3rem,4.9vw,4.3rem) 1.5rem;
+  border:1px dashed color-mix(in srgb,var(--pb-mint) 23%,var(--pb-line));
+  border-radius:19px;
+  background:
+    radial-gradient(ellipse 24rem 15rem at 50% 20%,rgba(88,223,199,.057),transparent 90%),
+    color-mix(in srgb,var(--secondary-background-color) 35%,var(--background-color));
+}
+.pb-empty::after {
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;
+  background-image:linear-gradient(rgba(88,223,199,.09) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(88,223,199,.09) 1px,transparent 1px);
+  background-size:35px 35px;mask-image:radial-gradient(ellipse,#000,transparent 68%);
+}
+.pb-empty > * { position:relative;z-index:1; }
+.pb-empty-symbol {
+  display:grid;place-items:center;width:60px;height:60px;margin:0 auto 1.2rem;
+  border:1px solid rgba(88,223,199,.22);border-radius:19px;color:var(--pb-mint);font-size:2.1rem;
+  background:rgba(88,223,199,.085);box-shadow:0 14px 35px rgba(0,0,0,.06);
+}
+.pb-empty-title { color:var(--text-color);font-size:1.18rem;font-weight:735;letter-spacing:-.035em; }
+.pb-empty-desc { color:var(--pb-muted);font-size:.76rem;line-height:1.9;margin:.55rem auto 1.3rem;max-width:560px; }
+.pb-empty-step { display:inline-block;color:var(--pb-mint);font-size:.62rem;font-weight:700;letter-spacing:.06em; }
+
 /* Buttons, data, charts */
 .stButton > button,.stDownloadButton > button {
   min-height:2.8rem;border-radius:10px!important;font-weight:710;letter-spacing:-.015em;
