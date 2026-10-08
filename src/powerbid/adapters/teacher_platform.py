@@ -241,6 +241,23 @@ class TeacherPlatformAdapter:
             units=tuple(self.flatten_units(unit_tree)),
         )
 
+    def get_da_nodal_loads(
+        self, *, pm_scene_id: str, pm_scene_date_key: str,
+        page_no: int = 1, page_size: int = 999,
+    ) -> dict[str, Any]:
+        """Read PMSS operating-scene DA node loads (query-only POST)."""
+        return self._request(
+            "POST",
+            "scene/loadFc/list",
+            json_body={
+                "ids": [],
+                "pageNo": page_no,
+                "pageSize": page_size,
+                "sceneDateKey": pm_scene_date_key,
+                "sceneId": pm_scene_id,
+            },
+        ) or {}
+
     def get_unit_bid(self, *, scope_id: str, unit_id: str) -> dict[str, Any]:
         return self._request(
             "GET",
