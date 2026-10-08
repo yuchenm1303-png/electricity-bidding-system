@@ -1,0 +1,302 @@
+/* PowerBid Motion System
+   Compositor-first animations: motion communicates location, selection and state.
+   Every animation is optional for users who prefer reduced motion. */
+:root {
+  --motion-swift: 150ms;
+  --motion-fast: 210ms;
+  --motion-standard: 340ms;
+  --motion-reveal: 520ms;
+  --motion-ease: cubic-bezier(.22, 1, .36, 1);
+  --motion-ease-out: cubic-bezier(.18, .76, .22, 1);
+  --motion-spring: cubic-bezier(.21, 1.22, .32, 1);
+  --motion-outline: color-mix(in srgb, var(--ta-primary) 28%, transparent);
+}
+
+/* Keep layout/reading crisp: never animate dimensions of charts or tables. */
+:root .nav-entry,
+:root .ta-menu-toggle,
+:root .ta-header-icon,
+:root .icon-button,
+:root .sidebar-collapse,
+:root .outline-button,
+:root .primary-button,
+:root .secondary-button,
+:root .subtle-button,
+:root .ghost-cta,
+:root .guide-action,
+:root .ta-report-link,
+:root .sort-button,
+:root .row-action,
+:root .target-radio,
+:root .ta-search-results button,
+:root .mode-switch button,
+:root .ta-card-tag {
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    opacity var(--motion-fast) ease,
+    transform var(--motion-fast) var(--motion-ease);
+}
+
+/* Sidebar: active track, precise icon micro-gesture, not generic scale. */
+:root .nav-entry {isolation:isolate}
+:root .nav-entry::before {
+  content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;
+  border-radius:4px;background:var(--ta-primary);
+  opacity:0;transform:scaleY(.28);transform-origin:center;
+  transition:opacity var(--motion-fast),transform var(--motion-standard) var(--motion-spring);
+}
+:root .nav-entry.active::before {opacity:1;transform:scaleY(1)}
+:root .nav-entry svg {transition:transform var(--motion-standard) var(--motion-spring),color var(--motion-fast)}
+@media(hover:hover) {
+  :root .nav-entry:hover svg {transform:translateX(2px)}
+  :root .nav-entry.active:hover svg {transform:translateY(-1px)}
+}
+:root .brand-mark svg {transition:transform .48s var(--motion-spring)}
+@media(hover:hover) {:root .brand:hover .brand-mark svg {transform:rotate(-9deg) scale(1.1)}}
+:root .sidebar {transition:width var(--motion-standard) var(--motion-ease)}
+:root .app {transition:grid-template-columns var(--motion-standard) var(--motion-ease)}
+:root .sidebar-nav .nav-count {transition:background-color var(--motion-fast),color var(--motion-fast)}
+:root .sidebar .sidebar-lower {animation:pb-sidebar-note-in .55s var(--motion-ease) both}
+
+/* Header: icon twist, search expansion and responsive command results. */
+:root .ta-global-search {
+  transition:border-color var(--motion-fast),box-shadow var(--motion-fast),background-color var(--motion-fast);
+}
+:root .ta-global-search > svg {transition:color var(--motion-fast),transform var(--motion-standard) var(--motion-spring)}
+:root .ta-global-search:focus-within > svg {color:var(--ta-primary);transform:scale(1.1)}
+:root .ta-global-search kbd {transition:opacity var(--motion-fast)}
+:root .ta-global-search:focus-within kbd {opacity:.45}
+:root .ta-header-icon svg,
+:root .ta-menu-toggle svg,
+:root .settings-toggle svg,
+:root .reset-button svg,
+:root .secondary-button svg,
+:root .subtle-button svg {
+  transition:transform var(--motion-standard) var(--motion-spring);
+}
+@media(hover:hover) {
+  :root .ta-header-icon:hover svg {transform:rotate(-14deg) scale(1.08)}
+  :root .ta-menu-toggle:hover svg {transform:translateX(-2px)}
+  :root .settings-toggle:hover svg {transform:translateX(2px)}
+  :root .reset-button:hover svg {transform:rotate(-30deg)}
+  :root .secondary-button:hover svg,
+  :root .subtle-button:hover svg {transform:translateY(-2px)}
+}
+:root .ta-header-icon .theme-glyph {display:grid;place-items:center;animation:pb-theme-turn .40s var(--motion-spring) both}
+:root .ta-search-results {transform-origin:top left;animation:pb-search-enter .25s var(--motion-ease) both}
+:root .ta-search-results button svg {transition:transform var(--motion-fast) var(--motion-ease)}
+:root .ta-search-results button:hover svg {transform:translateX(3px)}
+
+/* Buttons: small tactile depression and purposeful arrow travel.
+   Avoid permanent pulse, strong glow, rainbow/ripple effects. */
+:root .primary-button,
+:root .guide-action {position:relative;overflow:hidden;isolation:isolate}
+:root .primary-button::after,
+:root .guide-action::after {
+  content:"";position:absolute;inset:0;background:linear-gradient(108deg,transparent 25%,rgba(255,255,255,.16) 50%,transparent 75%);
+  transform:translateX(-140%);pointer-events:none;
+}
+@media(hover:hover) {
+  :root .primary-button:hover::after,
+  :root .guide-action:hover::after {animation:pb-button-light .66s ease-out both}
+  :root .run-button:not(:disabled):hover > svg:last-child,
+  :root .guide-action:hover > svg:last-child,
+  :root .ghost-cta:hover > svg:last-child,
+  :root .ta-report-link:hover > svg:last-child,
+  :root .analysis-teaser:hover > svg:last-child {
+    transform:translate(3px,-1px);
+  }
+}
+:root .primary-button svg,
+:root .guide-action svg,
+:root .ghost-cta svg,
+:root .ta-report-link svg,
+:root .analysis-teaser svg {
+  transition:transform var(--motion-standard) var(--motion-ease);
+}
+:root button:not(:disabled):active {transform:scale(.975)}
+:root .ta-header-icon:active,
+:root .icon-button:active {transform:scale(.93)}
+:root button:disabled {animation:none!important}
+:root .run-button.is-running {box-shadow:0 0 0 4px var(--motion-outline)}
+:root .run-button.is-running::after {
+  transform:none;animation:pb-progress-sheen 1.65s ease-in-out infinite;
+}
+
+/* Navigating: a single purposeful 360ms rise/fade, with short stagger.
+   Trigger ONLY when a real navigation view mounts, not on input edits. */
+:root .view-stage {min-width:0;contain:layout style}
+:root .view-stage > :first-child {animation:pb-view-enter .36s var(--motion-ease) both}
+:root .view-stage .ta-top-dashboard .ta-stat-card:nth-child(1) {animation:pb-card-arrive .45s .04s var(--motion-ease) both}
+:root .view-stage .ta-top-dashboard .ta-stat-card:nth-child(2) {animation:pb-card-arrive .45s .10s var(--motion-ease) both}
+:root .view-stage .ta-bidding-chart {animation:pb-card-arrive .5s .14s var(--motion-ease) both}
+:root .view-stage .ta-capacity {animation:pb-card-arrive .55s .18s var(--motion-ease) both}
+:root .view-stage .ta-wide-chart {animation:pb-card-arrive .5s .21s var(--motion-ease) both}
+:root .view-stage .report-empty,
+:root .view-stage .data-panel.expanded,
+:root .view-stage .trial-placeholder {animation:pb-view-enter .4s var(--motion-ease) both}
+
+/* Cards: elevation reacts to pointer position gently; no zoom or reflow. */
+:root .ta-stat-card,
+:root .ta-chart-card,
+:root .ta-capacity,
+:root .data-panel,
+:root .recommendation-panel,
+:root .result-metric,
+:root .chart-card,
+:root .trials-panel {
+  transition:border-color var(--motion-standard),
+    box-shadow var(--motion-standard),transform var(--motion-standard) var(--motion-ease);
+}
+@media(hover:hover) {
+  :root .ta-stat-card:hover,
+  :root .ta-chart-card:hover,
+  :root .ta-capacity:hover,
+  :root .result-metric:hover {
+    border-color:color-mix(in srgb,var(--ta-primary) 21%,var(--ta-border));
+    box-shadow:0 9px 26px rgba(16,24,40,.065);
+    transform:translateY(-2px);
+  }
+  :root[data-theme="dark"] .ta-stat-card:hover,
+  :root[data-theme="dark"] .ta-chart-card:hover,
+  :root[data-theme="dark"] .ta-capacity:hover {box-shadow:0 9px 27px rgba(0,0,0,.19)}
+}
+:root .ta-stat-icon svg {transition:transform .45s var(--motion-spring)}
+:root .ta-stat-card:hover .ta-stat-icon svg {transform:translateY(-2px) rotate(-5deg)}
+:root .ta-gauge-arc {stroke-dashoffset:0}
+:root .ta-report-strip > div {animation:pb-card-arrive .43s var(--motion-ease) both}
+:root .ta-report-strip > div:nth-child(2){animation-delay:.06s}
+:root .ta-report-strip > div:nth-child(3){animation-delay:.12s}
+:root .ta-report-strip > div:nth-child(4){animation-delay:.18s}
+
+/* Tables and input controls: active focus & target selection are the feedback. */
+:root .units-table tbody tr,
+:root .trials-table tbody tr {transition:background-color var(--motion-fast)}
+:root .units-table tbody tr:nth-child(-n+10) {animation:pb-row-appear .32s var(--motion-ease) both}
+:root .units-table tbody tr:nth-child(2){animation-delay:.028s}
+:root .units-table tbody tr:nth-child(3){animation-delay:.055s}
+:root .units-table tbody tr:nth-child(4){animation-delay:.082s}
+:root .units-table tbody tr:nth-child(5){animation-delay:.11s}
+:root .units-table tbody tr:nth-child(6){animation-delay:.135s}
+:root .units-table tbody tr:nth-child(n+7){animation-delay:.15s}
+:root .cell-editor {transition:background-color var(--motion-fast),border-color var(--motion-fast),box-shadow var(--motion-fast),color var(--motion-fast)}
+:root .cell-editor:focus {box-shadow:0 0 0 3px var(--motion-outline)}
+:root .unit-symbol {transition:background-color var(--motion-fast),color var(--motion-fast),transform var(--motion-standard) var(--motion-ease)}
+:root .units-table tbody tr:hover .unit-symbol {transform:scale(1.04)}
+:root .target-radio.selected {animation:pb-target-pop .36s var(--motion-spring)}
+:root .target-radio.selected svg {animation:pb-check-in .25s var(--motion-ease) both}
+:root .table-search,
+:root .number-field,
+:root .select-wrap {transition:background-color var(--motion-fast),border-color var(--motion-fast),box-shadow var(--motion-fast)}
+:root .table-search:focus-within {box-shadow:0 0 0 3px var(--motion-outline)}
+:root .sort-button svg {transition:transform var(--motion-standard) var(--motion-spring)}
+:root .sort-button:hover svg {transform:translateY(-2px)}
+:root .row-action {transition:opacity var(--motion-fast),transform var(--motion-fast),background-color var(--motion-fast),color var(--motion-fast)}
+:root .units-table tbody tr:hover .row-action {opacity:1}
+:root .table-warning,
+:root .error-banner,
+:root .validation-banner,
+:root .stale-banner {animation:pb-alert-enter .32s var(--motion-ease) both}
+
+/* Settings drawer: in AND out animation; overlay blocks clicks only while open. */
+:root .ta-drawer-layer {position:fixed;inset:0;z-index:49;pointer-events:none}
+:root .ta-drawer-layer .ta-settings-overlay {
+  position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:auto;
+  opacity:0;transition:opacity .26s ease;
+}
+:root .ta-drawer-layer .settings-panel {
+  z-index:1;pointer-events:auto;
+  transform:translate3d(105%,0,0);opacity:.96;
+  transition:transform .34s var(--motion-ease),opacity .26s ease,
+    box-shadow .3s ease;
+  will-change:transform;
+}
+:root .ta-drawer-layer.is-open .ta-settings-overlay {opacity:1}
+:root .ta-drawer-layer.is-open .settings-panel {transform:translate3d(0,0,0);opacity:1}
+:root .ta-drawer-layer.is-closing {pointer-events:none}
+:root .ta-drawer-layer.is-closing .ta-settings-overlay,
+:root .ta-drawer-layer.is-closing .settings-panel {pointer-events:none}
+:root .settings-heading .settings-emblem svg {transition:transform .32s var(--motion-spring)}
+:root .settings-heading:hover .settings-emblem svg {transform:rotate(13deg)}
+:root .setting-section {animation:pb-section-slide .43s var(--motion-ease) both}
+:root .setting-section:nth-child(2){animation-delay:.06s}
+:root .setting-section:nth-child(3){animation-delay:.11s}
+:root .setting-section-head svg {transition:transform .29s var(--motion-spring)}
+:root .setting-section-head:hover svg {transform:rotate(-9deg) scale(1.09)}
+:root .select-wrap > svg {transition:transform var(--motion-fast) ease}
+:root .select-wrap:focus-within > svg {transform:rotate(180deg)}
+:root .mode-switch {position:relative;isolation:isolate}
+:root .mode-switch::before {
+  content:"";position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);
+  border-radius:6px;background:var(--ta-panel);
+  box-shadow:0 1px 5px rgba(16,24,40,.10);
+  transition:transform .35s var(--motion-spring),background-color var(--motion-fast);
+  z-index:-1;
+}
+:root .mode-switch[data-active="risk"]::before {transform:translateX(100%)}
+:root .mode-switch button.active {background:transparent;box-shadow:none}
+:root .mode-switch button {position:relative}
+:root .range-field input[type="range"] {appearance:none;-webkit-appearance:none;border:0;border-radius:99px;height:5px;cursor:pointer}
+:root .range-field input[type="range"]::-webkit-slider-thumb {
+  appearance:none;-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--ta-panel);border:3px solid var(--ta-primary);
+  box-shadow:0 0 0 3px var(--ta-primary-soft);
+  transition:box-shadow var(--motion-fast),transform var(--motion-fast) var(--motion-spring);
+}
+:root .range-field input[type="range"]::-moz-range-thumb {
+  width:10px;height:10px;border-radius:50%;background:var(--ta-panel);
+  border:3px solid var(--ta-primary);box-shadow:0 0 0 3px var(--ta-primary-soft);
+}
+:root .range-field input[type="range"]:hover::-webkit-slider-thumb,
+:root .range-field input[type="range"]:focus-visible::-webkit-slider-thumb {transform:scale(1.16);box-shadow:0 0 0 6px var(--ta-primary-soft)}
+:root .range-head strong {transition:color var(--motion-fast)}
+
+/* Reports: brief stagger on new calculation, check mark settles into place. */
+:root .result-ready {animation:pb-result-enter .50s var(--motion-ease) both}
+:root .result-ready .recommendation-price span {display:inline-block;animation:pb-number-rise .65s .09s var(--motion-ease) both}
+:root .result-ready .recommendation-foot svg {animation:pb-check-in .43s .26s var(--motion-spring) both}
+:root .results-content .result-metric {animation:pb-card-arrive .40s var(--motion-ease) both}
+:root .results-content .result-metric:nth-child(2){animation-delay:.055s}
+:root .results-content .result-metric:nth-child(3){animation-delay:.11s}
+:root .results-content .result-metric:nth-child(4){animation-delay:.165s}
+:root .chart-card .chart-tag {transition:color var(--motion-fast),background-color var(--motion-fast)}
+:root .chart-card:hover .chart-tag {color:var(--ta-primary);background:var(--ta-primary-soft)}
+:root .report-empty-art svg {animation:pb-empty-float 3.6s ease-in-out infinite}
+:root .recommendation-illustration svg {animation:pb-empty-float 3.8s ease-in-out infinite}
+:root .loading-symbol svg {animation:pb-empty-float 2.7s ease-in-out infinite}
+
+/* Animation keyframes */
+@keyframes pb-view-enter {from{opacity:0;transform:translate3d(0,12px,0)}to{opacity:1;transform:translateZ(0)}}
+@keyframes pb-card-arrive {from{opacity:0;transform:translate3d(0,15px,0)}to{opacity:1;transform:translateZ(0)}}
+@keyframes pb-sidebar-note-in {from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pb-search-enter {from{opacity:0;transform:translate3d(0,-7px,0) scale(.985)}to{opacity:1;transform:translateZ(0) scale(1)}}
+@keyframes pb-row-appear {from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pb-section-slide {from{opacity:0;transform:translate3d(10px,0,0)}to{opacity:1;transform:translateZ(0)}}
+@keyframes pb-alert-enter {from{opacity:0;transform:translate3d(0,-6px,0)}to{opacity:1;transform:translateZ(0)}}
+@keyframes pb-target-pop {0%{transform:scale(.82)}60%{transform:scale(1.17)}100%{transform:scale(1)}}
+@keyframes pb-check-in {from{opacity:0;transform:scale(.55)}to{opacity:1;transform:scale(1)}}
+@keyframes pb-theme-turn {from{opacity:.45;transform:rotate(-48deg) scale(.7)}to{opacity:1;transform:rotate(0) scale(1)}}
+@keyframes pb-result-enter {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pb-number-rise {from{opacity:0;transform:translateY(9px);filter:blur(2px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+@keyframes pb-button-light {from{transform:translateX(-140%)}to{transform:translateX(140%)}}
+@keyframes pb-progress-sheen {from{transform:translateX(-140%)}to{transform:translateX(140%)}}
+@keyframes pb-gauge-unveil {from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+@keyframes pb-empty-float {0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* Hover is not focus: keyboard remains clear and steady. */
+:root :is(button,input,select):focus-visible {outline:2px solid var(--ta-primary);outline-offset:3px}
+:root .table-scroll:focus-visible {outline:2px solid var(--ta-primary);outline-offset:-2px}
+
+/* Reduced motion is a requirement, not an afterthought. */
+@media(prefers-reduced-motion:reduce) {
+  :root *,:root *::before,:root *::after {
+    animation:none!important;transition:none!important;scroll-behavior:auto!important;
+  }
+  :root .ta-drawer-layer .settings-panel {transform:none!important;opacity:1!important;will-change:auto!important}
+  :root .ta-drawer-layer:not(.is-open) .settings-panel {display:none!important}
+  :root .ta-drawer-layer.is-open .ta-settings-overlay {opacity:1!important}
+  :root .mode-switch::before {transition:none!important}
+}
