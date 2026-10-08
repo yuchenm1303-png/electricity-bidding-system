@@ -49,7 +49,21 @@ def build_readonly_snapshot(
         observed = adapter.get_unit_bid(scope_id=scope_id, unit_id=unit_id)
         if not isinstance(observed, dict):
             raise ValueError(f"Unexpected bid response for unit {unit_id}")
-        bids[unit_id] = {"datas": observed.get("datas")}
+        period_data = []
+        for period in observed.get("datas") or []:
+            period_data.append({
+                "startPeriod": period["startPeriod"],
+                "endPeriod": period["endPeriod"],
+                "segmentDatas": [
+                    {
+                        k: segment[k]
+                        for k in ("startPower", "endPower", "price", "segmentOrder")
+                        if k in segment
+                    }
+                    for segment in period.get("segmentDatas") or []
+                ],
+            })
+        bids[unit_id] = {"datas": period_data}
         bids[unit_id].update({k: observed[k] for k in _COST_KEYS if k in observed})
 
     rules = {
