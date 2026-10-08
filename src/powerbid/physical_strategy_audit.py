@@ -6,8 +6,8 @@ feasibility. It NEVER writes to or calls the teacher platform.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, Sequence
 
 from powerbid.strategy_lab import StrategyResult
 from powerbid.unit_commitment import TerminalMode, ThermalConstraints, audit_dispatch
