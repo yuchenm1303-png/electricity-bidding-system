@@ -192,3 +192,63 @@ def test_preview_payload_does_not_do_network_io():
     assert payload["startCostHot"] == 13
     with pytest.raises(ValueError):
         validate_curve([BidSegment(0, 30, 20), BidSegment(40, 100, 25)])
+
+
+def test_readonly_snapshot_export_whitelists_only_safe_fields():
+    from powerbid.adapters.teacher_platform import TeacherPlatformContext
+    from powerbid.pmss_export import build_readonly_snapshot
+
+    original_tree = _tree()
+    units = original_tree[0]["children"]
+    context = TeacherPlatformContext(
+        project={"projectId": "private-project", "token": "NOT_FOR_EXPORT"},
+        cases=(),
+        market_system={
+            "spotList": [{
+                "marketAtomType": "DA",
+                "unitPowerDeclareSegmentConstraint": 5,
+                "priceLowerConstraint": 0,
+                "priceUpperConstraint": 1000,
+                "useSameBiddingCurve": 1,
+                "secretHeader": "NOT_FOR_EXPORT",
+            }],
+            "scopes": [{
+                "tmSceneDateKey": "date-1",
+                "datas": [{"selfSort": "DA", "scopeId": "private-scope"}],
+            }],
+        },
+        units=tuple(units),
+    )
+
+    class ReadOnlyFakeAdapter:
+        def __init__(self):
+            self.read_calls = []
+
+        def get_unit_bid(self, *, scope_id, unit_id):
+            self.read_calls.append((scope_id, unit_id))
+            return {
+                **_bid(60 if unit_id == "G30" else 80, 100 if unit_id == "G30" else 200),
+                "token": "NOT_FOR_EXPORT",
+                "minTechPowerCost": 4,
+                "startCostHot": 5,
+                "startCostWarm": 6,
+                "startCostCold": 7,
+            }
+
+    adapter = ReadOnlyFakeAdapter()
+    result = build_readonly_snapshot(
+        adapter,
+        context=context,
+        case={"tmSceneDateKey": "date-1", "caseId": "private-case"},
+        demand_forecast_mw=[180] * 24,
+        forecast_source="explicit test forecast",
+    )
+    assert len(adapter.read_calls) == 2
+    assert result["unitBids"]["G30"]["startCostHot"] == 5
+    import json
+    serialized = json.dumps(result)
+    assert "NOT_FOR_EXPORT" not in serialized
+    assert "private-scope" not in serialized
+    assert "private-case" not in serialized
+    assert "private-project" not in serialized
+    assert len(result["demandForecastMw"]) == 24
