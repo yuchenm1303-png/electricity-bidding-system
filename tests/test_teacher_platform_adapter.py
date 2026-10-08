@@ -112,3 +112,32 @@ def test_context_resolves_day_ahead_scope():
             case={"caseId": "case-2", "tmSceneDateKey": "missing"},
             market_type_atom="DA",
         )
+
+
+def test_result_selectors_are_read_only_and_da_ids_are_not_reused_for_rt():
+    adapter = object.__new__(TeacherPlatformAdapter)
+    calls = []
+
+    def fake_request(method, path, **kwargs):
+        calls.append((method, path, kwargs))
+        return {"periodNum": 24, "datas": []}
+
+    adapter._request = fake_request
+    adapter.get_unit_result_tree("case-1")
+    assert calls[-1] == (
+        "GET", "marketResult/unitBid/getSelectTree",
+        {"params": {"caseId": "case-1"}},
+    )
+
+    adapter.get_unit_results(case_id="case-1", da_ids=["unit-DA"])
+    assert calls[-1][2]["json_body"] == {
+        "caseId": "case-1",
+        "daIds": ["unit-DA"],
+        "rtIds": [],
+    }
+
+    adapter.get_nodal_prices(case_id="case-1", da_ids=["node-DA"])
+    assert calls[-1][2]["json_body"]["rtIds"] == []
+
+    adapter.get_branch_flows(case_id="case-1", da_ids=["line-DA"])
+    assert calls[-1][2]["json_body"]["rtIds"] == []
