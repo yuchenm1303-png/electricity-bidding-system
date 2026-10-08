@@ -1,0 +1,97 @@
+{
+  "syntheticExample": true,
+  "forecastSource": "PowerBid synthetic 2-bus network, NOT PMSS observation",
+  "unitTree": [
+    {
+      "key": "G1",
+      "title": "示例煤电机组 G1",
+      "leaf": true,
+      "pdAdjustMin": 15,
+      "pdAdjustMax": 100,
+      "mvarate": 110,
+      "runningCost": 50,
+      "unitType": "coal"
+    },
+    {
+      "key": "G2",
+      "title": "示例燃气机组 G2",
+      "leaf": true,
+      "pdAdjustMin": 0,
+      "pdAdjustMax": 150,
+      "mvarate": 170,
+      "runningCost": 80,
+      "unitType": "gas"
+    }
+  ],
+  "unitBids": {
+    "G1": {
+      "datas": [
+        {
+          "startPeriod": 1,
+          "endPeriod": 24,
+          "segmentDatas": [
+            {
+              "startPower": 0,
+              "endPower": 100,
+              "price": 60,
+              "segmentOrder": 1
+            }
+          ]
+        }
+      ]
+    },
+    "G2": {
+      "datas": [
+        {
+          "startPeriod": 1,
+          "endPeriod": 24,
+          "segmentDatas": [
+            {
+              "startPower": 0,
+              "endPower": 150,
+              "price": 90,
+              "segmentOrder": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "marketSystem": {
+    "spotList": [
+      {
+        "marketAtomType": "DA",
+        "unitPowerDeclareSegmentConstraint": 5,
+        "priceLowerConstraint": 0,
+        "priceUpperConstraint": 1000,
+        "useSameBiddingCurve": 1
+      }
+    ]
+  },
+  "demandForecastMw": [
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160,
+    160
+  ]
+}
