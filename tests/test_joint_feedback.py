@@ -1,6 +1,4 @@
 """Read-only PMSS historical feedback for joint DC+unit commitment research."""
-from dataclasses import replace
-
 import pytest
 from test_joint_market import _model
 
