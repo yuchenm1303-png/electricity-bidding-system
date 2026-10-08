@@ -14,7 +14,7 @@
 可替换的市场出清环境
     ├─ 内置教学引擎
     ├─ PyPSA
-    └─ 老师的报价出清仿真系统（待确认接口）
+    └─ 老师的报价出清仿真系统（接口已联调）
 ```
 
 > 当前版本是课程研讨 MVP，不是生产级交易系统。`data/sample_market.json` 明确标记为仿真数据。
@@ -32,6 +32,7 @@
 - [x] Streamlit 可视化演示界面
 - [x] 单场景与风险分析结果 CSV 导出
 - [x] PyPSA 可选出清 Adapter
+- [x] 老师 PMSS 平台 Adapter：工程 / 机组 / 报价 / 出清 / 结果读取
 - [x] 示例仿真场景
 - [x] 单元测试与 GitHub Actions CI
 - [x] 开源项目参考与架构说明
@@ -166,7 +167,7 @@ powerbid data/sample_market.json --engine pypsa --start 180 --stop 400 --step 10
 - `synthetic`：我们人为构造的教学或压力测试场景；
 - `unknown`：来源尚未确认。
 
-现在的示例属于 `synthetic`。等老师平台的 API 或导入导出格式确定后，再实现 `TeacherPlatformAdapter`。
+现在的示例属于 synthetic。老师平台内部 API 已完成首轮联调，TeacherPlatformAdapter 已加入代码库；接口记录见 docs/TEACHER_PLATFORM_API.md。
 
 ## 下一阶段
 
