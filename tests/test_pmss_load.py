@@ -56,3 +56,28 @@ def test_pmss_total_row_must_match_nodal_sum():
         parse_da_nodal_loads(
             payload([row, load_row("n1", 75), load_row("n2", 125)], row_count=2)
         )
+
+
+def test_da_load_adapter_calls_read_only_list_endpoint():
+    from powerbid.adapters.teacher_platform import TeacherPlatformAdapter
+
+    client = object.__new__(TeacherPlatformAdapter)
+    calls = []
+
+    def fake_request(method, path, **kwargs):
+        calls.append((method, path, kwargs["json_body"]))
+        return {"periodNum": 24, "data": {"datas": []}}
+
+    client._request = fake_request
+    client.get_da_nodal_loads(pm_scene_id="scene-A", pm_scene_date_key="date-A")
+    assert calls == [(
+        "POST",
+        "scene/loadFc/list",
+        {
+            "ids": [],
+            "pageNo": 1,
+            "pageSize": 999,
+            "sceneDateKey": "date-A",
+            "sceneId": "scene-A",
+        },
+    )]
