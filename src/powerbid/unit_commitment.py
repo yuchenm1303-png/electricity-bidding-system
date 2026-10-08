@@ -10,9 +10,10 @@ startup/shutdown transition ramps and startup/shutdown cost.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from math import isfinite
-from typing import Literal, Sequence
+from typing import Literal
 
 TerminalMode = Literal["complete", "carryover"]
 HOURS = 24
