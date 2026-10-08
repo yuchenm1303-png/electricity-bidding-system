@@ -86,7 +86,9 @@ with st.form("unit_commitment_form"):
     min_up = g.number_input("最短连续开机小时", min_value=1, step=1, value=None)
     min_down = h.number_input("最短连续停机小时", min_value=1, step=1, value=None)
     i, j = st.columns(2)
-    startup_cost = i.number_input("每次启动成本（与电价利润统一货币单位）", min_value=0.0, value=None)
+    startup_cost = i.number_input(
+        "每次启动成本（与电价利润统一货币单位）", min_value=0.0, value=None
+    )
     shutdown_cost = j.number_input("每次停机成本", min_value=0.0, value=None)
     k, m = st.columns(2)
     initial_online = k.checkbox("上一小时机组处于开机状态", value=False)
