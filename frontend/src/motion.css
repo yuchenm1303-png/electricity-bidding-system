@@ -139,6 +139,25 @@
 :root .view-stage .data-panel.expanded,
 :root .view-stage .trial-placeholder {animation:pb-view-enter .4s var(--motion-ease) both}
 
+/* Visualizations: show real values immediately, animate only user interaction.
+   Recharts' mount-from-zero animation can leave empty plots on throttled tabs. */
+:root .recharts-bar-rectangle path,
+:root .recharts-bar-rectangle rect {
+  transition:filter var(--motion-fast) ease,opacity var(--motion-fast) ease;
+}
+@media(hover:hover) {
+  :root .recharts-bar-rectangle:hover path,
+  :root .recharts-bar-rectangle:hover rect {
+    filter:brightness(1.085) drop-shadow(0 3px 3px rgba(70,95,255,.13));
+  }
+  :root .ta-capacity:hover .ta-gauge-arc {
+    filter:drop-shadow(0 2px 3px rgba(70,95,255,.13));
+    stroke-width:17;
+  }
+}
+:root .recharts-active-dot {animation:pb-target-pop .25s var(--motion-spring) both}
+:root .recharts-tooltip-wrapper {pointer-events:none}
+
 /* Cards: elevation reacts to pointer position gently; no zoom or reflow. */
 :root .ta-stat-card,
 :root .ta-chart-card,
@@ -168,8 +187,7 @@
 :root .ta-stat-card:hover .ta-stat-icon svg {transform:translateY(-2px) rotate(-5deg)}
 :root .ta-gauge-arc {
   stroke-dashoffset:0;
-  animation:pb-gauge-unveil .88s .12s var(--motion-ease) both;
-  transition:stroke-dasharray .52s var(--motion-ease);
+  transition:stroke-dasharray .52s var(--motion-ease),filter var(--motion-fast),stroke-width var(--motion-fast);
 }
 :root .ta-report-strip > div {animation:pb-card-arrive .43s var(--motion-ease) both}
 :root .ta-report-strip > div:nth-child(2){animation-delay:.06s}
