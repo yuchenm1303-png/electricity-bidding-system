@@ -20,6 +20,7 @@ from powerbid.strategy_lab import (
     generate_policy_plan,
     simulate_strategy,
     stress_grid,
+    tune_policy_grid,
 )
 
 
@@ -174,3 +175,34 @@ def test_lower_tail_produces_stable_cvar_for_entire_day():
     assert ev.downside_profit == pytest.approx(min(x.total_profit for x in ev.scenarios))
     assert ev.score == pytest.approx(ev.downside_profit)
     assert _lower_tail(ev.scenarios, 1.0) == pytest.approx(ev.expected_profit)
+
+
+def test_joint_parameter_search_finds_feasible_strategy_under_budget():
+    snap = _snapshot(same_curve=False, high_load=True)
+    result = tune_policy_grid(
+        snap,
+        "G1",
+        markups=(0.0, 20.0),
+        slopes=(0.0, 15.0),
+        scarcity_sensitivities=(0.0, 90.0),
+        scenarios=(DemandStress("normal"), DemandStress("high", demand_factor=1.05)),
+        max_evaluations=8,
+    )
+    assert 2 <= result.evaluated <= 9  # baseline plus at most 8 distinct policy plans
+    assert result.recommended.feasible_probability == pytest.approx(1.0)
+    assert all(
+        len(plan.segments) == 5
+        for plan in result.recommended.periods
+    )
+
+
+def test_joint_parameter_search_rejects_budget_overrun():
+    with pytest.raises(ValueError, match="exceeds max_evaluations"):
+        tune_policy_grid(
+            _snapshot(),
+            "G1",
+            markups=(0, 10, 20),
+            slopes=(0, 5),
+            scarcity_sensitivities=(0, 50),
+            max_evaluations=10,
+        )
