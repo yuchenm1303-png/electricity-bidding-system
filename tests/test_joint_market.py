@@ -173,3 +173,12 @@ def test_initial_state_and_closing_mode_handled_explicitly():
         joint_clear_day(snapshot, network, units, "G1", terminal_mode="unknown")
     with pytest.raises(ValueError, match="safe study limit"):
         joint_clear_day(snapshot, network, units, "G1", demand_multiplier=2.1)
+
+
+
+def test_non_boolean_uploaded_initial_status_rejected_before_optimization():
+    snapshot, network, units = _model()
+    malformed = dict(units)
+    malformed["G1"] = replace(units["G1"], initial_on="false")
+    with pytest.raises(ValueError, match="actual boolean"):
+        joint_clear_day(snapshot, network, malformed, "G1")
