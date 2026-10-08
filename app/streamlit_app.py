@@ -15,6 +15,7 @@ for module_path in (SRC, APP_DIR):
         sys.path.insert(0, str(module_path))
 
 from design_system import APP_CSS  # noqa: E402
+
 from powerbid.adapters.pypsa_engine import PyPSAClearingEngine  # noqa: E402
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine  # noqa: E402
 from powerbid.models import MarketScenario, Offer  # noqa: E402
@@ -95,8 +96,11 @@ with st.sidebar:
         <div class="pb-side-brand">
             <div class="pb-side-logo">
                 <svg viewBox="0 0 32 32" width="21" height="21" aria-hidden="true">
-                    <path d="M5.5 21.5L11 16l4 3.5L22.5 10l4 3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M21 7.5h6v6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" opacity=".72"/>
+                    <path d="M5.5 21.5L11 16l4 3.5L22.5 10l4 3"
+                          fill="none" stroke="currentColor" stroke-width="2.4"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 7.5h6v6" fill="none" stroke="currentColor" stroke-width="2.1"
+                          stroke-linecap="round" stroke-linejoin="round" opacity=".72"/>
                 </svg>
             </div>
             <div>
@@ -170,10 +174,18 @@ with st.sidebar:
                 <span class="pb-side-ready"><span class="pb-live-dot"></span>READY</span>
             </div>
             <div class="pb-side-summary-grid">
-                <div class="pb-side-summary-item"><span>目标机组</span><strong>{target_unit_id}</strong></div>
-                <div class="pb-side-summary-item"><span>市场负荷</span><strong>{demand_mw:,.0f} MW</strong></div>
-                <div class="pb-side-summary-item"><span>报价区间</span><strong>{bid_start:g} – {bid_stop:g}</strong></div>
-                <div class="pb-side-summary-item"><span>报价步长</span><strong>{bid_step:g}</strong></div>
+                <div class="pb-side-summary-item">
+                    <span>目标机组</span><strong>{target_unit_id}</strong>
+                </div>
+                <div class="pb-side-summary-item">
+                    <span>市场负荷</span><strong>{demand_mw:,.0f} MW</strong>
+                </div>
+                <div class="pb-side-summary-item">
+                    <span>报价区间</span><strong>{bid_start:g} – {bid_stop:g}</strong>
+                </div>
+                <div class="pb-side-summary-item">
+                    <span>报价步长</span><strong>{bid_step:g}</strong>
+                </div>
             </div>
         </div>
         <div class="pb-side-footnote">{engine_name} · {source_label}</div>
@@ -193,7 +205,9 @@ st.markdown(
     <section class="pb-hero" aria-label="电力报价决策概览">
         <div class="pb-hero-grid">
             <div>
-                <div class="pb-eyebrow"><span class="pb-eyebrow-dot"></span>Decision intelligence / Power market</div>
+                <div class="pb-eyebrow">
+                    <span class="pb-eyebrow-dot"></span>Decision intelligence / Power market
+                </div>
                 <h1>把复杂市场，<br><em>变成清晰决策。</em></h1>
                 <p class="pb-hero-copy">
                     从机组成本、申报容量到市场出清与风险评估，所有报价选择都有迹可循。
@@ -206,7 +220,9 @@ st.markdown(
                 </div>
             </div>
             <aside class="pb-hero-panel">
-                <div class="pb-hero-panel-head"><span>Active scenario</span><span>SIMULATION</span></div>
+                <div class="pb-hero-panel-head">
+                    <span>Active scenario</span><span>SIMULATION</span>
+                </div>
                 <div class="pb-hero-visual">
                     <div class="pb-orbit" aria-hidden="true">
                         <span class="pb-orbit-dot"></span>
@@ -332,7 +348,8 @@ with st.container(border=True, key="run_card"):
             <div class="pb-action-copy">
                 <div class="pb-action-title"><span class="pb-live-dot"></span>决策引擎已就绪</div>
                 <div class="pb-action-desc">
-                    {decision_mode} · {engine_name} · 候选 {bid_start:g}–{bid_stop:g} / 步长 {bid_step:g}
+                    {decision_mode} · {engine_name} ·
+                    候选 {bid_start:g}–{bid_stop:g} / 步长 {bid_step:g}
                 </div>
             </div>
             """,
@@ -576,7 +593,8 @@ if saved_report is not None:
         st.markdown(
             f"""
             <div class="pb-result-banner">
-                <span><strong>风险摘要</strong> · 风险得分 {best.score:,.2f} · 可行概率 {best.feasible_probability:.0%}</span>
+                <span><strong>风险摘要</strong> · 风险得分 {best.score:,.2f} ·
+                    可行概率 {best.feasible_probability:.0%}</span>
                 <span>预计中标 {best.expected_accepted_mw:.2f} MW</span>
             </div>
             """,
@@ -681,7 +699,9 @@ else:
             <div class="pb-empty-symbol" aria-hidden="true">↗</div>
             <div class="pb-empty-title">准备好探索更优报价了吗？</div>
             <div class="pb-empty-desc">配置市场参数、调整机组申报数据，然后运行决策模型。<br>推荐报价、收益曲线和情景分析将在这里呈现。</div>
-            <div class="pb-empty-step">01 设置参数 &nbsp;&nbsp; / &nbsp;&nbsp; 02 运行优化 &nbsp;&nbsp; / &nbsp;&nbsp; 03 解读结果</div>
+            <div class="pb-empty-step">
+                01 设置参数 &nbsp;&nbsp; / &nbsp;&nbsp; 02 运行优化 &nbsp;&nbsp; / &nbsp;&nbsp; 03 解读结果
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -690,7 +710,7 @@ else:
 st.markdown(
     """
     <div style="height:1.8rem"></div>
-    <div style="text-align:center;font-size:.68rem;opacity:.48;padding:.75rem 0 1.3rem;letter-spacing:.04em">
+    <div class="pb-footer">
         POWERBID LAB <span style="margin:0 .7rem">·</span> DECISIONS BACKED BY SIMULATION
         <span style="margin:0 .7rem">·</span> FOR TEACHING &amp; RESEARCH
     </div>
