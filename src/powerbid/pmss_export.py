@@ -90,3 +90,32 @@ def build_readonly_snapshot(
         "demandForecastMw": list(demand_forecast_mw),
         "forecastSource": forecast_source,
     }
+
+
+def build_da_scene_snapshot(
+    adapter: TeacherPlatformAdapter,
+    *,
+    context: TeacherPlatformContext,
+    case: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Build a local 24h DA snapshot from actual PMSS scenario load inputs."""
+    from powerbid.pmss_load import parse_da_nodal_loads
+
+    scene_id = str(case["pmSceneId"])
+    date_key = str(case["pmSceneDateKey"])
+    load = parse_da_nodal_loads(
+        adapter.get_da_nodal_loads(
+            pm_scene_id=scene_id,
+            pm_scene_date_key=date_key,
+        )
+    )
+    return build_readonly_snapshot(
+        adapter,
+        context=context,
+        case=case,
+        demand_forecast_mw=list(load.total_load_mw),
+        forecast_source=(
+            f"{load.source}; case date {case.get('caseDate', 'unlabeled')}; "
+            "historical scenario input, not future prediction"
+        ),
+    )
