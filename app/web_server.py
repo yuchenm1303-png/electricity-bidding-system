@@ -15,7 +15,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.pmss_api import router as pmss_router
-
 from powerbid.adapters.pypsa_engine import PyPSAClearingEngine
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine
 from powerbid.models import MarketScenario, Offer
