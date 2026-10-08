@@ -7,8 +7,8 @@ in these endpoints. Uploaded JSON is used in memory for the current request.
 from __future__ import annotations
 
 import json
-from threading import BoundedSemaphore
 from dataclasses import asdict
+from threading import BoundedSemaphore
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -18,11 +18,10 @@ from starlette.concurrency import run_in_threadpool
 from powerbid.network_dispatch import network_from_dict
 from powerbid.network_feedback import compare_dc_baseline_to_pmss
 from powerbid.network_strategy import evaluate_network_plan, verify_network_inputs
-from powerbid.strategy_lab import DemandStress
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
-from powerbid.pmss_integration import BidSegment, PeriodBid
-from powerbid.pmss_integration import snapshot_from_pmss
+from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_strategy import optimize_segmented_bid
+from powerbid.strategy_lab import DemandStress
 
 router = APIRouter(prefix="/api/pmss")
 _NETWORK_LIMITER = BoundedSemaphore(value=1)
@@ -321,7 +320,10 @@ async def evaluate_network_snapshot(request: Request) -> dict[str, Any]:
         raise HTTPException(422, detail=str(exc)) from exc
     return {
         "baseline": _summary_dc_study(baseline, network, params.target_unit_id),
-        "recommended": _summary_dc_study(proposed, network, params.target_unit_id) if proposed else None,
+        "recommended": (
+            _summary_dc_study(proposed, network, params.target_unit_id)
+            if proposed else None
+        ),
         "recommended_error": error,
         "historical_calibration": historical,
         "topology_source": network.topology_source,
