@@ -171,7 +171,7 @@ def test_baseline_only_historical_comparison_has_zero_error_for_matching_fixture
         policies=(BidPolicy("cost"),), scenarios=(DemandStress("normal"),)
     ).baseline
     data = _pmss_from_model(baseline)
-    comparison = compare_dc_baseline_to_pmss(network, baseline, "G1", data)
+    comparison = compare_dc_baseline_to_pmss(snapshot, network, baseline, "G1", data)
     assert comparison.target_dispatch_mae_mw == pytest.approx(0)
     assert comparison.target_price_mae == pytest.approx(0)
     assert comparison.nodal_price_mae == pytest.approx(0)
@@ -189,7 +189,7 @@ def test_baseline_comparison_rejects_wrong_identity_or_new_strategy():
     )
     with pytest.raises(ValueError, match="original-bid"):
         compare_dc_baseline_to_pmss(
-            network, result.ranked[-1]
+            snapshot, network, result.ranked[-1]
             if not result.ranked[-1].name.startswith("PMSS")
             else result.ranked[0],
             "G1", _pmss_from_model(result.baseline)
@@ -197,7 +197,7 @@ def test_baseline_comparison_rejects_wrong_identity_or_new_strategy():
     data = _pmss_from_model(result.baseline)
     data["nodalPrices"][0]["element_id"] = "unknown"
     with pytest.raises(ValueError, match="node IDs"):
-        compare_dc_baseline_to_pmss(network, result.baseline, "G1", data)
+        compare_dc_baseline_to_pmss(snapshot, network, result.baseline, "G1", data)
 
 
 def test_missing_history_points_not_zero_filled():
