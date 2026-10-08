@@ -85,7 +85,7 @@ function WorkspaceHeader({ view, onRun, running, onReset, onToggleSettings, sett
         {settingsHidden ? <PanelRightOpen size={16}/> : <PanelRightClose size={16}/>}
         <span>参数</span>
       </button>
-      <button type="button" className="primary-button run-button" disabled={running || disabled} onClick={onRun}>
+      <button type="button" className={"primary-button run-button" + (running ? " is-running" : "")} disabled={running || disabled} onClick={onRun}>
         {running ? <span className="button-spinner"/> : <Play size={16} fill="currentColor"/>}
         <span>{running ? "正在优化..." : "运行报价分析"}</span><ArrowRight size={15}/>
       </button>
@@ -119,6 +119,8 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [sidebarCompact, setSidebarCompact] = useState(false);
   const [settingsHidden, setSettingsHidden] = useState(true);
+  const [drawerMounted, setDrawerMounted] = useState(false);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     window.localStorage.getItem("powerbid-theme") === "dark" ? "dark" : "light"
   );
@@ -127,6 +129,23 @@ export default function App() {
     window.localStorage.setItem("powerbid-theme", theme);
   }, [theme]);
   const [mobileNav, setMobileNav] = useState(false);
+  useEffect(() => {
+    if (!settingsHidden) {
+      const frame = window.requestAnimationFrame(() => setDrawerVisible(true));
+      return () => window.cancelAnimationFrame(frame);
+    }
+    setDrawerVisible(false);
+    if (drawerMounted) {
+      const timeout = window.setTimeout(() => setDrawerMounted(false), 350);
+      return () => window.clearTimeout(timeout);
+    }
+  }, [settingsHidden, drawerMounted]);
+  const openSettings = () => {
+    setDrawerMounted(true);
+    setSettingsHidden(false);
+  };
+  const closeSettings = () => setSettingsHidden(true);
+  const toggleSettings = () => settingsHidden ? openSettings() : closeSettings();
   useEffect(() => {
     let mounted = true;
     loadScenario().then(data => {
@@ -146,6 +165,7 @@ export default function App() {
   const changeView = (next: WorkspaceView) => {
     setView(next);
     setMobileNav(false);
+    document.querySelector(".app-main")?.scrollTo({ top: 0, behavior: "auto" });
     if (next === "risk" && config && config.mode !== "risk") setMode("risk");
   };
   const reset = () => {
@@ -185,7 +205,7 @@ export default function App() {
   }, [run]);
   return <div className="app">
     <div className="mobile-topbar"><button type="button" className="icon-button" onClick={() => setMobileNav(true)} aria-label="打开菜单"><Menu size={20}/></button>
-      <strong><Activity size={17}/> PowerBid Studio</strong><button type="button" className="icon-button" title="切换参数面板" onClick={() => setSettingsHidden(v => !v)}><SlidersHorizontal size={19}/></button></div>
+      <strong><Activity size={17}/> PowerBid Studio</strong><button type="button" className="icon-button" title="切换参数面板" onClick={() => toggleSettings}><SlidersHorizontal size={19}/></button></div>
     {mobileNav && <button type="button" className="mobile-backdrop" aria-label="关闭菜单" onClick={() => setMobileNav(false)}/>}
     <div className={mobileNav ? "mobile-sidebar-visible" : ""}>
       <Sidebar active={view} change={changeView} report={report} compact={sidebarCompact}
@@ -204,11 +224,11 @@ export default function App() {
             onClick={() => setTheme(v => v === "light" ? "dark" : "light")}
             aria-label={theme === "light" ? "切换为深色模式" : "切换为浅色模式"}
             title={theme === "light" ? "切换为深色模式" : "切换为浅色模式"}>
-            {theme === "light" ? <Moon size={19}/> : <Sun size={19}/>}
+            <span key={theme} className="theme-glyph">{theme === "light" ? <Moon size={19}/> : <Sun size={19}/>}</span>
           </button>
           <span className="environment-pill"><span className="online-dot"/> 教学模拟环境</span>
           <button className="ta-header-icon" type="button" title="打开策略参数" aria-label="打开策略参数"
-            onClick={() => setSettingsHidden(false)}><SlidersHorizontal size={19}/></button>
+            onClick={openSettings}><SlidersHorizontal size={19}/></button>
           <span className="avatar-mark">PB</span>
         </div>
       </header>
@@ -216,8 +236,9 @@ export default function App() {
       {!config ? <div className="loading-workspace"><div className="loading-symbol"><Activity size={27}/></div><h2>{error ? "无法加载市场场景" : "正在载入报价工作台"}</h2><p>PowerBid 正在连接本地仿真计算服务...</p><button className="outline-button" onClick={() => window.location.reload()}>重新加载</button></div> :
       <div className="content-shell">
         <WorkspaceHeader view={view} onRun={() => void run()} running={running} onReset={reset}
-          onToggleSettings={() => setSettingsHidden(v => !v)} settingsHidden={settingsHidden} disabled={!!validationError}/>
+          onToggleSettings={toggleSettings} settingsHidden={settingsHidden} disabled={!!validationError}/>
         {validationError && <div className="validation-banner"><CircleHelp size={15}/>{validationError}</div>}
+        <div className="view-stage" key={view}>
         {view === "workspace" && <>
           <DashboardOverview offers={config.offers} demand={config.demand_mw}
             targetId={config.target_unit_id} report={report}
@@ -251,14 +272,15 @@ export default function App() {
           <ResultsContent report={report?.mode === "risk" ? report : null} stale={stale} running={running} onRun={() => void run()}/>
         </>}
         {view === "trials" && <TrialDetails report={report}/>}
+        </div>
         <footer className="app-footer"><span>POWERBID STUDIO · 市场策略研究</span><span>Simulation only · Not for live trading</span></footer>
       </div>}
     </div>
-    {config && !settingsHidden && <>
-      <button className="ta-settings-overlay" type="button" aria-label="关闭策略参数" onClick={() => setSettingsHidden(true)}/>
-      <SettingsPanel config={config} onChange={update} onClose={() => setSettingsHidden(true)}
+    {config && drawerMounted && <div className={"ta-drawer-layer " + (drawerVisible ? "is-open" : "is-closing")}>
+      <button className="ta-settings-overlay" type="button" aria-label="关闭策略参数" onClick={closeSettings}/>
+      <SettingsPanel config={config} onChange={update} onClose={closeSettings}
         collapsed={false} onModeChange={setMode}/>
-    </>}
+    </div>}
   </div>;
 }
 
