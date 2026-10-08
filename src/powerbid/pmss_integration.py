@@ -6,9 +6,10 @@ observations and must not silently stand in for a forecast.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from math import isfinite
-from typing import Any, Mapping
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,7 +49,7 @@ class MarketLimits:
     same_curve: bool
 
     @classmethod
-    def from_pmss(cls, market_system: Mapping[str, Any], market_type: str = "DA") -> "MarketLimits":
+    def from_pmss(cls, market_system: Mapping[str, Any], market_type: str = "DA") -> MarketLimits:
         rule = next(
             (r for r in market_system.get("spotList", [])
              if r.get("marketAtomType") == market_type),
@@ -217,7 +218,9 @@ class UnitClearingRow:
     income: tuple[float | None, ...]
 
 
-def read_24_values(series: Mapping[str, Any], field_name: str, periods: int = 24) -> tuple[float | None, ...]:
+def read_24_values(
+    series: Mapping[str, Any], field_name: str, periods: int = 24
+) -> tuple[float | None, ...]:
     """Decode hourly series without using misleading 'sum'/'average' summaries."""
     values = series.get("datas")
     if not isinstance(values, list) or len(values) != periods:
@@ -261,7 +264,8 @@ def selected_leaf_ids(tree: list[dict[str, Any]], market_type: str) -> list[str]
     PMSS returns two market groups; do not assume RT IDs equal DA IDs.
     """
     def marker(node: Mapping[str, Any]) -> str:
-        return " ".join(str(node.get(k, "")) for k in ("key", "value", "title", "marketTypeAtom")).lower()
+        keys = ("key", "value", "title", "marketTypeAtom")
+        return " ".join(str(node.get(k, "")) for k in keys).lower()
     if market_type not in {"DA", "RT"}:
         raise ValueError("market_type must be DA or RT")
     tags = ("da", "日前") if market_type == "DA" else ("rt", "实时")
