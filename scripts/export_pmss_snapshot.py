@@ -31,7 +31,9 @@ def main() -> int:
     base_url = os.getenv("PMSS_BASE_URL")
     cookie_path = os.getenv("PMSS_COOKIE_FILE")
     if not base_url or not cookie_path:
-        parser.error("PMSS_BASE_URL and PMSS_COOKIE_FILE must be set in the private host environment")
+        parser.error(
+            "PMSS_BASE_URL and PMSS_COOKIE_FILE must be set in the private host environment"
+        )
 
     cookie_file = Path(cookie_path).resolve()
     if not cookie_file.is_file():
