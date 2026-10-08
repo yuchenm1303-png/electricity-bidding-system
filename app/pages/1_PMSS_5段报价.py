@@ -29,8 +29,8 @@ st.info(
 
 st.markdown(
     "上传不含账号、Cookie、Token 的 JSON 快照，包含 "
-    "\`unitTree\`、\`unitBids\`、\`marketSystem\`、"
-    "\`demandForecastMw\`（24 个数）和 \`forecastSource\`。"
+    "`unitTree`、`unitBids`、`marketSystem`、"
+    "`demandForecastMw`（24 个数）和 `forecastSource`。"
 )
 upload = st.file_uploader("选择 PMSS 只读数据快照", type=["json"])
 if upload is None:
