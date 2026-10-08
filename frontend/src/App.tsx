@@ -2,19 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowRight, BarChart3, Boxes, ChevronRight, CircleHelp,
   ExternalLink, FileBarChart, LayoutDashboard, Menu, Moon, PanelRightClose, PanelRightOpen,
-  Play, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Sun, TrendingUp, X, Zap
+  Network, Play, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Sun, TrendingUp, X, Zap
 } from "lucide-react";
 import { loadScenario, runOptimization, fromScenario } from "./api";
 import { SettingsPanel } from "./SettingsPanel";
 import { UnitsTable } from "./UnitsTable";
 import { DashboardOverview } from "./DashboardOverview";
 import { CommandSearch } from "./CommandSearch";
+import { PMSSWorkspace } from "./PMSSWorkspace";
 import { Recommendation, ResultsContent, TrialDetails } from "./Results";
 import { type Mode, type Report, type Scenario, type Settings, type WorkspaceView } from "./types";
 
 const navigation: { id: WorkspaceView; label: string; hint: string; icon: typeof LayoutDashboard }[] = [
   { id: "workspace", label: "决策工作台", hint: "概览与操作", icon: LayoutDashboard },
   { id: "units", label: "机组申报数据", hint: "数据编辑", icon: Boxes },
+  { id: "pmss", label: "PMSS 市场分析", hint: "只读历史与分段报价", icon: Network },
   { id: "analysis", label: "策略分析", hint: "收益与出清", icon: TrendingUp },
   { id: "risk", label: "压力情景", hint: "风险评估", icon: Activity },
   { id: "trials", label: "试算明细", hint: "记录与导出", icon: FileBarChart },
@@ -76,6 +78,7 @@ function WorkspaceHeader({ view, onRun, running, onReset, onToggleSettings, sett
   const label: Record<WorkspaceView, [string,string]> = {
     workspace: ["报价策略工作台", "统一管理市场参数、机组申报与报价策略分析"],
     units: ["机组数据管理", "维护模拟市场中的发电机组和申报参数"],
+    pmss: ["PMSS 真实市场分析", "导入脱敏快照，查看节点电价与本地五段报价策略"],
     analysis: ["策略分析报告", "用真实计算结果理解报价与收益之间的关系"],
     risk: ["压力情景分析", "检验不同负荷与竞争报价下的策略稳健性"],
     trials: ["试算明细", "完整记录每个候选报价的市场出清结果"],
@@ -84,6 +87,7 @@ function WorkspaceHeader({ view, onRun, running, onReset, onToggleSettings, sett
     <div className="workspace-heading"><div className="crumbs"><span>工作空间</span><ChevronRight size={13}/><span>{label[view][0]}</span></div>
       <h1>{label[view][0]}</h1><p>{label[view][1]}</p></div>
     <div className="header-actions">
+      {view !== "pmss" && <>
       <button type="button" className="outline-button reset-button" title="恢复示例数据" onClick={onReset}><RotateCcw size={16}/> <span>恢复示例</span></button>
       <button type="button" className="outline-button settings-toggle" title="展开或收起策略参数" onClick={onToggleSettings}>
         {settingsHidden ? <PanelRightOpen size={16}/> : <PanelRightClose size={16}/>}
@@ -93,6 +97,7 @@ function WorkspaceHeader({ view, onRun, running, onReset, onToggleSettings, sett
         {running ? <span className="button-spinner"/> : <Play size={16} fill="currentColor"/>}
         <span>{running ? "正在优化..." : "运行报价分析"}</span><ArrowRight size={15}/>
       </button>
+      </>}
     </div>
   </div>;
 }
@@ -213,7 +218,7 @@ export default function App() {
     {mobileNav && <button type="button" className="mobile-backdrop" aria-label="关闭菜单" onClick={() => setMobileNav(false)}/>}
     <div className={mobileNav ? "mobile-sidebar-visible" : ""}>
       <Sidebar active={view} change={changeView} report={report} compact={sidebarCompact}
-        toggle={() => setSidebarCompact(v => !v)} source={sourceMap[scenario?.data_source ?? "unknown"] ?? "来源未标记"}/>
+        toggle={() => setSidebarCompact(v => !v)} source={view === "pmss" ? "PMSS / 脱敏快照" : sourceMap[scenario?.data_source ?? "unknown"] ?? "来源未标记"}/>
       {mobileNav && <button type="button" className="mobile-close" onClick={() => setMobileNav(false)} aria-label="关闭菜单"><X size={21}/></button>}
     </div>
     <div className="app-main">
@@ -241,7 +246,7 @@ export default function App() {
       <div className="content-shell">
         <WorkspaceHeader view={view} onRun={() => void run()} running={running} onReset={reset}
           onToggleSettings={toggleSettings} settingsHidden={settingsHidden} disabled={!!validationError}/>
-        {validationError && <div className="validation-banner"><CircleHelp size={15}/>{validationError}</div>}
+        {view !== "pmss" && validationError && <div className="validation-banner"><CircleHelp size={15}/>{validationError}</div>}
         <div className="view-stage" key={view}>
         {view === "workspace" && <>
           <DashboardOverview offers={config.offers} demand={config.demand_mw}
@@ -276,6 +281,7 @@ export default function App() {
           <ResultsContent report={report?.mode === "risk" ? report : null} stale={stale} running={running} onRun={() => void run()}/>
         </>}
         {view === "trials" && <TrialDetails report={report}/>}
+        {view === "pmss" && <PMSSWorkspace/>}
         </div>
         <footer className="app-footer"><span>POWERBID STUDIO · 市场策略研究</span><span>Simulation only · Not for live trading</span></footer>
       </div>}
