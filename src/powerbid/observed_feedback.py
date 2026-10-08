@@ -5,7 +5,7 @@ or economic profit. PMSS 'income' is preserved in its reported units.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
 from math import isfinite
 from typing import Any
