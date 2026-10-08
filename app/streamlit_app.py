@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from html import escape
 from pathlib import Path
 
 import altair as alt
@@ -24,7 +25,7 @@ from powerbid.risk import RiskAwareBidOptimizer, build_stress_cases  # noqa: E40
 from powerbid.scenario_io import load_scenario  # noqa: E402
 
 st.set_page_config(
-    page_title="PowerBid Lab",
+    page_title="PowerBid · 电力报价工作台",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -51,7 +52,7 @@ def section_header(kicker: str, title: str, description: str) -> None:
 
 def chart_style(chart: alt.Chart) -> alt.Chart:
     return (
-        chart.properties(height=305)
+        chart.properties(height=278)
         .configure(background="transparent")
         .configure_view(strokeWidth=0)
         .configure_axis(
@@ -59,12 +60,12 @@ def chart_style(chart: alt.Chart) -> alt.Chart:
             titleFont="Inter",
             labelFontSize=10,
             titleFontSize=10,
-            labelColor="#9caac0",
-            titleColor="#9caac0",
+            labelColor="#9eafb7",
+            titleColor="#9eafb7",
             labelPadding=8,
             titlePadding=12,
-            gridColor="#64748b",
-            gridOpacity=0.11,
+            gridColor="#8aa5ac",
+            gridOpacity=0.10,
             domain=False,
             ticks=False,
         )
@@ -73,11 +74,36 @@ def chart_style(chart: alt.Chart) -> alt.Chart:
             titleFont="Inter",
             labelFontSize=10,
             titleFontSize=10,
-            labelColor="#9caac0",
-            titleColor="#9caac0",
+            labelColor="#9eafb7",
+            titleColor="#9eafb7",
             orient="top",
             padding=4,
         )
+    )
+
+
+def metric_tile(label: str, value: str, note: str, icon: str) -> str:
+    """Build an accessible overview card using only actual scenario values."""
+    glyphs = {
+        "load": '<path d="M3 13h4l3-8 4 14 3-7h4"/>',
+        "unit": '<rect x="4" y="8" width="16" height="12" rx="2"/>'
+                '<path d="M8 8V4h8v4M8 13h2m4 0h2M8 17h2m4 0h2"/>',
+        "range": '<path d="M4 17l5-5 4 3 7-8"/>'
+                 '<path d="M15 7h5v5"/>',
+        "time": '<circle cx="12" cy="12" r="9"/>'
+                '<path d="M12 7v5l4 2"/>',
+    }
+    path = glyphs[icon]
+    return (
+        '<div class="pb-kpi" role="group" aria-label="'
+        + escape(label, quote=True) + '">'
+        '<div class="pb-kpi-top"><span class="pb-kpi-label">'
+        + escape(label) + '</span><span class="pb-kpi-icon">'
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+        ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + path + '</svg></span></div>'
+        '<div class="pb-kpi-value">' + escape(value) + '</div>'
+        '<div class="pb-kpi-caption">' + escape(note) + '</div></div>'
     )
 
 
@@ -199,46 +225,50 @@ st.markdown(
     f"""
     <div class="pb-topbar">
         <div class="pb-breadcrumb">
-            <span>POWERBID LAB</span><span class="pb-crumb-separator">/</span>
-            <strong>报价决策工作台</strong>
+            <span>POWERBID</span><span class="pb-crumb-separator">/</span>
+            <span>策略研究</span><span class="pb-crumb-separator">/</span>
+            <strong>报价工作台</strong>
         </div>
-        <div class="pb-top-status"><span class="pb-live-dot"></span>教学模拟环境 · 就绪</div>
+        <div class="pb-top-status">
+            <span class="pb-live-dot"></span>教学模拟 · 非实时市场
+        </div>
     </div>
-    <section class="pb-hero" aria-label="电力报价决策概览">
+    <section class="pb-hero" aria-label="电力报价分析工作台">
         <div class="pb-hero-grid">
             <div>
                 <div class="pb-eyebrow">
-                    <span class="pb-eyebrow-dot"></span>Decision intelligence / Power market
+                    <span class="pb-eyebrow-dot"></span>POWER MARKET / DECISION INTELLIGENCE
                 </div>
-                <h1>把复杂市场，<br><em>变成清晰决策。</em></h1>
+                <h1>让每一次报价，<br><em>都有数据依据。</em></h1>
                 <p class="pb-hero-copy">
-                    从机组成本、申报容量到市场出清与风险评估，所有报价选择都有迹可循。
-                    用清晰的模拟结果比较方案，不靠猜测做决定。
+                    在一个工作台完成机组建模、候选报价比较和收益风险分析。
+                    关注真正重要的出清结果，而不是复杂的操作流程。
                 </p>
                 <div class="pb-chip-row">
                     <span class="pb-chip"><span class="pb-chip-dot"></span>{engine_name}</span>
                     <span class="pb-chip">{decision_mode}</span>
-                    <span class="pb-chip">数据来源 / {source_label}</span>
+                    <span class="pb-chip">数据源 · {source_label}</span>
                 </div>
             </div>
             <aside class="pb-hero-panel">
                 <div class="pb-hero-panel-head">
-                    <span>Active scenario</span><span>SIMULATION</span>
+                    <span>SCENARIO / 01</span><span>当前研究场景</span>
                 </div>
-                <div class="pb-hero-visual">
-                    <div class="pb-orbit" aria-hidden="true">
-                        <span class="pb-orbit-dot"></span>
-                        <span class="pb-orbit-core">↗</span>
+                <div>
+                    <div class="pb-scenario-id">
+                        <strong>{escape(target_unit_id)}</strong><span>目标发电机组</span>
                     </div>
-                    <div>
-                        <div class="pb-hero-panel-value">{target_unit_id}</div>
-                        <div class="pb-hero-panel-sub">目标机组<br>负荷 {demand_mw:,.0f} MW</div>
+                    <div class="pb-scenario-copy">
+                        市场总负荷 {demand_mw:,.0f} MW<br>
+                        基于当前配置开展策略仿真
                     </div>
                 </div>
-                <div class="pb-panel-divider"></div>
-                <div class="pb-panel-foot">
-                    <span>报价 {bid_start:g}–{bid_stop:g} / {interval_hours:g} h</span>
-                    <strong>步长 {bid_step:g}</strong>
+                <div>
+                    <div class="pb-scenario-divider"></div>
+                    <div class="pb-scenario-bottom">
+                        <span>报价范围 {bid_start:g}—{bid_stop:g}</span>
+                        <b>步长 {bid_step:g}</b>
+                    </div>
                 </div>
             </aside>
         </div>
@@ -247,15 +277,23 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-summary_cols = st.columns(4)
-summary_cols[0].metric("市场负荷", f"{demand_mw:,.0f} MW", help="当前场景总负荷")
-summary_cols[1].metric("目标机组", target_unit_id, help="本轮需要优化报价的机组")
-summary_cols[2].metric(
-    "候选区间",
-    f"{bid_start:g} – {bid_stop:g}",
-    help=f"按 {bid_step:g} 的步长搜索候选报价",
+summary_cols = st.columns(4, gap="small")
+summary_cols[0].markdown(
+    metric_tile("市场总负荷", f"{demand_mw:,.0f} MW", "当前模拟场景", "load"),
+    unsafe_allow_html=True,
 )
-summary_cols[3].metric("结算时段", f"{interval_hours:g} h", help="用于收益与成本结算")
+summary_cols[1].markdown(
+    metric_tile("目标机组", target_unit_id, f"共 {len(base.offers)} 台机组参与", "unit"),
+    unsafe_allow_html=True,
+)
+summary_cols[2].markdown(
+    metric_tile("报价搜索区间", f"{bid_start:g} – {bid_stop:g}", f"搜索步长 {bid_step:g}", "range"),
+    unsafe_allow_html=True,
+)
+summary_cols[3].markdown(
+    metric_tile("结算时段", f"{interval_hours:g} h", "单时段收益测算", "time"),
+    unsafe_allow_html=True,
+)
 
 section_header(
     "01 / MARKET INPUTS",
