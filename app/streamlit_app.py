@@ -50,6 +50,18 @@ def section_header(kicker: str, title: str, description: str) -> None:
     )
 
 
+
+def chart_heading(title: str, subtitle: str) -> None:
+    st.markdown(
+        '<div class="pb-chart-heading"><div class="pb-chart-title">'
+        + escape(title)
+        + '</div><div class="pb-chart-subtitle">'
+        + escape(subtitle)
+        + '</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def chart_style(chart: alt.Chart) -> alt.Chart:
     return (
         chart.properties(height=278)
@@ -283,7 +295,7 @@ summary_cols[0].markdown(
     unsafe_allow_html=True,
 )
 summary_cols[1].markdown(
-    metric_tile("目标机组", target_unit_id, f"共 {len(base.offers)} 台机组参与", "unit"),
+    metric_tile("目标机组", target_unit_id, f"示例机组 {len(base.offers)} 台", "unit"),
     unsafe_allow_html=True,
 )
 summary_cols[2].markdown(
@@ -477,7 +489,7 @@ if saved_report is not None:
     result = saved_report["result"]
     report_mode = saved_report["mode"]
     if saved_report["signature"] != current_signature:
-        st.info("下方展示的是上一次成功运行的结果。当前参数已变更，请点击「开始优化报价」更新。")
+        st.info("下方展示的是上一次成功运行的结果。当前参数已变更，请点击「运行报价分析」更新。")
 
     section_header(
         "03 / STRATEGY REPORT",
@@ -526,8 +538,7 @@ if saved_report is not None:
             left, right = st.columns(2)
             with left:
                 with st.container(border=True):
-                    st.markdown("**报价 — 利润**")
-                    st.caption("观察报价变化如何影响目标机组利润。")
+                    chart_heading("报价与收益", "观察报价变化如何影响目标机组利润。")
                     profit_area = (
                         alt.Chart(trials_df)
                         .mark_area(
@@ -555,8 +566,7 @@ if saved_report is not None:
 
             with right:
                 with st.container(border=True):
-                    st.markdown("**报价 — 中标电量**")
-                    st.caption("用于识别报价提高后可能出现的中标量拐点。")
+                    chart_heading("中标电量趋势", "识别提高报价后可能出现的中标量拐点。")
                     quantity_chart = (
                         alt.Chart(trials_df)
                         .mark_line(point=True, strokeWidth=2.4, color="#91b5f0")
@@ -652,8 +662,7 @@ if saved_report is not None:
             )
             with left:
                 with st.container(border=True):
-                    st.markdown("**收益 / 下行风险曲线**")
-                    st.caption("同时看平均收益和坏情景下的利润表现。")
+                    chart_heading("收益与下行风险", "比较期望利润与压力情景下的表现。")
                     risk_chart = (
                         alt.Chart(risk_long)
                         .mark_line(point=True, strokeWidth=2.2)
@@ -676,8 +685,7 @@ if saved_report is not None:
 
             with right:
                 with st.container(border=True):
-                    st.markdown("**风险得分**")
-                    st.caption("综合期望利润与下行情景利润后的决策指标。")
+                    chart_heading("风险得分", "综合收益与下行情景利润的决策指标。")
                     score_chart = (
                         alt.Chart(risk_df)
                         .mark_area(
@@ -697,8 +705,7 @@ if saved_report is not None:
 
         with scenario_tab:
             with st.container(border=True):
-                st.markdown("**推荐报价在各压力情景下的表现**")
-                st.caption("逐个检查推荐报价在不同负荷和竞争报价状态下的出清结果。")
+                chart_heading("压力情景明细", "检查不同负荷与竞争报价状态下的模拟出清结果。")
                 st.dataframe(
                     outcome_df.style.format(
                         {
