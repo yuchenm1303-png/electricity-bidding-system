@@ -216,7 +216,13 @@ export default function App() {
   }, [run, view]);
   return <div className="app">
     <div className="mobile-topbar"><button type="button" className="icon-button" onClick={() => setMobileNav(true)} aria-label="打开菜单"><Menu size={20}/></button>
-      <strong><Activity size={17}/> PowerBid Studio</strong><button type="button" className="icon-button" title="切换参数面板" onClick={toggleSettings}><SlidersHorizontal size={19}/></button></div>
+      <strong><Activity size={17}/> PowerBid Studio</strong>
+      {view==="pmss"
+        ? <button type="button" className="icon-button" title="切换主题" aria-label="切换主题"
+            onClick={()=>setTheme(value=>value==="light"?"dark":"light")}>
+            {theme==="light"?<Moon size={19}/>:<Sun size={19}/>}
+          </button>
+        : <button type="button" className="icon-button" title="切换参数面板" onClick={toggleSettings}><SlidersHorizontal size={19}/></button>}</div>
     {mobileNav && <button type="button" className="mobile-backdrop" aria-label="关闭菜单" onClick={() => setMobileNav(false)}/>}
     <div className={mobileNav ? "mobile-sidebar-visible" : ""}>
       <Sidebar active={view} change={changeView} report={report} compact={sidebarCompact}
