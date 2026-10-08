@@ -30,6 +30,9 @@ pypsa = [
 strategy = [
   "scipy>=1.11,<2",
 ]
+network = [
+  "scipy>=1.11,<2",
+]
 platform = [
   "requests[socks]>=2.32",
 ]
