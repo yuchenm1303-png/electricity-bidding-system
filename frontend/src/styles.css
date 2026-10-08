@@ -327,6 +327,13 @@ tr:hover .row-action,.row-action:focus-visible {opacity:1}
   .settings-scroll {padding-left:15px;padding-right:15px}
   .settings-top {padding:0 15px}
 }
+/* At laptop width, keep the editable spreadsheet at full width, not clipped by a side card. */
+@media(max-width:1500px) {
+  .work-grid {grid-template-columns:minmax(0,1fr)}
+  .recommendation-panel {min-height:235px}
+  .units-table {min-width:700px}
+}
+.mobile-table-hint {display:none}
 @media(max-width:1200px) {
   .app {grid-template-columns:78px minmax(0,1fr) 276px}
   .app:has(.settings-closed) {grid-template-columns:78px minmax(0,1fr) 57px}
@@ -370,6 +377,8 @@ tr:hover .row-action,.row-action:focus-visible {opacity:1}
   .head-help {display:none}
 }
 @media(max-width:720px) {
+  .mobile-table-hint {display:block;color:#8da3ac;font-size:10px;padding:0 18px 11px}
+
   .workspace-header {gap:15px;margin-bottom:19px}
   .workspace-heading h1 {font-size:22px}
   .header-actions {width:100%;justify-content:flex-start;flex-wrap:wrap}
