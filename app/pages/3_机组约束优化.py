@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from powerbid.observed_feedback import (  # noqa: E402
+    audit_observed_dispatch,
+    observed_unit_day,
+)
 from powerbid.physical_strategy_audit import (  # noqa: E402
     best_physical_candidate,
     screen_strategy_results,
@@ -243,6 +247,52 @@ try:
         )
 except ValueError as exc:
     st.warning(f"本次无法完成报价策略物理筛查：{exc}")
+
+
+if isinstance(raw.get("results"), dict):
+    st.subheader("PMSS 已出清历史反馈（只读记录）")
+    st.caption(
+        "这里只报告原平台已经出清的实际历史记录，不是当前推荐策略的反事实收益。"
+        "收入保持 PMSS 返回的原始单位，不与每MWh边际成本直接相减。"
+    )
+    try:
+        observed = observed_unit_day(
+            raw["results"], unit_id=unit_id, market_type=snapshot.limits.market_type
+        )
+        real_cols = st.columns(3)
+        real_cols[0].metric("历史记录发电量", f"{observed.observed_energy_mwh:,.2f} MWh")
+        real_cols[1].metric(
+            "PMSS 报告收入原始合计", f"{observed.observed_income_raw:,.4f}"
+        )
+        real_cols[2].metric(
+            "有记录的小时", f"{observed.nonmissing_power_hours}/24"
+        )
+        observation = pd.DataFrame({
+            "时段": range(1, 25),
+            "已出清中标 MW": observed.accepted_mw,
+            "已出清价格": observed.reported_price,
+            "平台原始收入": observed.reported_income,
+        })
+        st.dataframe(observation, hide_index=True, use_container_width=True)
+        if observed.nonmissing_power_hours == 24:
+            historical_audit = audit_observed_dispatch(
+                observed, spec, terminal_mode=terminal_mode
+            )
+            if historical_audit.feasible:
+                st.success(
+                    "按当前人工提供的机组参数，历史中标序列未发现简单物理约束违例。"
+                    "这并不能证明 PMSS 机组实际状态与这些假设一致。"
+                )
+            else:
+                st.warning(
+                    "历史中标序列与当前人工输入参数有冲突："
+                    + "；".join(historical_audit.violations[:4])
+                    + "。请核对实际机组参数和初始运行状态。"
+                )
+        else:
+            st.warning("部分历史出力缺失，不以0代替，跳过物理可行性判断。")
+    except (KeyError, ValueError, TypeError) as exc:
+        st.info(f"此快照中无法可靠关联该机组的24小时真实结果：{exc}")
 
 export = {
     "notice": "OFFLINE UNIT COMMITMENT PLAN - NOT PMSS BIDDING OR CLEARING",
