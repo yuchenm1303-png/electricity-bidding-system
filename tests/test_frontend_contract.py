@@ -45,3 +45,6 @@ def test_report_persists_and_marks_stale_inputs():
     assert "def metric_tile(" in view
     assert "def chart_heading(" in view
     assert "教学模拟 · 非实时市场" in view
+    assert "POWERBID_PLATFORM_BASE_URL" in view
+    assert "老师仿真平台 · 只读联调" in view
+    assert "teacher_platform_card" in view

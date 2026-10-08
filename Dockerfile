@@ -10,7 +10,7 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 
 RUN python -m pip install --upgrade pip \
-    && pip install --no-cache-dir -e ".[ui]"
+    && pip install --no-cache-dir -e ".[ui,platform]"
 
 # Keep UI/data changes in a late layer so visual iterations reuse the dependency cache.
 COPY app ./app

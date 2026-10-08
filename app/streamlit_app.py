@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from html import escape
 from pathlib import Path
@@ -18,6 +19,10 @@ for module_path in (SRC, APP_DIR):
 from design_system import APP_CSS  # noqa: E402
 
 from powerbid.adapters.pypsa_engine import PyPSAClearingEngine  # noqa: E402
+from powerbid.adapters.teacher_platform import (  # noqa: E402
+    TeacherPlatformAdapter,
+    TeacherPlatformError,
+)
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine  # noqa: E402
 from powerbid.models import MarketScenario, Offer  # noqa: E402
 from powerbid.optimizer import GridSearchBidOptimizer, price_grid  # noqa: E402
@@ -94,6 +99,49 @@ def chart_style(chart: alt.Chart) -> alt.Chart:
     )
 
 
+@st.cache_data(ttl=30, show_spinner=False)
+def load_teacher_platform_context(base_url: str) -> dict:
+    client = TeacherPlatformAdapter(base_url=base_url)
+    context = client.get_context()
+    return {
+        "project": context.project,
+        "cases": list(context.cases),
+        "market_system": context.market_system,
+        "units": list(context.units),
+    }
+
+
+@st.cache_data(ttl=20, show_spinner=False)
+def load_teacher_platform_detail(
+    base_url: str,
+    case_id: str,
+    scope_id: str,
+    unit_id: str,
+) -> dict:
+    client = TeacherPlatformAdapter(base_url=base_url)
+    bid = client.get_unit_bid(scope_id=scope_id, unit_id=unit_id)
+    clearing = client.get_clearing_result(case_id=case_id, market_type_atom="DA")
+    unit_result = client.get_unit_results(case_id=case_id, da_ids=[unit_id], rt_ids=[])
+    overview = client.get_result_overview(case_id=case_id, market_type_atom="DA")
+    return {
+        "bid": bid,
+        "clearing": clearing,
+        "unit_result": unit_result,
+        "overview": overview,
+    }
+
+
+def find_scope_id(market_system: dict, case: dict, market_type_atom: str = "DA") -> str:
+    scene_key = case.get("tmSceneDateKey")
+    for day in market_system.get("scopes", []):
+        if day.get("tmSceneDateKey") != scene_key:
+            continue
+        for scope in day.get("datas", []):
+            if scope.get("selfSort") == market_type_atom:
+                return str(scope["scopeId"])
+    raise TeacherPlatformError(f"当前案例没有找到 {market_type_atom} 市场 scope。")
+
+
 def metric_tile(label: str, value: str, note: str, icon: str) -> str:
     """Build an accessible overview card using only actual scenario values."""
     glyphs = {
@@ -127,6 +175,15 @@ source_label = {
     "public": "公开市场数据",
     "unknown": "来源未标记",
 }.get(base.data_source, base.data_source)
+
+platform_base_url = os.environ.get("POWERBID_PLATFORM_BASE_URL", "").strip()
+platform_context = None
+platform_error = None
+if platform_base_url:
+    try:
+        platform_context = load_teacher_platform_context(platform_base_url)
+    except Exception as exc:
+        platform_error = f"{type(exc).__name__}: {exc}"
 
 with st.sidebar:
     st.markdown(
@@ -233,6 +290,8 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
+top_status = "老师平台 · 只读已连接" if platform_context else "教学模拟 · 非实时市场"
+
 st.markdown(
     f"""
     <div class="pb-topbar">
@@ -242,7 +301,7 @@ st.markdown(
             <strong>报价工作台</strong>
         </div>
         <div class="pb-top-status">
-            <span class="pb-live-dot"></span>教学模拟 · 非实时市场
+            <span class="pb-live-dot"></span>{top_status}
         </div>
     </div>
     <section class="pb-hero" aria-label="电力报价分析工作台">
@@ -306,6 +365,130 @@ summary_cols[3].markdown(
     metric_tile("结算时段", f"{interval_hours:g} h", "单时段收益测算", "time"),
     unsafe_allow_html=True,
 )
+
+if platform_context:
+    section_header(
+        "LIVE / TEACHER PMSS",
+        "老师仿真平台 · 只读联调",
+        "这里展示老师平台当前工程的真实场景、机组报价和出清结果；本页不会向平台提交报价，也不会触发新的出清。",
+    )
+
+    project = platform_context["project"]
+    cases = platform_context["cases"]
+    units = platform_context["units"]
+    market_system = platform_context["market_system"]
+
+    with st.container(border=True, key="teacher_platform_card"):
+        live_head = st.columns(4)
+        live_head[0].metric("当前工程", project.get("projectName", "—"))
+        live_head[1].metric("电网模型", project.get("netName", "—"))
+        live_head[2].metric("市场规则", market_system.get("marketSystemName", "—"))
+        live_head[3].metric("平台机组", f"{len(units)} 台")
+
+        pick_left, pick_right = st.columns(2)
+        case_labels = [
+            item.get("caseDate") or item.get("caseName") or "未命名案例"
+            for item in cases
+        ]
+        selected_case_label = pick_left.selectbox(
+            "平台案例日期",
+            case_labels,
+            index=0,
+            key="teacher_platform_case",
+        )
+        selected_case = cases[case_labels.index(selected_case_label)]
+
+        unit_labels = [item.get("title") or item.get("key") or "未命名机组" for item in units]
+        selected_unit_label = pick_right.selectbox(
+            "平台机组",
+            unit_labels,
+            index=0,
+            key="teacher_platform_unit",
+        )
+        selected_unit = units[unit_labels.index(selected_unit_label)]
+
+        try:
+            da_scope_id = find_scope_id(market_system, selected_case, "DA")
+            platform_detail = load_teacher_platform_detail(
+                platform_base_url,
+                str(selected_case["caseId"]),
+                da_scope_id,
+                str(selected_unit["key"]),
+            )
+        except Exception as exc:
+            st.warning(f"平台明细暂时读取失败：{type(exc).__name__}: {exc}")
+        else:
+            da_rows = [
+                item
+                for item in (platform_detail["unit_result"].get("datas") or [])
+                if item.get("marketTypeAtom") == "DA"
+            ]
+            da_row = da_rows[0] if da_rows else {}
+            overview = platform_detail["overview"]
+            opt_result = (platform_detail["clearing"].get("optResult") or {})
+
+            live_metrics = st.columns(5)
+            rated_power = float(selected_unit.get("mvarate") or 0)
+            running_cost = float(selected_unit.get("runningCost") or 0)
+            live_metrics[0].metric("额定容量", f"{rated_power:,.0f} MW")
+            live_metrics[1].metric("运行成本参数", f"{running_cost:,.2f}")
+            live_metrics[2].metric(
+                "24时段中标合计",
+                f"{float((da_row.get('power') or {}).get('sum') or 0):,.2f}",
+            )
+            live_metrics[3].metric(
+                "日前机组收入",
+                f"{float((da_row.get('income') or {}).get('sum') or 0):,.4f} 万元",
+            )
+            live_metrics[4].metric(
+                "日前优化",
+                "已收敛" if opt_result.get("isConverge") == 1 else "未收敛",
+            )
+
+            bid_data = platform_detail["bid"]
+            periods = bid_data.get("datas") or []
+            segments = periods[0].get("segmentDatas", []) if periods else []
+            bid_df = pd.DataFrame(
+                [
+                    {
+                        "段序号": segment.get("segmentOrder"),
+                        "起始出力 / MW": segment.get("startPower"),
+                        "终止出力 / MW": segment.get("endPower"),
+                        "当前报价 / 元每MWh": segment.get("price"),
+                    }
+                    for segment in segments
+                ]
+            )
+
+            detail_left, detail_right = st.columns([1.25, 1])
+            with detail_left:
+                chart_heading("当前日前分段报价", "直接读取老师平台当前保存的数据。")
+                if bid_df.empty:
+                    st.info("当前机组没有可显示的日前分段报价。")
+                else:
+                    st.dataframe(bid_df, use_container_width=True, hide_index=True)
+
+            with detail_right:
+                chart_heading("当前市场概览", "直接读取该案例已有出清结果。")
+                highest_load = float(overview.get("systemHighestSysLoad") or 0)
+                avg_lmp = float(overview.get("systemUnitAvgLmp") or 0)
+                unit_income = float(overview.get("marketUnitIncome") or 0) / 10000
+                congestion_surplus = float(overview.get("blockSurplus") or 0) / 10000
+                overview_df = pd.DataFrame(
+                    [
+                        {"指标": "全天最高负荷", "数值": f"{highest_load:,.2f} MW"},
+                        {"指标": "发电平均节点电价", "数值": f"{avg_lmp:,.3f} 元/MWh"},
+                        {"指标": "市场机组收入", "数值": f"{unit_income:,.3f} 万元"},
+                        {"指标": "市场阻塞盈余", "数值": f"{congestion_surplus:,.3f} 万元"},
+                    ]
+                )
+                st.dataframe(overview_df, use_container_width=True, hide_index=True)
+
+            st.caption(
+                "安全模式：平台桥接当前只允许读取接口；报价保存和“执行出清”接口在服务器侧被禁止。"
+            )
+elif platform_base_url and platform_error:
+    st.warning(f"老师平台桥接已配置，但当前无法读取：{platform_error}")
 
 section_header(
     "01 / MARKET INPUTS",
