@@ -281,6 +281,12 @@ def selected_leaf_ids(tree: list[dict[str, Any]], market_type: str) -> list[str]
             elif item.get("leaf"):
                 ident = item.get("key") or item.get("value")
                 if ident is not None:
-                    ids.append(str(ident))
+                    raw = str(ident)
+                    prefix = f"{market_type}-"
+                    if not raw.startswith(prefix):
+                        raise ValueError(
+                            f"Expected {prefix} result selector key, got unexpected ID"
+                        )
+                    ids.append(raw[len(prefix):])
     visit(parents[0].get("children") or [])
     return ids
