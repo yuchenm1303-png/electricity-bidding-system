@@ -100,7 +100,7 @@ def evaluate_curve(
             interval_hours=1,
             target_unit_id=target_parts[0],
             offers=tuple(offers),
-            data_source="platform",
+            data_source="mixed_platform_bids_and_forecast",
         )
         clearing = market_engine.clear(scenario)
         accepted = sum(clearing.accepted_mw.get(key, 0.0) for key in target_parts)
@@ -184,6 +184,13 @@ def optimize_segmented_bid(
     initial = _equal_buckets(capacity, n, prices[0])
     best = evaluate_curve(snapshot, target_unit_id, initial)
     evaluations = 2  # baseline + seed
+    # A flat price curve is a useful reference for each candidate and avoids
+    # an unnecessary local-search disadvantage versus a one-block baseline.
+    for price in prices[1:]:
+        trial = evaluate_curve(snapshot, target_unit_id, _equal_buckets(capacity, n, price))
+        evaluations += 1
+        if trial.total_profit > best.total_profit + 1e-8:
+            best = trial
     tol = 1e-8
 
     def consider(curve: tuple[BidSegment, ...]) -> None:
