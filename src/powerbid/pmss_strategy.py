@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isfinite
-from typing import Sequence
+from typing import Any, Mapping, Sequence
 
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine
 from powerbid.models import MarketScenario, Offer
@@ -192,7 +192,7 @@ def optimize_segmented_bid(
 
     for _ in range(iterations):
         before = best.total_profit
-        for i in range(n):
+        for i in range(n - 1, -1, -1):
             for candidate in prices:
                 # For a standard nondecreasing cumulative supply curve.
                 if i > 0 and candidate < best.segments[i - 1].price:
@@ -227,15 +227,19 @@ def build_pmss_dry_run_payload(
     unit_id: str,
     segments: Sequence[BidSegment],
     period_num: int = 24,
+    existing_bid: Mapping[str, Any],
 ) -> dict[str, object]:
-    """Prepare JSON for review only; this function never performs HTTP."""
+    """Prepare JSON for review; preserve original PMSS cost fields, never HTTP."""
     validate_curve(segments)
+    cost_fields = ("minTechPowerCost", "startCostHot", "startCostWarm", "startCostCold")
+    if any(key not in existing_bid for key in cost_fields):
+        raise ValueError("Existing PMSS bid must supply all four cost fields")
     return {
         "scopeId": scope_id,
-        "minTechPowerCost": 0,
-        "startCostHot": 0,
-        "startCostWarm": 0,
-        "startCostCold": 0,
+        "minTechPowerCost": existing_bid["minTechPowerCost"],
+        "startCostHot": existing_bid["startCostHot"],
+        "startCostWarm": existing_bid["startCostWarm"],
+        "startCostCold": existing_bid["startCostCold"],
         "unitId": unit_id,
         "datas": [{
             "startPeriod": 1,
