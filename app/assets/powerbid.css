@@ -234,6 +234,36 @@ hr {border-color:var(--pb-border)!important}
 *::-webkit-scrollbar {width:7px;height:7px}
 *::-webkit-scrollbar-thumb {border-radius:99px;background:#35434a}
 
+
+/* Readouts appear only after optimization. They must align with the overview KPIs. */
+[data-testid="stMetric"] {
+  min-height:110px;padding:.95rem 1.05rem .95rem;
+  border:1px solid rgba(135,215,194,.11);border-radius:13px;
+  background:linear-gradient(135deg,#172521,#172029 88%);
+  transition:border-color .2s ease,transform .2s ease;
+}
+[data-testid="stMetric"]:hover {border-color:rgba(135,215,194,.28);transform:translateY(-2px)}
+[data-testid="stMetricLabel"] {color:#9fb4b4;font-size:.7rem;font-weight:610}
+[data-testid="stMetricValue"] {color:#ecf3f2;font-size:clamp(1.2rem,1.7vw,1.55rem);font-weight:725;letter-spacing:-.038em;margin-top:.35rem}
+[data-testid="stMetricDelta"] {font-size:.65rem}
+.pb-chart-heading {padding:.1rem 0 .8rem}
+.pb-chart-title {font-size:.83rem;font-weight:700;color:#e2eced;letter-spacing:-.02em}
+.pb-chart-subtitle {font-size:.68rem;color:#869aa4;line-height:1.6;margin-top:.25rem}
+[data-testid="stTabs"] [data-testid="stVerticalBlockBorderWrapper"] {background:#151c24}
+[data-testid="stTabs"] [data-testid="stVerticalBlockBorderWrapper"] > div {padding:.35rem}
+.st-key-offer_card [data-testid="stDataEditor"] {margin-top:.28rem}
+.st-key-run_card [data-testid="stButton"] > button {letter-spacing:.015em}
+[data-testid="stTooltipIcon"] {color:#8598a2}
+[data-testid="stDataFrame"] button,[data-testid="stDataEditor"] button {border-radius:6px}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"] svg {color:#8fa3ad}
+@media(max-width:680px) {
+  [data-testid="stHorizontalBlock"]:has(.pb-kpi) {flex-wrap:wrap!important;gap:.5rem!important}
+  [data-testid="stHorizontalBlock"]:has(.pb-kpi) > [data-testid="stColumn"] {
+    flex:1 1 calc(50% - .4rem)!important;min-width:145px!important;
+  }
+  [data-testid="stMetric"] {min-height:95px}
+}
+
 /* Responsive: laptop screens, compact windows and narrow browsers */
 @media (max-width:1170px) {
   .pb-hero-grid {grid-template-columns:minmax(0,1fr) minmax(215px,.7fr);gap:1.2rem}
