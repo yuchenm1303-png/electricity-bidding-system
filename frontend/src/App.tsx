@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowRight, BarChart3, Boxes, ChevronDown, ChevronRight, CircleHelp, Clock3,
-  Download, FileBarChart, LayoutDashboard, Menu, PanelRightClose, PanelRightOpen,
+  FileBarChart, LayoutDashboard, Menu, PanelRightClose, PanelRightOpen,
   Play, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Target, TrendingUp, X, Zap
 } from "lucide-react";
 import { loadScenario, runOptimization, fromScenario } from "./api";
