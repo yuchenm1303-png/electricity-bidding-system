@@ -12,6 +12,10 @@ SRC = Path(__file__).resolve().parents[2] / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from powerbid.pmss_diagnostics import (  # noqa: E402
+    analyze_historical_network,
+    compare_baseline_to_pmss,
+)
 from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
 from powerbid.pmss_strategy import optimize_segmented_bid  # noqa: E402
 
@@ -25,8 +29,8 @@ st.info(
 
 st.markdown(
     "上传不含账号、Cookie、Token 的 JSON 快照，包含 "
-    "\`unitTree\`、\`unitBids\`、\`marketSystem\`、"
-    "\`demandForecastMw\`（24 个数）和 \`forecastSource\`。"
+    "`unitTree`、`unitBids`、`marketSystem`、"
+    "`demandForecastMw`（24 个数）和 `forecastSource`。"
 )
 upload = st.file_uploader("选择 PMSS 只读数据快照", type=["json"])
 if upload is None:
@@ -69,10 +73,16 @@ st.caption(
 )
 
 if raw.get("historicalBacktestOnly"):
-    st.warning(
-        "本快照使用历史已出清总发电量作为回测负荷代理，不是未来负荷预测，"
-        "也不能等同于真实系统负荷。结果只供算法验证。"
-    )
+    if raw.get("loadSourceKind") == "PMSS_DA_SCENE_LOAD_INPUT":
+        st.info(
+            "该快照采用 PMSS 历史场景的实际日前负荷输入（不是未来预测）。"
+            "只能用于该历史案例的分析与模型回测。"
+        )
+    else:
+        st.warning(
+            "这份旧快照使用历史已出清总发电量作为负荷代理，"
+            "不等于真实负荷预测；只能验证算法流程。"
+        )
 
 observed = raw.get("results")
 if isinstance(observed, dict) and observed.get("periodNum") == 24:
@@ -160,6 +170,55 @@ if isinstance(observed, dict) and observed.get("periodNum") == 24:
                 use_container_width=True,
             )
 
+network_report = None
+if isinstance(observed, dict) and observed.get("periodNum") == 24:
+    try:
+        network_report = analyze_historical_network(observed)
+    except (ValueError, TypeError, KeyError) as exc:
+        st.warning(f"历史网络诊断不可用：{exc}")
+
+if network_report is not None:
+    st.subheader("历史网络阻塞与节点价格")
+    st.caption(
+        "下面是 PMSS 已发生出清的网络状态，并不是候选报价对节点电价或线路的影响预测。"
+    )
+    network_hours = pd.DataFrame([
+        {
+            "时段": hour.hour,
+            "节点价格极差": hour.lmp_spread,
+            "非零影子价格线路数": hour.nonzero_shadow_branches,
+            "最大线路潮流绝对值 MW": hour.max_abs_flow_mw,
+            "最大影子价格绝对值": hour.max_abs_shadow,
+        }
+        for hour in network_report.hourly
+    ])
+    first, second, third = st.columns(3)
+    first.metric("已读取节点", str(network_report.node_count))
+    second.metric("已读取线路", str(network_report.branch_count))
+    third.metric(
+        "出现非零影子价格的时段",
+        f"{sum(hour.nonzero_shadow_branches > 0 for hour in network_report.hourly)}/24",
+    )
+    st.line_chart(network_hours.set_index("时段")[["节点价格极差"]])
+    st.dataframe(network_hours, hide_index=True, use_container_width=True)
+    st.caption(
+        "影子价格非零只代表对应约束在历史解中的边际价值，"
+        "不能据此推断线路过载或报价调整后的潮流。"
+    )
+    st.dataframe(
+        pd.DataFrame([
+            {
+                "线路": b.name or b.element_id,
+                "非零影子价格时段": b.hours_nonzero_shadow,
+                "影子价格绝对值峰值": b.peak_abs_shadow,
+                "历史潮流绝对值峰值 MW": b.peak_abs_flow_mw,
+            }
+            for b in network_report.most_shadowed[:10]
+        ]),
+        hide_index=True,
+        use_container_width=True,
+    )
+
 with st.form("optimize_pmss_curve"):
     unit_names = {u.unit_id: u.name for u in snapshot.units}
     chosen = st.selectbox(
@@ -202,6 +261,46 @@ col1, col2, col3 = st.columns(3)
 col1.metric("原始曲线模拟利润", f"{base.total_profit:,.2f}")
 col2.metric("推荐曲线模拟利润", f"{best.total_profit:,.2f}")
 col3.metric("本地试算次数", result.evaluated_curves)
+
+if isinstance(observed, dict) and observed.get("periodNum") == 24:
+    try:
+        backtest = compare_baseline_to_pmss(
+            target_unit_id=chosen, baseline=base, results=observed,
+        )
+    except (ValueError, TypeError, KeyError) as exc:
+        st.warning(f"模型历史误差未能计算：{exc}")
+    else:
+        st.subheader("基准策略：PowerBid 模拟与 PMSS 真实中标的偏差")
+        st.caption(
+            "这里仅比较原始报价曲线的历史模拟误差；推荐的新报价尚未在 PMSS"
+            " 出清，不能据此判断真实收益一定提升。"
+        )
+        left, middle, right = st.columns(3)
+        left.metric(
+            "原始报价出力 MAE",
+            f"{backtest.power_mae_mw:,.2f} MW"
+            if backtest.power_mae_mw is not None else "无数据",
+        )
+        middle.metric(
+            "出力 RMSE",
+            f"{backtest.power_rmse_mw:,.2f} MW"
+            if backtest.power_rmse_mw is not None else "无数据",
+        )
+        right.metric("实际出力覆盖", f"{backtest.observed_power_points}/24")
+        st.line_chart(
+            pd.DataFrame([
+                {
+                    "时段": item.hour,
+                    "PMSS 实际中标 MW": item.observed_accepted_mw,
+                    "PowerBid 原始曲线模拟 MW": item.surrogate_accepted_mw,
+                }
+                for item in backtest.hours
+            ]).set_index("时段")
+        )
+        st.caption(
+            "PMSS 机组价格可能是节点结算价格；PowerBid 仅有单区域统一价格，"
+            "两种价格不直接等价。因此这里优先使用中标量误差验证模型。"
+        )
 
 st.subheader("推荐价格—电量段")
 st.dataframe(

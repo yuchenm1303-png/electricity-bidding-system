@@ -17,13 +17,17 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from powerbid.adapters.teacher_platform import TeacherPlatformAdapter  # noqa: E402
-from powerbid.pmss_export import build_readonly_snapshot  # noqa: E402
+from powerbid.pmss_export import (  # noqa: E402
+    build_da_scene_snapshot,
+    build_readonly_snapshot,
+)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Export sanitized PMSS read-only data")
-    parser.add_argument("--forecast-json", required=True, type=Path)
-    parser.add_argument("--forecast-source", required=True)
+    parser.add_argument("--forecast-json", type=Path)
+    parser.add_argument("--forecast-source", default="")
+    parser.add_argument("--pmss-da-snapshot", action="store_true")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--case-date", default=None, help="Select a historical case date")
     args = parser.parse_args()
@@ -44,9 +48,16 @@ def main() -> int:
     ):
         parser.error("PMSS_COOKIE_FILE must contain a string-to-string JSON cookie object")
 
-    forecast = json.loads(args.forecast_json.read_text(encoding="utf-8"))
-    if not isinstance(forecast, list):
-        parser.error("--forecast-json must contain a JSON array of 24 numeric load values")
+    forecast = None
+    if not args.pmss_da_snapshot:
+        if args.forecast_json is None or not args.forecast_source:
+            parser.error(
+                "Use --pmss-da-snapshot or supply both "
+                "--forecast-json and --forecast-source"
+            )
+        forecast = json.loads(args.forecast_json.read_text(encoding="utf-8"))
+        if not isinstance(forecast, list):
+            parser.error("--forecast-json must contain an array of 24 values")
 
     client = TeacherPlatformAdapter(
         base_url=base_url,
@@ -62,13 +73,23 @@ def main() -> int:
     if len(cases) != 1 and not args.case_date:
         parser.error("Multiple cases exist; specify --case-date to avoid selecting the wrong one")
 
-    snapshot = build_readonly_snapshot(
-        client,
-        context=context,
-        case=cases[0],
-        demand_forecast_mw=forecast,
-        forecast_source=args.forecast_source,
-    )
+    if args.pmss_da_snapshot:
+        # PMSS scene load, award, nodal price and branch flow queries are
+        # read-only despite their HTTP POST methods.
+        snapshot = build_da_scene_snapshot(
+            client,
+            context=context,
+            case=cases[0],
+            include_results=True,
+        )
+    else:
+        snapshot = build_readonly_snapshot(
+            client,
+            context=context,
+            case=cases[0],
+            demand_forecast_mw=forecast,
+            forecast_source=args.forecast_source,
+        )
     path = args.output.resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     # Atomic replace, private file permissions, and no authentication in output.
