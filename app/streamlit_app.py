@@ -312,6 +312,13 @@ section_header(
     "确认左侧控制参数和机组数据后开始计算。所有候选报价都会经过同一套出清与结算流程。",
 )
 
+valid_range = bid_start <= bid_stop
+valid_target = target_unit_id in edited_df["unit_id"].astype(str).tolist()
+if not valid_range:
+    st.warning("最低报价不能高于最高报价，请调整左侧报价区间。")
+if not valid_target:
+    st.warning("目标机组不在当前机组表内。请重新添加该机组，或在左侧选择其他目标机组。")
+
 with st.container(border=True, key="run_card"):
     action_left, action_right = st.columns([3.4, 1.6], vertical_alignment="center")
     with action_left:
@@ -327,7 +334,19 @@ with st.container(border=True, key="run_card"):
             unsafe_allow_html=True,
         )
     with action_right:
-        run = st.button("开始优化报价", type="primary", use_container_width=True)
+        run = st.button("开始优化报价  ↗", type="primary", use_container_width=True, disabled=not (valid_range and valid_target))
+
+current_signature = (
+    decision_mode, engine_name, target_unit_id,
+    float(demand_mw), float(interval_hours),
+    float(bid_start), float(bid_stop), float(bid_step),
+    edited_df.to_json(orient="records", force_ascii=False),
+    (
+        (demand_uncertainty, competitor_uncertainty, risk_aversion, tail_fraction)
+        if decision_mode == "不确定性 / 风险分析" else None
+    ),
+)
+saved_report = st.session_state.get("pb_report")
 
 if run:
     try:
@@ -370,226 +389,254 @@ if run:
                     min_feasible_probability=1.0,
                 ).optimize(stress_cases, candidates)
     except Exception as exc:
+        saved_report = None
+        st.session_state.pop("pb_report", None)
         st.error(f"本轮优化没有完成：{exc}")
     else:
-        section_header(
-            "03 / STRATEGY REPORT",
-            "报价决策结果",
-            "先看推荐结果，再下钻到收益曲线、风险区间和全部试算明细。",
+        saved_report = {
+            "result": result,
+            "mode": decision_mode,
+            "signature": current_signature,
+        }
+        st.session_state["pb_report"] = saved_report
+
+if saved_report is not None:
+    result = saved_report["result"]
+    report_mode = saved_report["mode"]
+    if saved_report["signature"] != current_signature:
+        st.info("下方展示的是上一次成功运行的结果。当前参数已变更，请点击「开始优化报价」更新。")
+
+    section_header(
+        "03 / STRATEGY REPORT",
+        "报价决策结果",
+        "先看推荐结果，再下钻到收益曲线、风险区间和全部试算明细。",
+    )
+
+    if report_mode == "单场景利润最大化":
+        best = result.best
+        result_cols = st.columns(4)
+        result_cols[0].metric("推荐报价", f"{best.bid_price:.2f}")
+        result_cols[1].metric("出清价格", "—" if best.clearing_price is None else f"{best.clearing_price:.2f}")
+        result_cols[2].metric("预计中标", f"{best.accepted_mw:.2f} MW")
+        result_cols[3].metric("预计利润", f"{best.profit:,.2f}")
+
+        trials_df = pd.DataFrame(
+            [
+                {
+                    "报价": item.bid_price,
+                    "出清价格": item.clearing_price,
+                    "中标电量MW": item.accepted_mw,
+                    "收入": item.revenue,
+                    "变动成本": item.variable_cost,
+                    "利润": item.profit,
+                    "可行": item.feasible,
+                }
+                for item in result.trials
+            ]
         )
 
-        if decision_mode == "单场景利润最大化":
-            best = result.best
-            result_cols = st.columns(4)
-            result_cols[0].metric("推荐报价", f"{best.bid_price:.2f}")
-            result_cols[1].metric("出清价格", "—" if best.clearing_price is None else f"{best.clearing_price:.2f}")
-            result_cols[2].metric("预计中标", f"{best.accepted_mw:.2f} MW")
-            result_cols[3].metric("预计利润", f"{best.profit:,.2f}")
+        st.markdown(
+            f"""
+            <div class="pb-result-banner">
+                <span><strong>策略摘要</strong> · 当前最优报价为 {best.bid_price:.2f}</span>
+                <span>{len(trials_df)} 个候选报价已完成试算</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-            trials_df = pd.DataFrame(
-                [
-                    {
-                        "报价": item.bid_price,
-                        "出清价格": item.clearing_price,
-                        "中标电量MW": item.accepted_mw,
-                        "收入": item.revenue,
-                        "变动成本": item.variable_cost,
-                        "利润": item.profit,
-                        "可行": item.feasible,
-                    }
-                    for item in result.trials
-                ]
-            )
-
-            st.markdown(
-                f"""
-                <div class="pb-result-banner">
-                    <span><strong>策略摘要</strong> · 当前最优报价为 {best.bid_price:.2f}</span>
-                    <span>{len(trials_df)} 个候选报价已完成试算</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            overview_tab, detail_tab = st.tabs(["策略概览", "全部试算"])
-            with overview_tab:
-                left, right = st.columns(2)
-                with left:
-                    with st.container(border=True):
-                        st.markdown("**报价 — 利润**")
-                        st.caption("观察报价变化如何影响目标机组利润。")
-                        profit_area = (
-                            alt.Chart(trials_df)
-                            .mark_area(line={"color": "#3b82f6", "strokeWidth": 2.4}, color="#3b82f6", opacity=0.16)
-                            .encode(
-                                x=alt.X("报价:Q", title="报价"),
-                                y=alt.Y("利润:Q", title="利润", scale=alt.Scale(zero=False)),
-                                tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("利润:Q", format=",.2f")],
-                            )
-                        )
-                        best_rule = alt.Chart(pd.DataFrame({"报价": [best.bid_price]})).mark_rule(color="#14b8a6", strokeDash=[6, 5], strokeWidth=1.5).encode(x="报价:Q")
-                        st.altair_chart(chart_style(alt.layer(profit_area, best_rule)), use_container_width=True)
-
-                with right:
-                    with st.container(border=True):
-                        st.markdown("**报价 — 中标电量**")
-                        st.caption("用于识别报价提高后可能出现的中标量拐点。")
-                        quantity_chart = (
-                            alt.Chart(trials_df)
-                            .mark_line(point=True, strokeWidth=2.4, color="#14b8a6")
-                            .encode(
-                                x=alt.X("报价:Q", title="报价"),
-                                y=alt.Y("中标电量MW:Q", title="中标电量 / MW"),
-                                tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("中标电量MW:Q", format=".2f")],
-                            )
-                        )
-                        st.altair_chart(chart_style(quantity_chart), use_container_width=True)
-
-            with detail_tab:
+        overview_tab, detail_tab = st.tabs(["策略概览", "全部试算"])
+        with overview_tab:
+            left, right = st.columns(2)
+            with left:
                 with st.container(border=True):
-                    st.dataframe(
-                        trials_df.style.format(
-                            {
-                                "报价": "{:.2f}",
-                                "出清价格": "{:.2f}",
-                                "中标电量MW": "{:.2f}",
-                                "收入": "{:,.2f}",
-                                "变动成本": "{:,.2f}",
-                                "利润": "{:,.2f}",
-                            },
-                            na_rep="—",
-                        ),
-                        use_container_width=True,
-                        hide_index=True,
+                    st.markdown("**报价 — 利润**")
+                    st.caption("观察报价变化如何影响目标机组利润。")
+                    profit_area = (
+                        alt.Chart(trials_df)
+                        .mark_area(line={"color": "#58dfc7", "strokeWidth": 2.4}, color="#58dfc7", opacity=0.16)
+                        .encode(
+                            x=alt.X("报价:Q", title="报价"),
+                            y=alt.Y("利润:Q", title="利润", scale=alt.Scale(zero=False)),
+                            tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("利润:Q", format=",.2f")],
+                        )
                     )
-                    st.download_button(
-                        "导出试算结果 CSV",
-                        trials_df.to_csv(index=False).encode("utf-8-sig"),
-                        file_name="powerbid_single_scenario.csv",
-                        mime="text/csv",
+                    best_rule = alt.Chart(pd.DataFrame({"报价": [best.bid_price]})).mark_rule(color="#8aabfa", strokeDash=[6, 5], strokeWidth=1.5).encode(x="报价:Q")
+                    st.altair_chart(chart_style(alt.layer(profit_area, best_rule)), use_container_width=True)
+
+            with right:
+                with st.container(border=True):
+                    st.markdown("**报价 — 中标电量**")
+                    st.caption("用于识别报价提高后可能出现的中标量拐点。")
+                    quantity_chart = (
+                        alt.Chart(trials_df)
+                        .mark_line(point=True, strokeWidth=2.4, color="#8aabfa")
+                        .encode(
+                            x=alt.X("报价:Q", title="报价"),
+                            y=alt.Y("中标电量MW:Q", title="中标电量 / MW"),
+                            tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("中标电量MW:Q", format=".2f")],
+                        )
                     )
-        else:
-            best = result.best
-            result_cols = st.columns(4)
-            result_cols[0].metric("推荐报价", f"{best.bid_price:.2f}")
-            result_cols[1].metric("期望利润", f"{best.expected_profit:,.2f}")
-            result_cols[2].metric("下行情景利润", f"{best.downside_profit:,.2f}")
-            result_cols[3].metric("最差情景利润", f"{best.worst_profit:,.2f}")
+                    st.altair_chart(chart_style(quantity_chart), use_container_width=True)
 
-            risk_df = pd.DataFrame(
-                [
-                    {
-                        "报价": item.bid_price,
-                        "期望利润": item.expected_profit,
-                        "下行情景利润": item.downside_profit,
-                        "最差情景利润": item.worst_profit,
-                        "预计中标MW": item.expected_accepted_mw,
-                        "可行概率": item.feasible_probability,
-                        "风险得分": item.score,
-                    }
-                    for item in result.trials
-                ]
-            )
-            outcome_df = pd.DataFrame(
-                [
-                    {
-                        "情景": item.name,
-                        "概率权重": item.probability,
-                        "出清价格": item.clearing_price,
-                        "中标MW": item.accepted_mw,
-                        "利润": item.profit,
-                        "可行": item.feasible,
-                    }
-                    for item in best.outcomes
-                ]
-            )
-
-            st.markdown(
-                f"""
-                <div class="pb-result-banner">
-                    <span><strong>风险摘要</strong> · 风险得分 {best.score:,.2f} · 可行概率 {best.feasible_probability:.0%}</span>
-                    <span>预计中标 {best.expected_accepted_mw:.2f} MW</span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            risk_tab, scenario_tab, all_tab = st.tabs(["风险曲线", "压力情景", "全部候选"])
-            with risk_tab:
-                left, right = st.columns([3, 2])
-                risk_long = risk_df.melt(
-                    id_vars=["报价"],
-                    value_vars=["期望利润", "下行情景利润", "最差情景利润"],
-                    var_name="指标",
-                    value_name="利润",
+        with detail_tab:
+            with st.container(border=True):
+                st.dataframe(
+                    trials_df.style.format(
+                        {
+                            "报价": "{:.2f}",
+                            "出清价格": "{:.2f}",
+                            "中标电量MW": "{:.2f}",
+                            "收入": "{:,.2f}",
+                            "变动成本": "{:,.2f}",
+                            "利润": "{:,.2f}",
+                        },
+                        na_rep="—",
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
                 )
-                with left:
-                    with st.container(border=True):
-                        st.markdown("**收益 / 下行风险曲线**")
-                        st.caption("同时看平均收益和坏情景下的利润表现。")
-                        risk_chart = (
-                            alt.Chart(risk_long)
-                            .mark_line(point=True, strokeWidth=2.2)
-                            .encode(
-                                x=alt.X("报价:Q", title="报价"),
-                                y=alt.Y("利润:Q", title="利润", scale=alt.Scale(zero=False)),
-                                color=alt.Color("指标:N", title=None, scale=alt.Scale(range=["#3b82f6", "#8b5cf6", "#ef4444"])),
-                                tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("指标:N"), alt.Tooltip("利润:Q", format=",.2f")],
-                            )
-                        )
-                        st.altair_chart(chart_style(risk_chart), use_container_width=True)
+                st.download_button(
+                    "导出试算结果 CSV",
+                    trials_df.to_csv(index=False).encode("utf-8-sig"),
+                    file_name="powerbid_single_scenario.csv",
+                    mime="text/csv",
+                )
+    else:
+        best = result.best
+        result_cols = st.columns(4)
+        result_cols[0].metric("推荐报价", f"{best.bid_price:.2f}")
+        result_cols[1].metric("期望利润", f"{best.expected_profit:,.2f}")
+        result_cols[2].metric("下行情景利润", f"{best.downside_profit:,.2f}")
+        result_cols[3].metric("最差情景利润", f"{best.worst_profit:,.2f}")
 
-                with right:
-                    with st.container(border=True):
-                        st.markdown("**风险得分**")
-                        st.caption("综合期望利润与下行情景利润后的决策指标。")
-                        score_chart = (
-                            alt.Chart(risk_df)
-                            .mark_area(line={"color": "#14b8a6", "strokeWidth": 2.4}, color="#14b8a6", opacity=0.16)
-                            .encode(
-                                x=alt.X("报价:Q", title="报价"),
-                                y=alt.Y("风险得分:Q", title="风险得分", scale=alt.Scale(zero=False)),
-                                tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("风险得分:Q", format=",.2f")],
-                            )
-                        )
-                        st.altair_chart(chart_style(score_chart), use_container_width=True)
+        risk_df = pd.DataFrame(
+            [
+                {
+                    "报价": item.bid_price,
+                    "期望利润": item.expected_profit,
+                    "下行情景利润": item.downside_profit,
+                    "最差情景利润": item.worst_profit,
+                    "预计中标MW": item.expected_accepted_mw,
+                    "可行概率": item.feasible_probability,
+                    "风险得分": item.score,
+                }
+                for item in result.trials
+            ]
+        )
+        outcome_df = pd.DataFrame(
+            [
+                {
+                    "情景": item.name,
+                    "概率权重": item.probability,
+                    "出清价格": item.clearing_price,
+                    "中标MW": item.accepted_mw,
+                    "利润": item.profit,
+                    "可行": item.feasible,
+                }
+                for item in best.outcomes
+            ]
+        )
 
-            with scenario_tab:
+        st.markdown(
+            f"""
+            <div class="pb-result-banner">
+                <span><strong>风险摘要</strong> · 风险得分 {best.score:,.2f} · 可行概率 {best.feasible_probability:.0%}</span>
+                <span>预计中标 {best.expected_accepted_mw:.2f} MW</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        risk_tab, scenario_tab, all_tab = st.tabs(["风险曲线", "压力情景", "全部候选"])
+        with risk_tab:
+            left, right = st.columns([3, 2])
+            risk_long = risk_df.melt(
+                id_vars=["报价"],
+                value_vars=["期望利润", "下行情景利润", "最差情景利润"],
+                var_name="指标",
+                value_name="利润",
+            )
+            with left:
                 with st.container(border=True):
-                    st.markdown("**推荐报价在各压力情景下的表现**")
-                    st.caption("逐个检查推荐报价在不同负荷和竞争报价状态下的出清结果。")
-                    st.dataframe(
-                        outcome_df.style.format(
-                            {"概率权重": "{:.1%}", "出清价格": "{:.2f}", "中标MW": "{:.2f}", "利润": "{:,.2f}"},
-                            na_rep="—",
-                        ),
-                        use_container_width=True,
-                        hide_index=True,
+                    st.markdown("**收益 / 下行风险曲线**")
+                    st.caption("同时看平均收益和坏情景下的利润表现。")
+                    risk_chart = (
+                        alt.Chart(risk_long)
+                        .mark_line(point=True, strokeWidth=2.2)
+                        .encode(
+                            x=alt.X("报价:Q", title="报价"),
+                            y=alt.Y("利润:Q", title="利润", scale=alt.Scale(zero=False)),
+                            color=alt.Color("指标:N", title=None, scale=alt.Scale(range=["#58dfc7", "#b09afc", "#fd8c98"])),
+                            tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("指标:N"), alt.Tooltip("利润:Q", format=",.2f")],
+                        )
                     )
+                    st.altair_chart(chart_style(risk_chart), use_container_width=True)
 
-            with all_tab:
+            with right:
                 with st.container(border=True):
-                    st.dataframe(
-                        risk_df.style.format(
-                            {
-                                "报价": "{:.2f}",
-                                "期望利润": "{:,.2f}",
-                                "下行情景利润": "{:,.2f}",
-                                "最差情景利润": "{:,.2f}",
-                                "预计中标MW": "{:.2f}",
-                                "可行概率": "{:.1%}",
-                                "风险得分": "{:,.2f}",
-                            }
-                        ),
-                        use_container_width=True,
-                        hide_index=True,
+                    st.markdown("**风险得分**")
+                    st.caption("综合期望利润与下行情景利润后的决策指标。")
+                    score_chart = (
+                        alt.Chart(risk_df)
+                        .mark_area(line={"color": "#8aabfa", "strokeWidth": 2.4}, color="#8aabfa", opacity=0.16)
+                        .encode(
+                            x=alt.X("报价:Q", title="报价"),
+                            y=alt.Y("风险得分:Q", title="风险得分", scale=alt.Scale(zero=False)),
+                            tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("风险得分:Q", format=",.2f")],
+                        )
                     )
-                    st.download_button(
-                        "导出风险分析 CSV",
-                        risk_df.to_csv(index=False).encode("utf-8-sig"),
-                        file_name="powerbid_risk_analysis.csv",
-                        mime="text/csv",
-                    )
+                    st.altair_chart(chart_style(score_chart), use_container_width=True)
+
+        with scenario_tab:
+            with st.container(border=True):
+                st.markdown("**推荐报价在各压力情景下的表现**")
+                st.caption("逐个检查推荐报价在不同负荷和竞争报价状态下的出清结果。")
+                st.dataframe(
+                    outcome_df.style.format(
+                        {"概率权重": "{:.1%}", "出清价格": "{:.2f}", "中标MW": "{:.2f}", "利润": "{:,.2f}"},
+                        na_rep="—",
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+        with all_tab:
+            with st.container(border=True):
+                st.dataframe(
+                    risk_df.style.format(
+                        {
+                            "报价": "{:.2f}",
+                            "期望利润": "{:,.2f}",
+                            "下行情景利润": "{:,.2f}",
+                            "最差情景利润": "{:,.2f}",
+                            "预计中标MW": "{:.2f}",
+                            "可行概率": "{:.1%}",
+                            "风险得分": "{:,.2f}",
+                        }
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                st.download_button(
+                    "导出风险分析 CSV",
+                    risk_df.to_csv(index=False).encode("utf-8-sig"),
+                    file_name="powerbid_risk_analysis.csv",
+                    mime="text/csv",
+                )
+
+else:
+    st.markdown(
+        """
+        <div class="pb-empty">
+            <div class="pb-empty-symbol" aria-hidden="true">↗</div>
+            <div class="pb-empty-title">准备好探索更优报价了吗？</div>
+            <div class="pb-empty-desc">配置市场参数、调整机组申报数据，然后运行决策模型。<br>推荐报价、收益曲线和情景分析将在这里呈现。</div>
+            <div class="pb-empty-step">01 设置参数 &nbsp;&nbsp; / &nbsp;&nbsp; 02 运行优化 &nbsp;&nbsp; / &nbsp;&nbsp; 03 解读结果</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.markdown(
     """
