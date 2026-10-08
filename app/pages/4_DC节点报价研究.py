@@ -17,6 +17,7 @@ from powerbid.network_feedback import compare_dc_baseline_to_pmss  # noqa: E402
 from powerbid.network_strategy import compare_network_policies  # noqa: E402
 from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
 from powerbid.strategy_lab import DemandStress, stress_grid  # noqa: E402
+from powerbid.unit_commitment import ThermalConstraints  # noqa: E402
 
 st.set_page_config(page_title="PowerBid · 网络约束策略研究", layout="wide")
 st.title("网络约束策略研究 · 节点电价与阻塞")
@@ -68,6 +69,21 @@ with st.expander("查看网络 JSON 格式说明"):
         "负荷每个节点都必须有24个数，真实机组和节点 ID 必须一一对应。"
     )
 
+physical_upload = st.file_uploader(
+    "可选：上传独立核实的机组物理参数 JSON，以便筛除不符合启停与爬坡要求的报价",
+    type=["json"],
+    key="network_physical_input",
+)
+with st.expander("查看可选物理约束文件字段"):
+    st.code(
+        "必须使用 ThermalConstraints 的确切字段："
+        "unit_id、min_mw、max_mw、ramp_up_mw、ramp_down_mw、"
+        "startup_ramp_mw、shutdown_ramp_mw、min_up_hours、min_down_hours、"
+        "startup_cost、shutdown_cost、initial_on、initial_mw、initial_state_hours。"
+        "这些字段均应取自核实的机组资料；不可猜测或默认置零。",
+        language="text",
+    )
+
 if pmss_upload is None or network_upload is None:
     st.stop()
 
@@ -82,6 +98,16 @@ try:
         forecast_source=pmss["forecastSource"],
     )
     network = network_from_dict(net)
+    physical = None
+    if physical_upload is not None:
+        from dataclasses import fields
+
+        physical_raw = json.loads(physical_upload.getvalue().decode("utf-8"))
+        if not isinstance(physical_raw, dict) or set(physical_raw) != {
+            field.name for field in fields(ThermalConstraints)
+        }:
+            raise ValueError("Physical JSON fields must exactly match ThermalConstraints")
+        physical = ThermalConstraints(**physical_raw)
 except (ValueError, TypeError, KeyError, UnicodeDecodeError) as exc:
     st.error(f"数据不完整或无法识别：{exc}")
     st.stop()
@@ -127,6 +153,7 @@ try:
             target_id,
             scenarios=scenarios,
             risk_aversion=risk,
+            physical=physical,
         )
 except (RuntimeError, ValueError) as exc:
     st.error(f"网络策略比较未完成：{exc}")
@@ -141,12 +168,15 @@ q[2].metric("尾部下行毛利", f"{best.downside_margin:,.2f}")
 q[3].metric("实际比较候选数", str(comparison.evaluated))
 st.caption(
     "注意：模拟毛利 = DC节点电价 × 模拟中标电量 - 常量运行成本。"
-    "未扣启停成本、爬坡限制等物理约束，也未考虑交流潮流、备用和PMSS实际结算。"
+    "未在网络出清时联合求解启停与爬坡；如果提供物理参数，仅在出清后进行排除筛查。"
+    "未考虑交流潮流、备用和PMSS实际结算。"
 )
 st.dataframe(
     pd.DataFrame(
         {
             "报价策略": row.name,
+            "物理筛查": "未提供约束" if row.physically_feasible is None
+            else ("通过" if row.physically_feasible else "未通过"),
             "期望模拟毛利": row.expected_margin,
             "下行毛利": row.downside_margin,
             "最差情景毛利": row.worst_margin,
@@ -157,6 +187,17 @@ st.dataframe(
     ),
     hide_index=True, use_container_width=True,
 )
+
+if physical is None:
+    st.info(
+        "目前没有提供机组运行约束：排名只基于 DC 网络模拟利润，"
+        "不能推断策略在实际机组开停机和爬坡约束下可执行。"
+    )
+else:
+    st.success(
+        "已提供目标机组物理参数，本次推荐经过所有测试情景的事后物理筛查。"
+        "此筛查不能代替网络与多时段约束联合优化。"
+    )
 
 st.subheader("中性市场情景 · 节点电价 / 线路潮流")
 neutral = next(
