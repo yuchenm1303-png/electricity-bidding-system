@@ -1,4 +1,4 @@
-import type { Scenario, Settings, Report } from "./types";
+import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization } from "./types";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -37,3 +37,21 @@ export const fromScenario = (scenario: Scenario): Settings => ({
   risk_aversion: 0.35,
   tail_fraction: 0.25,
 });
+
+export async function inspectPMSS(snapshot: Record<string, unknown>): Promise<PMSSInspection> {
+  return unpack<PMSSInspection>(await fetch(BASE + "api/pmss/inspect", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ snapshot }),
+  }));
+}
+export async function optimizePMSS(
+  snapshot: Record<string, unknown>,
+  target_unit_id: string,
+  candidate_prices: number[],
+  iterations: number,
+): Promise<PMSSOptimization> {
+  return unpack<PMSSOptimization>(await fetch(BASE + "api/pmss/optimize", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ snapshot, target_unit_id, candidate_prices, iterations }),
+  }));
+}
