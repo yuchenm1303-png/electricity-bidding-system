@@ -42,10 +42,13 @@ function RangeField({ label, value, onChange, max = 40, unit = "%" }: {
   label: string; value: number; onChange: (value: number) => void; max?: number; unit?: string;
 }) {
   const display = Math.round(value * 100);
+  const fill = Math.min(100, Math.max(0, display / max * 100));
   return (
     <label className="range-field">
       <span className="range-head"><span>{label}</span><strong>{display}{unit}</strong></span>
-      <input type="range" min={0} max={max} step={5} value={display} onChange={e => onChange(Number(e.target.value) / 100)} />
+      <input type="range" min={0} max={max} step={5} value={display}
+        style={{ background: `linear-gradient(90deg, var(--ta-primary) ${fill}%, var(--ta-border) ${fill}%)` }}
+        onChange={e => onChange(Number(e.target.value) / 100)} />
     </label>
   );
 }
@@ -84,9 +87,9 @@ export function SettingsPanel({ config, onChange, onClose, collapsed, onModeChan
         <div className="setting-section">
           <div className="setting-section-head"><Gauge size={15}/><span>报价策略</span><small>02</small></div>
           <span className="field-label">决策模式</span>
-          <div className="mode-switch" role="group" aria-label="决策模式">
-            <button type="button" className={config.mode === "single" ? "active" : ""} onClick={() => onModeChange("single")}>单场景</button>
-            <button type="button" className={config.mode === "risk" ? "active" : ""} onClick={() => onModeChange("risk")}>风险分析</button>
+          <div className="mode-switch" data-active={config.mode} role="group" aria-label="决策模式">
+            <button type="button" aria-pressed={config.mode === "single"} className={config.mode === "single" ? "active" : ""} onClick={() => onModeChange("single")}>单场景</button>
+            <button type="button" aria-pressed={config.mode === "risk"} className={config.mode === "risk" ? "active" : ""} onClick={() => onModeChange("risk")}>风险分析</button>
           </div>
           <div className="field-pair">
             <NumberField label="最低报价" value={config.start} step={10} onCommit={v => set("start", v)}/>
