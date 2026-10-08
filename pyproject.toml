@@ -21,6 +21,9 @@ ui = [
 pypsa = [
   "pypsa>=0.35",
 ]
+platform = [
+  "requests[socks]>=2.32",
+]
 dev = [
   "pytest>=8.3",
   "ruff>=0.6",
@@ -30,6 +33,7 @@ all = [
   "pandas>=2.2",
   "pywebview>=5.3,<6",
   "pypsa>=0.35",
+  "requests[socks]>=2.32",
   "pytest>=8.3",
   "ruff>=0.6",
 ]
