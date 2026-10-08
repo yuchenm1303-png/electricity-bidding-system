@@ -132,15 +132,15 @@ def test_confirmed_unit_result_parses_24_hour_power_price_income():
 def test_result_selection_is_market_specific():
     tree = [
         {"key": "DA", "title": "日前", "children": [
-            {"key": "G30_DA", "leaf": True},
-            {"key": "G31_DA", "leaf": True},
+            {"key": "DA-G30", "leaf": True},
+            {"key": "DA-G31", "leaf": True},
         ]},
         {"key": "RT", "title": "实时", "children": [
-            {"key": "G30_RT", "leaf": True},
+            {"key": "RT-G30", "leaf": True},
         ]},
     ]
-    assert selected_leaf_ids(tree, "DA") == ["G30_DA", "G31_DA"]
-    assert selected_leaf_ids(tree, "RT") == ["G30_RT"]
+    assert selected_leaf_ids(tree, "DA") == ["G30", "G31"]
+    assert selected_leaf_ids(tree, "RT") == ["G30"]
     with pytest.raises(ValueError):
         selected_leaf_ids(tree, "BAD")
 
