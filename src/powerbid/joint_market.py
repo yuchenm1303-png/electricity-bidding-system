@@ -94,6 +94,8 @@ def joint_clear_day(
     for ident, spec in technical.items():
         if spec.unit_id != ident:
             raise ValueError("ThermalConstraints.unit_id does not match mapping key")
+        if not isinstance(spec.initial_on, bool):
+            raise ValueError("Initial unit on/off status must be an actual boolean")
         if spec.max_mw > snapshot.unit(ident).capacity_mw + 1e-7:
             raise ValueError(f"{ident}: technical maximum exceeds snapshot capacity")
     if terminal_mode not in ("complete", "carryover"):
