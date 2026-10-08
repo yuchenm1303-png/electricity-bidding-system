@@ -7,10 +7,11 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from powerbid.adapters.teacher_platform import (
@@ -230,7 +231,12 @@ async def offline_optimize(request: Request) -> dict[str, Any]:
         raise HTTPException(422, str(exc)) from exc
 
 
-def _client() -> TeacherPlatformAdapter:
+def _client(view_key: str | None = None) -> TeacherPlatformAdapter:
+    configured_key = os.getenv("POWERBID_PMSS_VIEW_KEY", "").strip()
+    if not configured_key or not view_key or not secrets.compare_digest(
+        view_key, configured_key
+    ):
+        raise HTTPException(403, "PMSS 实时查询需要管理员配置访问密钥")
     base = os.getenv("POWERBID_PLATFORM_BASE_URL", "").strip()
     if not base:
         raise HTTPException(503, "尚未配置老师平台只读桥接，仍可上传快照进行离线研究")
@@ -253,14 +259,18 @@ def _context(client: TeacherPlatformAdapter) -> Any:
 
 @router.get("/live/status")
 def live_status() -> dict[str, Any]:
-    configured = bool(os.getenv("POWERBID_PLATFORM_BASE_URL", "").strip())
+    configured = bool(os.getenv("POWERBID_PLATFORM_BASE_URL", "").strip()) and bool(
+        os.getenv("POWERBID_PMSS_VIEW_KEY", "").strip()
+    )
     return {"configured": configured, "read_only": True, "write_enabled": False}
 
 
 @router.get("/live/context")
-def live_context() -> dict[str, Any]:
+def live_context(
+    x_powerbid_view_key: str | None = Header(default=None),
+) -> dict[str, Any]:
     try:
-        context = _context(_client())
+        context = _context(_client(x_powerbid_view_key))
         return {
             "project": {
                 "projectId": context.project.get("projectId"),
@@ -288,11 +298,15 @@ def live_context() -> dict[str, Any]:
 
 
 @router.get("/live/detail")
-def live_detail(case_id: str, unit_id: str) -> dict[str, Any]:
+def live_detail(
+    case_id: str,
+    unit_id: str,
+    x_powerbid_view_key: str | None = Header(default=None),
+) -> dict[str, Any]:
     if not 1 <= len(case_id) <= 128 or not 1 <= len(unit_id) <= 128:
         raise HTTPException(422, "案例或机组编号无效")
     try:
-        client = _client()
+        client = _client(x_powerbid_view_key)
         context = _context(client)
         case = next((c for c in context.cases if str(c.get("caseId")) == case_id), None)
         unit = next(
