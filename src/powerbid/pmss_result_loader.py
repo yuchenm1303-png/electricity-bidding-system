@@ -51,6 +51,11 @@ def read_market_results(
                 f"PMSS {market_type} {kind}: selected {expected[kind]}, "
                 f"received {received[kind]} rows"
             )
+    for kind, rows in (("unit", units), ("node", nodes), ("branch", branches)):
+        if any(row.market_type != market_type for row in rows):
+            raise ValueError(f"PMSS {kind} returned a different market type")
+        if {row.element_id for row in rows} != set(ids[kind]):
+            raise ValueError(f"PMSS {kind} result IDs differ from selected IDs")
     return {
         "marketTypeAtom": market_type,
         "periodNum": 24,
