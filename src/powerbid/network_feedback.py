@@ -12,6 +12,7 @@ from typing import Any
 
 from powerbid.network_dispatch import DcNetwork
 from powerbid.network_strategy import NetworkBidResult
+from powerbid.pmss_integration import PMSSSnapshot
 from powerbid.pmss_diagnostics import series24
 
 
@@ -38,6 +39,7 @@ def _id(row: Mapping[str, Any]) -> str:
 
 
 def compare_dc_baseline_to_pmss(
+    snapshot: PMSSSnapshot,
     network: DcNetwork,
     baseline: NetworkBidResult,
     target_unit_id: str,
@@ -48,8 +50,11 @@ def compare_dc_baseline_to_pmss(
         raise ValueError("Requires 24-hour historical PMSS DA results")
     if target_unit_id not in network.unit_bus:
         raise ValueError("Target unit has no verified node map")
-    if not baseline.name.startswith("PMSS 原始已申报曲线"):
-        raise ValueError("Only historical original-bid model baseline can be compared")
+    if (
+        not baseline.name.startswith("PMSS 原始已申报曲线")
+        or baseline.periods != snapshot.bids[target_unit_id]
+    ):
+        raise ValueError("Only the exact historical original-bid plan can be compared")
     if len(baseline.scenarios) != 1:
         raise ValueError("Historical model validation must use exactly one neutral scenario")
     scenario = baseline.scenarios[0]
