@@ -20,7 +20,7 @@ from powerbid.pmss_strategy import optimize_segmented_bid
 router = APIRouter(prefix="/api/pmss")
 MAX_REQUEST_BYTES = 900_000
 SENSITIVE_KEYS = {
-    "cookie", "cookies", "set-cookie", "token", "accesstoken",
+    "cookie", "cookies", "setcookie", "token", "accesstoken",
     "refreshtoken", "authorization", "password", "passwd",
     "secret", "session", "sessionid", "csrf", "privatekey",
 }
@@ -78,7 +78,12 @@ def _screen_snapshot(raw: dict[str, Any]) -> None:
                 if not isinstance(key, str):
                     raise ValueError("快照字段必须为字符串")
                 lowered = key.lower().replace("_", "").replace("-", "")
-                if lowered in SENSITIVE_KEYS:
+                if lowered in SENSITIVE_KEYS or any(
+                    part in lowered for part in (
+                        "cookie", "token", "password", "secret",
+                        "authorization", "session", "csrf", "privatekey",
+                    )
+                ):
                     raise ValueError("快照包含认证字段；请在服务器端脱敏后再导入")
                 nodes.append((child, depth + 1))
         elif isinstance(value, list):
