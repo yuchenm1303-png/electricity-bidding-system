@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useReducedMotion } from "./useReducedMotion";
 import { Activity, BarChart3, Boxes, TrendingUp, Zap, ArrowUpRight, Gauge } from "lucide-react";
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid,
@@ -71,7 +70,6 @@ function CapacityGauge({ demand, total, unitCount }: { demand: number; total: nu
 }
 
 export function DashboardOverview({ offers, demand, targetId, report, onNavigate }: Props) {
-  const reducedMotion = useReducedMotion();
   const total = useMemo(() => offers.reduce((n, o) => n + o.quantity_mw, 0), [offers]);
   const ordered = useMemo(() => [...offers].sort((a,b) => a.bid_price - b.bid_price), [offers]);
   const cumulative = useMemo(() => {
@@ -104,7 +102,7 @@ export function DashboardOverview({ offers, demand, targetId, report, onNavigate
                 <YAxis tick={axis} axisLine={false} tickLine={false} width={50}/>
                 <Tooltip cursor={{fill:"#f2f4ff"}} contentStyle={tooltip}
                   formatter={(v, name) => [typeof v==="number"?numeric(v,2):v, name]}/>
-                <Bar isAnimationActive={!reducedMotion} animationDuration={520} animationEasing="ease-out" dataKey="bid_price" name="机组报价" radius={[5,5,0,0]}>
+                <Bar isAnimationActive={false} dataKey="bid_price" name="机组报价" radius={[5,5,0,0]}>
                   {offers.map(o => <Cell key={o.unit_id} fill={o.unit_id===targetId ? "#465fff" : "#a6b4ff"}/>)}
                 </Bar>
               </BarChart>
@@ -138,7 +136,7 @@ export function DashboardOverview({ offers, demand, targetId, report, onNavigate
             <ReferenceLine y={demand} stroke="#e2a25a" strokeDasharray="5 5"
               label={{value:"市场负荷", position:"insideTopRight",fill:"#ba874b",fontSize:11}}/>
             <Tooltip contentStyle={tooltip} formatter={v => typeof v==="number" ? numeric(v,2) + " MW" : v}/>
-            <Area isAnimationActive={!reducedMotion} animationDuration={620} animationEasing="ease-out" dataKey="capacity" name="累积供给容量" stroke="#465fff" strokeWidth={2.7} fill="url(#taSupply)"
+            <Area isAnimationActive={false} dataKey="capacity" name="累积供给容量" stroke="#465fff" strokeWidth={2.7} fill="url(#taSupply)"
               type="stepAfter" dot={{fill:"#465fff",r:3}} activeDot={{r:5}}/>
           </AreaChart>
         </ResponsiveContainer>
