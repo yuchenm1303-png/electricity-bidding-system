@@ -14,13 +14,13 @@ for module_path in (SRC, APP_DIR):
     if str(module_path) not in sys.path:
         sys.path.insert(0, str(module_path))
 
+from design_system import APP_CSS  # noqa: E402
 from powerbid.adapters.pypsa_engine import PyPSAClearingEngine  # noqa: E402
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine  # noqa: E402
 from powerbid.models import MarketScenario, Offer  # noqa: E402
 from powerbid.optimizer import GridSearchBidOptimizer, price_grid  # noqa: E402
 from powerbid.risk import RiskAwareBidOptimizer, build_stress_cases  # noqa: E402
 from powerbid.scenario_io import load_scenario  # noqa: E402
-from design_system import APP_CSS  # noqa: E402
 
 st.set_page_config(
     page_title="PowerBid Lab",
@@ -119,7 +119,9 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
         demand_mw = st.number_input("市场负荷 / MW", min_value=0.0, value=base.demand_mw, step=10.0)
-        interval_hours = st.number_input("结算时段 / h", min_value=0.25, value=base.interval_hours, step=0.25)
+        interval_hours = st.number_input(
+            "结算时段 / h", min_value=0.25, value=base.interval_hours, step=0.25
+        )
         target_unit_id = st.selectbox("目标机组", [offer.unit_id for offer in base.offers], index=0)
         engine_name = st.selectbox("出清引擎", ["内置统一出清价", "PyPSA"])
         decision_mode = st.selectbox("决策模式", ["单场景利润最大化", "不确定性 / 风险分析"])
@@ -269,7 +271,10 @@ with st.container(border=True, key="offer_card"):
         st.caption("修改仅作用于当前分析，不覆盖原始样例文件。")
     with meta_right:
         st.markdown(
-            f'<div style="text-align:right"><span class="pb-card-meta">{len(source_df)} UNIT · {source_label}</span></div>',
+            (
+                f'<div style="text-align:right"><span class="pb-card-meta">'
+                f'{len(source_df)} UNIT · {source_label}</span></div>'
+            ),
             unsafe_allow_html=True,
         )
 
@@ -334,7 +339,12 @@ with st.container(border=True, key="run_card"):
             unsafe_allow_html=True,
         )
     with action_right:
-        run = st.button("开始优化报价  ↗", type="primary", use_container_width=True, disabled=not (valid_range and valid_target))
+        run = st.button(
+            "开始优化报价  ↗",
+            type="primary",
+            use_container_width=True,
+            disabled=not (valid_range and valid_target),
+        )
 
 current_signature = (
     decision_mode, engine_name, target_unit_id,
@@ -369,14 +379,20 @@ if run:
                 description="Interactive teaching scenario built in the Streamlit UI.",
                 data_source="synthetic",
             )
-            engine = PyPSAClearingEngine() if engine_name == "PyPSA" else UniformPriceClearingEngine()
+            engine = (
+                PyPSAClearingEngine()
+                if engine_name == "PyPSA"
+                else UniformPriceClearingEngine()
+            )
             candidates = price_grid(float(bid_start), float(bid_stop), float(bid_step))
 
             if decision_mode == "单场景利润最大化":
                 result = GridSearchBidOptimizer(engine).optimize(scenario, candidates)
             else:
                 demand_multipliers = (1.0 - demand_uncertainty, 1.0, 1.0 + demand_uncertainty)
-                competitor_multipliers = (1.0 - competitor_uncertainty, 1.0, 1.0 + competitor_uncertainty)
+                competitor_multipliers = (
+                    1.0 - competitor_uncertainty, 1.0, 1.0 + competitor_uncertainty
+                )
                 stress_cases = build_stress_cases(
                     scenario,
                     demand_multipliers=demand_multipliers,
@@ -416,7 +432,10 @@ if saved_report is not None:
         best = result.best
         result_cols = st.columns(4)
         result_cols[0].metric("推荐报价", f"{best.bid_price:.2f}")
-        result_cols[1].metric("出清价格", "—" if best.clearing_price is None else f"{best.clearing_price:.2f}")
+        result_cols[1].metric(
+            "出清价格",
+            "—" if best.clearing_price is None else f"{best.clearing_price:.2f}",
+        )
         result_cols[2].metric("预计中标", f"{best.accepted_mw:.2f} MW")
         result_cols[3].metric("预计利润", f"{best.profit:,.2f}")
 
@@ -454,15 +473,28 @@ if saved_report is not None:
                     st.caption("观察报价变化如何影响目标机组利润。")
                     profit_area = (
                         alt.Chart(trials_df)
-                        .mark_area(line={"color": "#58dfc7", "strokeWidth": 2.4}, color="#58dfc7", opacity=0.16)
+                        .mark_area(
+                            line={"color": "#58dfc7", "strokeWidth": 2.4},
+                            color="#58dfc7", opacity=0.16,
+                        )
                         .encode(
                             x=alt.X("报价:Q", title="报价"),
                             y=alt.Y("利润:Q", title="利润", scale=alt.Scale(zero=False)),
-                            tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("利润:Q", format=",.2f")],
+                            tooltip=[
+                                alt.Tooltip("报价:Q", format=".2f"),
+                                alt.Tooltip("利润:Q", format=",.2f"),
+                            ],
                         )
                     )
-                    best_rule = alt.Chart(pd.DataFrame({"报价": [best.bid_price]})).mark_rule(color="#8aabfa", strokeDash=[6, 5], strokeWidth=1.5).encode(x="报价:Q")
-                    st.altair_chart(chart_style(alt.layer(profit_area, best_rule)), use_container_width=True)
+                    best_rule = (
+                        alt.Chart(pd.DataFrame({"报价": [best.bid_price]}))
+                        .mark_rule(color="#8aabfa", strokeDash=[6, 5], strokeWidth=1.5)
+                        .encode(x="报价:Q")
+                    )
+                    st.altair_chart(
+                        chart_style(alt.layer(profit_area, best_rule)),
+                        use_container_width=True,
+                    )
 
             with right:
                 with st.container(border=True):
@@ -474,7 +506,10 @@ if saved_report is not None:
                         .encode(
                             x=alt.X("报价:Q", title="报价"),
                             y=alt.Y("中标电量MW:Q", title="中标电量 / MW"),
-                            tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("中标电量MW:Q", format=".2f")],
+                            tooltip=[
+                                alt.Tooltip("报价:Q", format=".2f"),
+                                alt.Tooltip("中标电量MW:Q", format=".2f"),
+                            ],
                         )
                     )
                     st.altair_chart(chart_style(quantity_chart), use_container_width=True)
@@ -567,8 +602,16 @@ if saved_report is not None:
                         .encode(
                             x=alt.X("报价:Q", title="报价"),
                             y=alt.Y("利润:Q", title="利润", scale=alt.Scale(zero=False)),
-                            color=alt.Color("指标:N", title=None, scale=alt.Scale(range=["#58dfc7", "#b09afc", "#fd8c98"])),
-                            tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("指标:N"), alt.Tooltip("利润:Q", format=",.2f")],
+                            color=alt.Color(
+                                "指标:N",
+                                title=None,
+                                scale=alt.Scale(range=["#58dfc7", "#b09afc", "#fd8c98"]),
+                            ),
+                            tooltip=[
+                                alt.Tooltip("报价:Q", format=".2f"),
+                                alt.Tooltip("指标:N"),
+                                alt.Tooltip("利润:Q", format=",.2f"),
+                            ],
                         )
                     )
                     st.altair_chart(chart_style(risk_chart), use_container_width=True)
@@ -579,11 +622,17 @@ if saved_report is not None:
                     st.caption("综合期望利润与下行情景利润后的决策指标。")
                     score_chart = (
                         alt.Chart(risk_df)
-                        .mark_area(line={"color": "#8aabfa", "strokeWidth": 2.4}, color="#8aabfa", opacity=0.16)
+                        .mark_area(
+                            line={"color": "#8aabfa", "strokeWidth": 2.4},
+                            color="#8aabfa", opacity=0.16,
+                        )
                         .encode(
                             x=alt.X("报价:Q", title="报价"),
                             y=alt.Y("风险得分:Q", title="风险得分", scale=alt.Scale(zero=False)),
-                            tooltip=[alt.Tooltip("报价:Q", format=".2f"), alt.Tooltip("风险得分:Q", format=",.2f")],
+                            tooltip=[
+                                alt.Tooltip("报价:Q", format=".2f"),
+                                alt.Tooltip("风险得分:Q", format=",.2f"),
+                            ],
                         )
                     )
                     st.altair_chart(chart_style(score_chart), use_container_width=True)
