@@ -25,7 +25,10 @@ def test_design_is_shared_and_offline_friendly():
     assert "CSS_PATH.read_text" in design
     assert ".pb-hero" in css
     assert ".pb-empty" in css
-    assert "@media (max-width:900px)" in css
+    assert "@media (max-width:950px)" in css
+    assert ".pb-kpi" in css
+    assert ".pb-chart-heading" in css
+    assert ".pb-side-summary" in css
     assert "prefers-reduced-motion:reduce" in css
     assert "@import" not in css
     assert "https://" not in css
@@ -38,4 +41,7 @@ def test_report_persists_and_marks_stale_inputs():
     assert 'saved_report["signature"] != current_signature' in view
     assert 'if report_mode == "单场景利润最大化":' in view
     assert 'disabled=not (valid_range and valid_target)' in view
-    assert "数据来源 / {source_label}" in view
+    assert "数据源 · {source_label}" in view
+    assert "def metric_tile(" in view
+    assert "def chart_heading(" in view
+    assert "教学模拟 · 非实时市场" in view
