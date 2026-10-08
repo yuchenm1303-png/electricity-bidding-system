@@ -102,7 +102,7 @@ def test_nodal_parser_uses_power_flow_as_lmp_per_live_frontend():
 
 
 def test_branch_parser_reads_all_five_real_series():
-    data = FakeResults().get_branch_flows()
+    data = FakeResults().get_branch_flows(da_ids=["line-1"])
     row = parse_branch_flows(data)[0]
     assert row.flow_mw[0] == -40
     assert row.from_node_price[0] == 53
