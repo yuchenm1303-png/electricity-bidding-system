@@ -112,6 +112,11 @@ except (ValueError, TypeError, KeyError, UnicodeDecodeError) as exc:
     st.error(f"数据不完整或无法识别：{exc}")
     st.stop()
 
+if pmss.get("syntheticExample"):
+    st.warning(
+        "当前上传的是 PowerBid 合成教学示例，并非老师 PMSS 真实节点、线路或报价数据。"
+    )
+
 if pmss.get("historicalBacktestOnly"):
     st.warning(
         "PMSS 快照是历史案例，仅可用于事后回测。"
