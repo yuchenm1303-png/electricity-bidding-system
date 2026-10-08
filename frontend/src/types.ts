@@ -114,6 +114,9 @@ export type PMSSInspection = {
   historical_only: boolean;
   load_source_kind: string;
   max_segments: number;
+  dc_grid_available: boolean;
+  dc_grid_buses: number;
+  dc_grid_lines: number;
   network: {
     node_count: number;
     branch_count: number;
@@ -159,4 +162,32 @@ export type PMSSOptimization = {
   pmss_write_performed: false;
   pmss_clearing_executed: false;
   counterfactual_pmss_result_available: false;
+};
+
+export type DCNetworkStudy = {
+  target_unit_id: string;
+  total_profit: number;
+  total_accepted_mwh: number;
+  max_line_utilization: number;
+  hours_with_binding_lines: number;
+  study_type: string;
+  hours: {
+    period: number;
+    target_mw: number;
+    target_lmp: number;
+    target_profit: number;
+    binding_line_count: number;
+    binding_lines: string[];
+  }[];
+};
+export type PMSSNetworkComparison = {
+  baseline: DCNetworkStudy;
+  recommended: DCNetworkStudy | null;
+  recommended_error: string | null;
+  topology_source: string;
+  network_model: string;
+  excluded_constraints: string[];
+  pmss_write_performed: false;
+  pmss_clearing_executed: false;
+  pmss_counterfactual_verified: false;
 };
