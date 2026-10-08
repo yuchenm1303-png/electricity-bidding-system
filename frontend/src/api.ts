@@ -17,7 +17,7 @@ async function unpack<T>(res: Response): Promise<T> {
 }
 export const loadScenario = async () => unpack<Scenario>(await fetch(BASE + "api/scenario"));
 export const runOptimization = async (settings: Settings) =>
-  unpack<Report>(await fetch("/api/optimize", {
+  unpack<Report>(await fetch(BASE + "api/optimize", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(settings),
