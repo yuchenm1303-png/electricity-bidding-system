@@ -166,7 +166,11 @@
 }
 :root .ta-stat-icon svg {transition:transform .45s var(--motion-spring)}
 :root .ta-stat-card:hover .ta-stat-icon svg {transform:translateY(-2px) rotate(-5deg)}
-:root .ta-gauge-arc {stroke-dashoffset:0}
+:root .ta-gauge-arc {
+  stroke-dashoffset:0;
+  animation:pb-gauge-unveil .88s .12s var(--motion-ease) both;
+  transition:stroke-dasharray .52s var(--motion-ease);
+}
 :root .ta-report-strip > div {animation:pb-card-arrive .43s var(--motion-ease) both}
 :root .ta-report-strip > div:nth-child(2){animation-delay:.06s}
 :root .ta-report-strip > div:nth-child(3){animation-delay:.12s}
@@ -234,11 +238,11 @@
   border-radius:6px;background:var(--ta-panel);
   box-shadow:0 1px 5px rgba(16,24,40,.10);
   transition:transform .35s var(--motion-spring),background-color var(--motion-fast);
-  z-index:-1;
+  z-index:0;
 }
 :root .mode-switch[data-active="risk"]::before {transform:translateX(100%)}
 :root .mode-switch button.active {background:transparent;box-shadow:none}
-:root .mode-switch button {position:relative}
+:root .mode-switch button {position:relative;z-index:1}
 :root .range-field input[type="range"] {appearance:none;-webkit-appearance:none;border:0;border-radius:99px;height:5px;cursor:pointer}
 :root .range-field input[type="range"]::-webkit-slider-thumb {
   appearance:none;-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
@@ -267,6 +271,38 @@
 :root .report-empty-art svg {animation:pb-empty-float 3.6s ease-in-out infinite}
 :root .recommendation-illustration svg {animation:pb-empty-float 3.8s ease-in-out infinite}
 :root .loading-symbol svg {animation:pb-empty-float 2.7s ease-in-out infinite}
+
+
+/* Theme transitions cover actual chrome, not the entire DOM tree.
+   Avoid reflow, especially in editable numeric cells. */
+:root .app-main,
+:root .sidebar,
+:root .global-header,
+:root .ta-stat-card,
+:root .ta-chart-card,
+:root .ta-capacity,
+:root .data-panel,
+:root .trials-panel,
+:root .chart-card,
+:root .settings-panel,
+:root .ta-global-search,
+:root .ta-stat-icon,
+:root .ta-capacity-footer,
+:root .recommendation-panel {
+  transition-property:background-color,border-color,box-shadow,transform;
+  transition-duration:var(--motion-standard);
+  transition-timing-function:var(--motion-ease);
+}
+/* This deliberately leaves motion on hover cards without shifting layout. */
+:root .view-stage .ta-overview {min-width:0}
+:root .ta-chart-card .recharts-wrapper,
+:root .chart-card .recharts-wrapper {overflow:visible}
+:root .ta-chart-card .recharts-tooltip-wrapper,
+:root .chart-card .recharts-tooltip-wrapper {transition:opacity .16s ease}
+:root .ta-gauge-reading strong,
+:root .ta-capacity-footer strong {font-variant-numeric:tabular-nums}
+:root .setting-section .number-field:focus-within,
+:root .table-search:focus-within {box-shadow:0 0 0 3px var(--motion-outline)}
 
 /* Animation keyframes */
 @keyframes pb-view-enter {from{opacity:0;transform:translate3d(0,12px,0)}to{opacity:1;transform:translateZ(0)}}
