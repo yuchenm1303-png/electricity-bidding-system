@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowRight, BarChart3, Boxes, ChevronRight, CircleHelp,
   FileBarChart, LayoutDashboard, Menu, Moon, PanelRightClose, PanelRightOpen,
-  Play, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Sparkles, Sun, TrendingUp, X, Zap
+  Play, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Sun, TrendingUp, X, Zap
 } from "lucide-react";
 import { loadScenario, runOptimization, fromScenario } from "./api";
 import { SettingsPanel } from "./SettingsPanel";
