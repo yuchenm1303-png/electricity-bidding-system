@@ -1,7 +1,12 @@
 """HTTP contract for the React frontend, backed by real optimization engines."""
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
