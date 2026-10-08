@@ -135,7 +135,9 @@ def test_pmss_rejects_invalid_or_oversized_computation():
 
 
 def test_pmss_rejects_wrong_mime_and_does_not_expose_server_snapshot():
-    response = client.post("/api/pmss/inspect", content="{}", headers={"content-type": "text/plain"})
+    response = client.post(
+        "/api/pmss/inspect", content="{}", headers={"content-type": "text/plain"}
+    )
     assert response.status_code == 415
     assert client.get("/api/pmss/inspect").status_code == 405
     assert client.get("/api/pmss/snapshot").status_code == 404
