@@ -97,7 +97,6 @@ def compare_dc_baseline_to_pmss(
         hours[i].dispatched_mw - actual for i, actual in enumerate(dispatch)
         if actual is not None
     ]
-    target_bus = network.unit_bus[target_unit_id]
     price_errors = [
         abs(hours[i].target_lmp - actual)
         for i, actual in enumerate(prices) if actual is not None
