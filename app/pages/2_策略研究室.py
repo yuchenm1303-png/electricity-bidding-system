@@ -13,7 +13,7 @@ if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
 from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
-from powerbid.strategy_lab import compare_strategies, stress_grid  # noqa: E402
+from powerbid.strategy_lab import compare_strategies, stress_grid, tune_policy_grid  # noqa: E402
 
 st.set_page_config(page_title="PowerBid · 策略研究室", layout="wide")
 st.title("策略研究室 · 24 小时报价与风险比较")
@@ -82,6 +82,7 @@ with st.form("strategy_lab_settings"):
     tail_fraction = risk_cols[2].slider(
         "下行情景概率占比", 0.05, 1.0, 0.25, 0.05
     )
+    joint_search = st.checkbox("联合搜索加价、分段梯度和供需紧张度（更全面）", value=False)
     run = st.form_submit_button("比较所有报价策略", type="primary")
 
 if not run:
@@ -95,17 +96,31 @@ if not markups or markups[-1] < max_markup - 1e-6:
 
 try:
     with st.spinner("正在本地计算策略与风险情景"):
-        comparison = compare_strategies(
-            snapshot,
-            target_id,
-            markups=markups,
-            scenarios=stress_grid(
-                demand_deviation=demand_deviation,
-                peer_price_deviation=peer_deviation,
-            ),
-            risk_aversion=risk_aversion,
-            tail_fraction=tail_fraction,
+        cases = stress_grid(
+            demand_deviation=demand_deviation,
+            peer_price_deviation=peer_deviation,
         )
+        if joint_search:
+            comparison = tune_policy_grid(
+                snapshot,
+                target_id,
+                markups=markups,
+                slopes=(0.0, 10.0, 25.0),
+                scarcity_sensitivities=(0.0, 50.0, 100.0),
+                scenarios=cases,
+                risk_aversion=risk_aversion,
+                tail_fraction=tail_fraction,
+                max_evaluations=300,
+            )
+        else:
+            comparison = compare_strategies(
+                snapshot,
+                target_id,
+                markups=markups,
+                scenarios=cases,
+                risk_aversion=risk_aversion,
+                tail_fraction=tail_fraction,
+            )
 except ValueError as exc:
     st.error(f"策略对比未完成：{exc}")
     st.stop()
