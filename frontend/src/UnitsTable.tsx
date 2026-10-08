@@ -142,6 +142,7 @@ export function UnitsTable({ offers, targetId, onChange, onTarget, expanded = fa
       </div>
     </div>
     {warning && <p className="table-warning"><AlertCircle size={14}/>{warning}</p>}
+    <div className="mobile-table-hint">左右滑动表格，可以查看和编辑全部列 →</div>
     <div className="table-scroll">
       <table className="units-table">
         <thead>{table.getHeaderGroups().map(group => <tr key={group.id}>{group.headers.map(h => <th key={h.id} style={{ width: h.getSize() }}>
