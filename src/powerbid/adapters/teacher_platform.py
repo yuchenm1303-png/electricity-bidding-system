@@ -384,6 +384,14 @@ class TeacherPlatformAdapter:
             params={"caseId": case_id, "marketTypeAtom": market_type_atom},
         ) or {}
 
+    def get_unit_result_tree(self, case_id: str) -> list[dict[str, Any]]:
+        """Read-only selector for unit results; use DA and RT IDs separately."""
+        return self._request(
+            "GET",
+            "marketResult/unitBid/getSelectTree",
+            params={"caseId": case_id},
+        ) or []
+
     def get_unit_results(
         self,
         *,
@@ -397,7 +405,7 @@ class TeacherPlatformAdapter:
             json_body={
                 "caseId": case_id,
                 "daIds": da_ids,
-                "rtIds": da_ids if rt_ids is None else rt_ids,
+                "rtIds": [] if rt_ids is None else rt_ids,
             },
         ) or {}
 
@@ -421,7 +429,7 @@ class TeacherPlatformAdapter:
             json_body={
                 "caseId": case_id,
                 "daIds": da_ids,
-                "rtIds": da_ids if rt_ids is None else rt_ids,
+                "rtIds": [] if rt_ids is None else rt_ids,
             },
         ) or {}
 
@@ -445,6 +453,6 @@ class TeacherPlatformAdapter:
             json_body={
                 "caseId": case_id,
                 "daIds": da_ids,
-                "rtIds": da_ids if rt_ids is None else rt_ids,
+                "rtIds": [] if rt_ids is None else rt_ids,
             },
         ) or {}
