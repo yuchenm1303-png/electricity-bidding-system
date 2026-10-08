@@ -68,6 +68,98 @@ st.caption(
     "真实 PMSS 对该字段的财务口径仍需按课程规则核验。"
 )
 
+if raw.get("historicalBacktestOnly"):
+    st.warning(
+        "本快照使用历史已出清总发电量作为回测负荷代理，不是未来负荷预测，"
+        "也不能等同于真实系统负荷。结果只供算法验证。"
+    )
+
+observed = raw.get("results")
+if isinstance(observed, dict) and observed.get("periodNum") == 24:
+    st.subheader("PMSS 真实已出清结果（只读）")
+    st.caption(
+        f"历史案例：{raw.get('caseDate', '未标注日期')} · "
+        "下方是真实 PMSS 已出清数据，不是本地报价优化的预测结果。"
+    )
+    unit_tab, node_tab, branch_tab = st.tabs(
+        ["机组中标", "节点电价", "支路潮流"]
+    )
+
+    def _values(row, field):
+        series = row.get(field, {})
+        if isinstance(series, dict):
+            return series.get("datas", [])
+        return series if isinstance(series, (list, tuple)) else []
+
+    with unit_tab:
+        units_data = observed.get("unitResults") or []
+        if units_data:
+            picked_unit = st.selectbox(
+                "查看机组结果",
+                range(len(units_data)),
+                format_func=lambda i: units_data[i].get("elementName")
+                or units_data[i].get("name", str(i)),
+                key="pmss_actual_unit",
+            )
+            item = units_data[picked_unit]
+            st.dataframe(
+                pd.DataFrame({
+                    "时段": range(1, 25),
+                    "中标出力 MW": _values(item, "power")
+                    or item.get("accepted_mw", []),
+                    "实际出清价格": _values(item, "price")
+                    or item.get("clearing_prices", []),
+                    "平台记录收入": _values(item, "income"),
+                }),
+                hide_index=True,
+                use_container_width=True,
+            )
+    with node_tab:
+        nodes_data = observed.get("nodalPrices") or []
+        if nodes_data:
+            picked_node = st.selectbox(
+                "查看节点",
+                range(len(nodes_data)),
+                format_func=lambda i: nodes_data[i].get("elementName")
+                or nodes_data[i].get("name", str(i)),
+                key="pmss_actual_node",
+            )
+            item = nodes_data[picked_node]
+            st.line_chart(
+                pd.DataFrame({
+                    "时段": range(1, 25),
+                    "节点电价": _values(item, "powerFlow") or item.get("lmp", []),
+                }).set_index("时段")
+            )
+    with branch_tab:
+        branches_data = observed.get("branchFlows") or []
+        if branches_data:
+            picked_branch = st.selectbox(
+                "查看支路",
+                range(len(branches_data)),
+                format_func=lambda i: branches_data[i].get("elementName")
+                or branches_data[i].get("name", str(i)),
+                key="pmss_actual_branch",
+            )
+            item = branches_data[picked_branch]
+            st.dataframe(
+                pd.DataFrame({
+                    "时段": range(1, 25),
+                    "线路潮流 MW": _values(item, "powerFlow")
+                    or item.get("flow_mw", []),
+                    "首端节点电价": _values(item, "beginNodePrice")
+                    or item.get("from_node_price", []),
+                    "末端节点电价": _values(item, "endNodePrice")
+                    or item.get("to_node_price", []),
+                    "影子价格": _values(item, "shadowPrice")
+                    or item.get("shadow_price", []),
+                    "阻塞盈余": _values(item, "blockSurplus")
+                    or item.get("congestion_surplus", []),
+                }),
+                hide_index=True,
+                use_container_width=True,
+            )
+
 with st.form("optimize_pmss_curve"):
     unit_names = {u.unit_id: u.name for u in snapshot.units}
     chosen = st.selectbox(
