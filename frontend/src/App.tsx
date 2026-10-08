@@ -124,7 +124,9 @@ export default function App() {
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
   const [sidebarCompact, setSidebarCompact] = useState(false);
-  const [settingsHidden, setSettingsHidden] = useState(false);
+  const [settingsHidden, setSettingsHidden] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 960px)").matches
+  );
   const [mobileNav, setMobileNav] = useState(false);
   useEffect(() => {
     let mounted = true;
