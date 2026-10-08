@@ -81,3 +81,40 @@ def test_da_load_adapter_calls_read_only_list_endpoint():
             "sceneId": "scene-A",
         },
     )]
+
+
+def test_scene_snapshot_uses_da_loads_without_fallback_to_dispatch(monkeypatch):
+    from powerbid import pmss_export
+
+    class Fake:
+        def get_da_nodal_loads(self, **kwargs):
+            assert kwargs == {
+                "pm_scene_id": "scene-1",
+                "pm_scene_date_key": "date-1",
+            }
+            aggregate = load_row("sum", 200)
+            aggregate["elementName"] = "统调负荷"
+            return payload(
+                [aggregate, load_row("bus-1", 75), load_row("bus-2", 125)],
+                row_count=2,
+            )
+
+    def fake_export(adapter, **kwargs):
+        assert kwargs["demand_forecast_mw"] == [200] * 24
+        assert "historical scenario input" in kwargs["forecast_source"]
+        return {"unitTree": [], "unitBids": {}, "marketSystem": {}}
+
+    monkeypatch.setattr(pmss_export, "build_readonly_snapshot", fake_export)
+    result = pmss_export.build_da_scene_snapshot(
+        Fake(),
+        context=object(),
+        case={
+            "pmSceneId": "scene-1",
+            "pmSceneDateKey": "date-1",
+            "caseDate": "2025-09-01",
+        },
+        include_results=False,
+    )
+    assert result["historicalBacktestOnly"]
+    assert result["loadNodeCount"] == 2
+    assert result["loadSourceKind"] == "PMSS_DA_SCENE_LOAD_INPUT"
