@@ -8,16 +8,17 @@ of scope. These must not be conflated with the separate unit-commitment MILP.
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import isfinite
 
 from powerbid.network_dispatch import DcNetwork, DcOffer, dc_clear_hour
 from powerbid.pmss_integration import (
-    PMSSSnapshot,
     PeriodBid,
+    PMSSSnapshot,
     curve_for_period,
 )
 from powerbid.strategy_lab import BidPolicy, DemandStress, generate_policy_plan, stress_grid
+from powerbid.unit_commitment import TerminalMode, ThermalConstraints, audit_dispatch
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +51,8 @@ class NetworkBidResult:
     score: float
     scenarios: tuple[NetworkDay, ...]
     model_label: str = "lossless DC nodal surrogate; not PMSS's actual clearing"
+    physically_feasible: bool | None = None
+    physical_violations: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -212,6 +215,8 @@ def compare_network_policies(
     scenarios: Iterable[DemandStress] | None = None,
     risk_aversion: float = 0.35,
     tail_fraction: float = 0.25,
+    physical: ThermalConstraints | None = None,
+    terminal_mode: TerminalMode = "carryover",
 ) -> NetworkBidComparison:
     """Price-taking simulation comparison with verified nodal topology.
 
@@ -231,6 +236,8 @@ def compare_network_policies(
     if len({p.name for p in chosen}) != len(chosen):
         raise ValueError("Strategy names must be unique")
     variants = tuple(stress_grid() if scenarios is None else scenarios)
+    if physical is not None and physical.unit_id != target_unit_id:
+        raise ValueError("Physical constraints must match target unit ID")
     baseline = evaluate_network_plan(
         snapshot, network, target_unit_id,
         "PMSS 原始已申报曲线（DC模型重算）",
@@ -251,9 +258,43 @@ def compare_network_policies(
                 risk_aversion=risk_aversion, tail_fraction=tail_fraction,
             )
         )
+    if physical is not None:
+        checked: list[NetworkBidResult] = []
+        for result in results:
+            issues = []
+            for day in result.scenarios:
+                audit = audit_dispatch(
+                    physical,
+                    [hour.dispatched_mw for hour in day.hours],
+                    terminal_mode=terminal_mode,
+                )
+                if not audit.feasible:
+                    issues.extend(
+                        f"{day.name}: {error}"
+                        for error in audit.violations[:4]
+                    )
+            checked.append(
+                replace(
+                    result,
+                    physically_feasible=not issues,
+                    physical_violations=tuple(issues[:8]),
+                )
+            )
+        results = checked
+        baseline = results[0]
     ranked = tuple(
-        sorted(results, key=lambda x: (x.score, x.expected_margin), reverse=True)
+        sorted(
+            results,
+            key=lambda x: (
+                x.physically_feasible is not False,
+                x.score,
+                x.expected_margin,
+            ),
+            reverse=True,
+        )
     )
+    if physical is not None and not any(r.physically_feasible for r in ranked):
+        raise ValueError("No candidate passed every 24h physical screening scenario")
     return NetworkBidComparison(
         baseline=baseline,
         recommended=ranked[0],
