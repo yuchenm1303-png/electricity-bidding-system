@@ -149,7 +149,9 @@ with st.sidebar:
             st.markdown(
                 """
                 <div class="pb-side-group-head">
-                    <div class="pb-side-group-title"><span class="pb-side-index">03</span>风险控制</div>
+                    <div class="pb-side-group-title">
+                        <span class="pb-side-index">03</span>风险控制
+                    </div>
                     <span class="pb-side-group-meta">RISK</span>
                 </div>
                 """,
@@ -661,7 +663,12 @@ if saved_report is not None:
                 st.caption("逐个检查推荐报价在不同负荷和竞争报价状态下的出清结果。")
                 st.dataframe(
                     outcome_df.style.format(
-                        {"概率权重": "{:.1%}", "出清价格": "{:.2f}", "中标MW": "{:.2f}", "利润": "{:,.2f}"},
+                        {
+                            "概率权重": "{:.1%}",
+                            "出清价格": "{:.2f}",
+                            "中标MW": "{:.2f}",
+                            "利润": "{:,.2f}",
+                        },
                         na_rep="—",
                     ),
                     use_container_width=True,
@@ -698,9 +705,15 @@ else:
         <div class="pb-empty">
             <div class="pb-empty-symbol" aria-hidden="true">↗</div>
             <div class="pb-empty-title">准备好探索更优报价了吗？</div>
-            <div class="pb-empty-desc">配置市场参数、调整机组申报数据，然后运行决策模型。<br>推荐报价、收益曲线和情景分析将在这里呈现。</div>
+            <div class="pb-empty-desc">
+                配置市场参数、调整机组申报数据，然后运行决策模型。
+                <br>
+                推荐报价、收益曲线和情景分析将在这里呈现。
+            </div>
             <div class="pb-empty-step">
-                01 设置参数 &nbsp;&nbsp; / &nbsp;&nbsp; 02 运行优化 &nbsp;&nbsp; / &nbsp;&nbsp; 03 解读结果
+                01 设置参数 &nbsp;&nbsp; / &nbsp;&nbsp;
+                02 运行优化 &nbsp;&nbsp; / &nbsp;&nbsp;
+                03 解读结果
             </div>
         </div>
         """,
