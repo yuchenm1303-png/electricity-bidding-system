@@ -16,7 +16,7 @@ from powerbid.network_dispatch import network_from_dict  # noqa: E402
 from powerbid.network_feedback import compare_dc_baseline_to_pmss  # noqa: E402
 from powerbid.network_strategy import compare_network_policies  # noqa: E402
 from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
-from powerbid.strategy_lab import BidPolicy, DemandStress, stress_grid  # noqa: E402
+from powerbid.strategy_lab import DemandStress, stress_grid  # noqa: E402
 
 st.set_page_config(page_title="PowerBid · 网络约束策略研究", layout="wide")
 st.title("网络约束策略研究 · 节点电价与阻塞")
