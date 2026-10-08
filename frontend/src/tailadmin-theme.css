@@ -1,0 +1,359 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap");
+
+/* PowerBid Studio — original React product UI with TailAdmin-inspired design.
+   Reference: TailAdmin free-react-tailwind-admin-dashboard (MIT), October 2026.
+   Business logic, charts, and tables are all PowerBid's own components. */
+:root {
+  --ta-bg:#f9fafb; --ta-panel:#fff; --ta-rail:#fff;
+  --ta-ink:#101828; --ta-ink-2:#344054; --ta-muted:#667085; --ta-muted-2:#98a2b3;
+  --ta-border:#e4e7ec; --ta-faint:#f2f4f7; --ta-hover:#f8f9fc;
+  --ta-primary:#465fff; --ta-primary-hover:#3641f5; --ta-primary-soft:#eff3ff;
+  --ta-success:#039855; --ta-success-soft:#ecfdf3; --ta-field:#fff;
+  --ta-shadow:0 1px 3px rgba(16,24,40,.035);
+}
+:root[data-theme="dark"] {
+  --ta-bg:#101828; --ta-panel:#1d2939; --ta-rail:#151f2e;
+  --ta-ink:#f2f4f7; --ta-ink-2:#e4e7ec; --ta-muted:#aab7c6; --ta-muted-2:#899aaa;
+  --ta-border:#344054; --ta-faint:#28364a; --ta-hover:#26354a;
+  --ta-primary:#8194ff; --ta-primary-hover:#a2b0ff; --ta-primary-soft:#29365d;
+  --ta-success:#6ce9a6; --ta-success-soft:#233f37; --ta-field:#243144;
+  --ta-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+html,body,#root {background:var(--ta-bg)!important;color:var(--ta-ink)!important}
+:root body {font-family:Outfit,Inter,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif!important}
+button,input,select {font-family:inherit}
+:root .app, :root .app:has(.settings-closed), :root .app:has(.sidebar.collapsed), :root .app:has(.settings-closed):has(.sidebar.collapsed) {
+  display:grid;grid-template-columns:268px minmax(0,1fr);height:100dvh;background:var(--ta-bg);color:var(--ta-ink);
+}
+:root .app:has(.sidebar.collapsed) {grid-template-columns:82px minmax(0,1fr)}
+:root .app-main {min-width:0;background:var(--ta-bg);color:var(--ta-ink)}
+:root .sidebar {background:var(--ta-rail);color:var(--ta-ink);border-right:1px solid var(--ta-border)}
+:root .brand {height:104px;padding:0 20px;gap:11px;flex:0 0 104px;border-bottom:1px solid var(--ta-border)}
+:root .brand-mark {background:#465fff;color:white;box-shadow:none;width:37px;height:37px;border-radius:10px}
+:root .brand-mark>span {display:none}
+:root .brand-name strong {font-size:22px;letter-spacing:-.05em;color:var(--ta-ink);font-weight:700}
+:root .brand-name small {color:var(--ta-muted-2);font-size:9px;letter-spacing:.11em}
+:root .sidebar-section-label {color:var(--ta-muted-2);font-size:11px;letter-spacing:.015em;margin:9px 19px 0;height:45px}
+:root .sidebar-section-label span {font-size:11px;color:var(--ta-muted-2)}
+:root .sidebar-nav {gap:5px;padding:4px 13px}
+:root .nav-entry {color:var(--ta-muted);font-size:13.5px;font-weight:560;min-height:45px;padding:0 15px;border:1px solid transparent;border-radius:9px;gap:13px}
+:root .nav-entry svg {color:var(--ta-muted-2);stroke-width:1.7}
+:root .nav-entry:hover {background:var(--ta-hover);color:var(--ta-ink)}
+:root .nav-entry.active {color:var(--ta-primary);background:var(--ta-primary-soft);border-color:transparent;box-shadow:none;font-weight:700}
+:root .nav-entry.active svg {color:var(--ta-primary)}
+:root .nav-count {background:var(--ta-primary-soft);color:var(--ta-primary)}
+:root .simulation-note {background:var(--ta-hover);border:1px solid var(--ta-border);border-radius:12px;padding:13px}
+:root .simulation-note strong {color:var(--ta-ink-2);font-size:12px}
+:root .simulation-note p {color:var(--ta-muted);font-size:11px}
+:root .simulation-note svg {color:var(--ta-primary)}
+:root .data-source {color:var(--ta-muted);font-size:11px}
+:root .sidebar-foot {border-top:1px solid var(--ta-border);color:var(--ta-muted-2);height:52px;font-size:10px}
+:root .version-dot {background:var(--ta-primary)}
+:root .sidebar-collapse {color:var(--ta-muted-2)}
+:root .sidebar-collapse:hover {background:var(--ta-hover);color:var(--ta-ink)}
+:root .app:has(.sidebar.collapsed) .sidebar {width:82px}
+:root .sidebar.collapsed .sidebar-nav {padding:12px}
+:root .sidebar.collapsed .brand {height:104px}
+:root .sidebar.collapsed .nav-entry {padding:0;justify-content:center}
+
+/* Search header, theme control and actions */
+:root .global-header {height:76px;flex:0 0 76px;padding:0 27px;background:var(--ta-panel);border-bottom:1px solid var(--ta-border);box-shadow:none;backdrop-filter:none}
+:root .ta-header-left {display:flex;align-items:center;gap:15px;min-width:0;flex:1}
+:root .ta-menu-toggle {display:grid;place-items:center;width:43px;height:43px;flex:0 0 43px;border:1px solid var(--ta-border);border-radius:9px;color:var(--ta-muted);background:var(--ta-panel)}
+:root .ta-menu-toggle:hover {color:var(--ta-primary);background:var(--ta-hover)}
+:root .ta-global-search {position:relative;display:flex;align-items:center;gap:11px;border:1px solid var(--ta-border);border-radius:9px;background:var(--ta-panel);height:44px;width:min(415px,100%);padding:0 15px;color:var(--ta-muted-2);box-shadow:var(--ta-shadow)}
+:root .ta-global-search:focus-within {border-color:var(--ta-primary);box-shadow:0 0 0 3px var(--ta-primary-soft)}
+:root .ta-global-search input {border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;color:var(--ta-ink);font-size:13px;min-width:0;flex:1}
+:root .ta-global-search input::placeholder {color:var(--ta-muted-2)}
+:root .ta-global-search kbd {font-size:11px;border:1px solid var(--ta-border);background:var(--ta-faint);padding:4px 7px;border-radius:5px;color:var(--ta-muted-2);font-family:inherit;white-space:nowrap}
+:root .ta-search-results {position:absolute;z-index:80;top:calc(100% + 8px);left:0;width:100%;padding:7px;background:var(--ta-panel);border:1px solid var(--ta-border);border-radius:10px;box-shadow:0 20px 45px rgba(16,24,40,.15)}
+:root .ta-search-results button {width:100%;border:0;background:transparent;color:var(--ta-ink);display:flex;align-items:center;gap:11px;text-align:left;border-radius:7px;padding:11px 10px;font-size:13px}
+:root .ta-search-results button:hover {background:var(--ta-primary-soft);color:var(--ta-primary)}
+:root .ta-search-results button small {font-size:11px;color:var(--ta-muted);margin-left:auto}
+:root .ta-search-empty {padding:13px;color:var(--ta-muted);font-size:12px}
+:root .global-right {gap:12px}
+:root .ta-header-icon {display:grid;place-items:center;height:42px;width:42px;border-radius:50%;background:var(--ta-panel);border:1px solid var(--ta-border);color:var(--ta-muted)}
+:root .ta-header-icon:hover {background:var(--ta-hover);color:var(--ta-primary);border-color:var(--ta-primary)}
+:root .avatar-mark {height:40px;width:40px;border-radius:50%;background:#e9e7ff;color:#465fff;border:0;font-size:12px;font-weight:750}
+:root .environment-pill {background:var(--ta-success-soft);border:1px solid transparent;color:var(--ta-success);font-size:11px;font-weight:650;padding:8px 11px;border-radius:22px}
+:root .online-dot {background:var(--ta-success);box-shadow:none}
+
+/* Main editorial rhythm */
+:root .content-shell {max-width:1700px;padding:28px 27px 52px}
+:root .workspace-header {min-height:75px;margin-bottom:24px;align-items:center;gap:16px}
+:root .crumbs {color:var(--ta-muted-2);font-size:11px;margin-bottom:7px}
+:root .crumbs span:last-child {color:var(--ta-muted)}
+:root .workspace-heading h1 {font-size:25px;color:var(--ta-ink);font-weight:690;letter-spacing:-.028em}
+:root .workspace-heading p {font-size:12px;color:var(--ta-muted)}
+:root .header-actions {gap:8px}
+:root .outline-button {height:40px;background:var(--ta-panel);border:1px solid var(--ta-border);border-radius:8px;color:var(--ta-ink-2);box-shadow:var(--ta-shadow);font-size:12px}
+:root .outline-button:hover {background:var(--ta-hover);border-color:var(--ta-muted-2);color:var(--ta-ink)}
+:root .primary-button {height:41px;background:var(--ta-primary);border:1px solid var(--ta-primary);border-radius:8px;color:#fff;box-shadow:0 4px 12px rgba(70,95,255,.12);font-size:12px}
+:root .primary-button:hover:not(:disabled) {background:var(--ta-primary-hover);box-shadow:0 8px 22px rgba(70,95,255,.19)}
+:root .eyebrow {color:var(--ta-primary)}
+:root .overview-strap {color:var(--ta-muted)}
+
+/* Dash overview: two metrics + bar chart / gauge, then full-width supply chart */
+:root .ta-overview {display:flex;flex-direction:column;gap:22px}
+:root .ta-top-dashboard {display:grid;grid-template-columns:minmax(0,1.47fr) minmax(340px,1fr);gap:22px;min-width:0}
+:root .ta-dashboard-left {min-width:0;display:flex;flex-direction:column;gap:22px}
+:root .ta-stats-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+:root .ta-stat-card,:root .ta-chart-card,:root .ta-capacity {
+  border:1px solid var(--ta-border);background:var(--ta-panel);border-radius:17px;box-shadow:var(--ta-shadow);min-width:0
+}
+:root .ta-stat-card {min-height:171px;padding:22px 23px;display:flex;flex-direction:column}
+:root .ta-stat-icon {display:grid;place-items:center;background:var(--ta-faint);color:var(--ta-ink-2);height:47px;width:47px;border-radius:12px;margin-bottom:17px}
+:root .ta-stat-label {font-size:13px;color:var(--ta-muted);font-weight:540}
+:root .ta-stat-bottom {display:flex;gap:10px;align-items:center;justify-content:space-between;margin:7px 0 3px}
+:root .ta-stat-bottom strong {font-size:29px;font-weight:710;letter-spacing:-.05em;color:var(--ta-ink);white-space:nowrap}
+:root .ta-stat-badge {background:var(--ta-success-soft);color:var(--ta-success);font-size:10px;font-weight:650;padding:5px 7px;border-radius:17px;white-space:nowrap}
+:root .ta-stat-detail {color:var(--ta-muted-2);font-size:11px}
+:root .ta-chart-card {padding:24px 23px}
+:root .ta-card-title {display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+:root .ta-card-title h3 {font-size:17px;color:var(--ta-ink);font-weight:690;letter-spacing:-.023em;margin:0 0 6px}
+:root .ta-card-title p {font-size:12px;color:var(--ta-muted-2);line-height:1.6;margin:0}
+:root .ta-card-tag {display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--ta-border);border-radius:8px;color:var(--ta-muted);font-size:11px;white-space:nowrap}
+:root .ta-card-icon {display:grid;place-items:center;color:var(--ta-muted);border:1px solid var(--ta-border);border-radius:8px;height:34px;width:34px}
+:root .ta-bidding-chart {height:338px;display:flex;flex-direction:column}
+:root .ta-bars {height:245px;min-height:175px;margin:15px 0 0}
+:root .ta-capacity {min-height:531px;padding:24px 0 0;display:flex;flex-direction:column;overflow:hidden}
+:root .ta-capacity>.ta-card-title {padding:0 24px}
+:root .ta-gauge-wrap {position:relative;width:min(80%,300px);margin:32px auto 0;min-height:190px}
+:root .ta-gauge-wrap svg {display:block;width:100%;height:auto}
+:root .ta-gauge-reading {position:absolute;left:0;right:0;top:92px;display:flex;flex-direction:column;align-items:center;gap:3px}
+:root .ta-gauge-reading strong {color:var(--ta-ink);font-size:36px;letter-spacing:-.04em;font-weight:690}
+:root .ta-gauge-reading span {font-size:10.5px;color:var(--ta-muted)}
+:root .ta-gauge-explain {font-size:12px;line-height:1.8;color:var(--ta-muted);text-align:center;max-width:330px;margin:10px auto 0;padding:0 20px;min-height:66px}
+:root .ta-capacity-footer {margin-top:auto;background:var(--ta-faint);padding:21px 10px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+:root .ta-capacity-footer>div {display:flex;flex-direction:column;align-items:center;gap:7px;border-right:1px solid var(--ta-border)}
+:root .ta-capacity-footer>div:last-child {border-right:0}
+:root .ta-capacity-footer span {font-size:12px;color:var(--ta-muted)}
+:root .ta-capacity-footer strong {font-size:16px;letter-spacing:-.02em;font-weight:680;color:var(--ta-ink)}
+:root .ta-wide-chart {min-height:349px}
+:root .ta-supply-chart {height:242px;min-width:0;margin-top:9px}
+:root .ta-wide-foot {display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:var(--ta-muted-2)}
+:root .ta-wide-foot span:first-child {display:flex;align-items:center;gap:6px}
+:root .ta-report-link {display:flex;align-items:center;gap:5px;color:var(--ta-primary);background:transparent;border:1px solid var(--ta-border);border-radius:8px;padding:8px 10px;font-size:12px}
+:root .ta-report-link:hover {background:var(--ta-primary-soft)}
+:root .ta-report-strip {display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:center;min-height:208px;padding:22px 0}
+:root .ta-report-strip>div {display:flex;flex-direction:column;gap:8px}
+:root .ta-report-strip span {font-size:12px;color:var(--ta-muted)}
+:root .ta-report-strip strong {font-size:24px;color:var(--ta-ink);letter-spacing:-.035em}
+:root .ta-report-strip small {font-size:11px;color:var(--ta-muted-2)}
+:root .ta-report-complete {background:var(--ta-primary-soft);border-radius:12px;padding:19px;color:var(--ta-primary)}
+:root .ta-report-complete strong {font-size:14px;color:var(--ta-primary)}
+:root .ta-report-complete span {font-size:11px}
+
+/* Workspace data + existing editable portfolio */
+:root .ta-secondary-section {margin-top:29px}
+:root .ta-section-heading {display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;gap:15px}
+:root .ta-section-heading span:first-child {font-size:10px;letter-spacing:.12em;font-weight:700;color:var(--ta-primary)}
+:root .ta-section-heading h2 {margin:5px 0 4px;font-size:18px;font-weight:690;letter-spacing:-.02em;color:var(--ta-ink)}
+:root .ta-section-heading p {margin:0;font-size:12px;color:var(--ta-muted)}
+:root .ta-section-hint {font-size:12px;color:var(--ta-muted)}
+:root .ta-work-grid {display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);gap:22px}
+:root .data-panel,:root .recommendation-panel,:root .trials-panel,:root .chart-card {background:var(--ta-panel);border:1px solid var(--ta-border);border-radius:16px;box-shadow:var(--ta-shadow)}
+:root .panel-head {padding:23px 23px 17px}
+:root .panel-kicker {font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--ta-primary)}
+:root .panel-head h2 {font-size:16px;color:var(--ta-ink);font-weight:690;margin:6px 0}
+:root .panel-head p {color:var(--ta-muted);font-size:12px}
+:root .panel-counter {font-size:11px;border:1px solid var(--ta-border);color:var(--ta-muted);background:var(--ta-faint);border-radius:7px;padding:6px 10px}
+:root .table-toolbar {padding:0 23px 18px}
+:root .table-search {height:39px;border:1px solid var(--ta-border);border-radius:9px;background:var(--ta-field);color:var(--ta-muted-2);max-width:285px}
+:root .table-search input {color:var(--ta-ink);font-size:12px}
+:root .table-search input::placeholder {color:var(--ta-muted-2)}
+:root .secondary-button {background:var(--ta-primary);border:1px solid var(--ta-primary);color:#fff;border-radius:8px;height:37px;font-weight:650;font-size:12px}
+:root .secondary-button:hover {background:var(--ta-primary-hover);border-color:var(--ta-primary-hover);color:#fff}
+:root .subtle-button {background:var(--ta-panel);border:1px solid var(--ta-border);color:var(--ta-ink-2);height:37px;border-radius:8px;font-size:12px}
+:root .subtle-button:hover {background:var(--ta-hover);color:var(--ta-ink)}
+:root .units-table thead th,:root .trials-table thead th {background:var(--ta-hover);color:var(--ta-muted);font-size:11.5px;height:46px;border-color:var(--ta-border)}
+:root .units-table tbody td,:root .trials-table tbody td {height:52px;color:var(--ta-ink-2);border-bottom:1px solid var(--ta-border);font-size:12px}
+:root .units-table tbody tr:hover,:root .trials-table tbody tr:hover {background:var(--ta-hover)}
+:root .units-table tbody tr.target-row {background:var(--ta-primary-soft)}
+:root .units-table tbody tr.target-row:hover {background:var(--ta-primary-soft)}
+:root .sort-button {color:var(--ta-muted)}
+:root .sort-button:hover {color:var(--ta-ink)}
+:root .unit-symbol {background:var(--ta-faint);color:var(--ta-muted);font-size:11px}
+:root .target-row .unit-symbol {background:#e6edff;color:var(--ta-primary)}
+:root .cell-editor {color:var(--ta-ink-2);font-size:12px}
+:root .cell-editor:hover {background:var(--ta-faint);border-color:var(--ta-border)}
+:root .cell-editor:focus {border-color:var(--ta-primary);background:var(--ta-panel);box-shadow:0 0 0 2px var(--ta-primary-soft)}
+:root .target-radio {border-color:var(--ta-muted-2)}
+:root .target-radio.selected {background:var(--ta-primary);border-color:var(--ta-primary);color:white;box-shadow:0 0 0 3px var(--ta-primary-soft)}
+:root .row-action {color:var(--ta-muted-2)}
+:root .row-action:hover {color:#d92d20;background:#fef3f2}
+:root .table-foot {color:var(--ta-muted);font-size:11px}
+:root .table-foot strong {color:var(--ta-ink-2)}
+:root .table-foot-note {color:var(--ta-muted-2)}
+:root .table-foot .legend-dot {background:var(--ta-primary)}
+:root .recommendation-panel {padding:23px;min-height:360px}
+:root .recommendation-illustration {background:var(--ta-primary-soft);border:0;color:var(--ta-primary)}
+:root .recommendation-empty h3 {color:var(--ta-ink);font-size:14px}
+:root .recommendation-empty p {color:var(--ta-muted);font-size:12px}
+:root .ghost-cta {background:var(--ta-primary-soft);color:var(--ta-primary);border-color:var(--ta-border);font-size:12px;height:40px}
+:root .ghost-cta:hover {background:var(--ta-faint)}
+:root .recommendation-price span {color:var(--ta-primary)}
+:root .recommendation-price small {color:var(--ta-muted)}
+:root .recommendation-dash {background:var(--ta-border)}
+:root .recommendation-facts>div span {color:var(--ta-muted)}
+:root .recommendation-facts strong {color:var(--ta-ink)}
+:root .recommendation-foot {color:var(--ta-primary)}
+:root .status-chip.success {background:var(--ta-success-soft);color:var(--ta-success)}
+:root .status-chip.warning {background:#fffaeb;color:#b54708}
+:root .quick-guide {background:var(--ta-primary-soft);border:1px solid #dfe6ff;border-radius:14px}
+:root .quick-guide h3 {color:var(--ta-ink);font-size:14px}
+:root .quick-guide p {color:var(--ta-muted)}
+:root .guide-steps {color:var(--ta-muted)}
+:root .guide-steps b {color:var(--ta-primary)}
+:root .guide-action {background:var(--ta-primary);border-color:var(--ta-primary);color:white}
+:root .guide-action:hover {background:var(--ta-primary-hover)}
+:root .analysis-teaser {background:var(--ta-primary-soft);border:1px solid #dbe3ff;color:var(--ta-ink)}
+:root .analysis-teaser:hover {background:var(--ta-faint)}
+:root .analysis-teaser-icon {background:#dbe3ff;color:var(--ta-primary)}
+:root .analysis-teaser small {color:var(--ta-muted)}
+
+/* Report and risk analysis */
+:root .result-section-heading h2 {color:var(--ta-ink)}
+:root .result-section-heading p {color:var(--ta-muted)}
+:root .result-metric {background:var(--ta-panel);border:1px solid var(--ta-border);border-radius:13px}
+:root .result-metric.accent {background:var(--ta-primary-soft);border-color:#dce3ff}
+:root .result-metric-top {color:var(--ta-muted)}
+:root .result-metric-top svg {color:var(--ta-primary)}
+:root .result-metric strong {color:var(--ta-ink)}
+:root .result-metric.accent strong {color:var(--ta-primary)}
+:root .result-metric small {color:var(--ta-muted)}
+:root .chart-card {padding:22px}
+:root .chart-card-head h3 {color:var(--ta-ink);font-size:14px}
+:root .chart-card-head p {color:var(--ta-muted);font-size:12px}
+:root .chart-tag {color:var(--ta-muted);border-color:var(--ta-border)}
+:root .chart-axis-label {color:var(--ta-muted)}
+:root .trials-table tbody tr.is-best {background:var(--ta-primary-soft)}
+:root .trials-table tbody tr.is-best td:first-child {color:var(--ta-primary)}
+:root .outcomes-block {border-top-color:var(--ta-border)}
+:root .outcomes-heading h3 {color:var(--ta-ink)}
+:root .outcomes-heading small {color:var(--ta-muted)}
+:root .report-empty {background:var(--ta-panel);border-color:var(--ta-border)}
+:root .report-empty-art {background:var(--ta-primary-soft);border:0;color:var(--ta-primary)}
+:root .report-empty h2 {color:var(--ta-ink)}
+:root .report-empty p {color:var(--ta-muted)}
+:root .trial-placeholder {background:var(--ta-panel);border-color:var(--ta-border);color:var(--ta-muted)}
+:root .trial-placeholder h3 {color:var(--ta-ink)}
+:root .section-note {background:var(--ta-primary-soft);border:1px solid var(--ta-border);color:var(--ta-ink-2)}
+:root .app-footer {color:var(--ta-muted-2)}
+:root .loading-workspace {color:var(--ta-muted)}
+:root .loading-workspace h2 {color:var(--ta-ink)}
+:root .loading-symbol {background:var(--ta-primary-soft);border:0;color:var(--ta-primary)}
+
+/* Settings as an offcanvas tool drawer: no longer occupies the dashboard grid */
+:root .ta-settings-overlay {position:fixed;z-index:49;inset:0;border:0;background:rgba(16,24,40,.35);cursor:default}
+:root .settings-panel {position:fixed;z-index:50;top:0;right:0;bottom:0;width:min(372px,calc(100vw - 30px));height:100dvh;min-height:0;box-shadow:-18px 0 60px rgba(16,24,40,.13);background:var(--ta-panel);color:var(--ta-ink);border-left:1px solid var(--ta-border)}
+:root .settings-closed {display:none}
+:root .settings-top {height:76px;flex-basis:76px;padding:0 22px;border-color:var(--ta-border)}
+:root .settings-emblem {background:var(--ta-primary-soft);border:0;color:var(--ta-primary);height:39px;width:39px}
+:root .settings-heading h3 {color:var(--ta-ink);font-size:14px}
+:root .settings-heading p {color:var(--ta-muted-2)}
+:root .settings-scroll {padding:0 21px 25px}
+:root .setting-section {border-color:var(--ta-border);padding:22px 0}
+:root .setting-section-head {color:var(--ta-ink);font-size:13px}
+:root .setting-section-head svg {color:var(--ta-primary)}
+:root .setting-section-head small {color:var(--ta-muted-2)}
+:root .field-label {color:var(--ta-ink-2);font-size:12px}
+:root .hint {color:var(--ta-muted-2)}
+:root .number-field,:root .select-wrap {background:var(--ta-field);border:1px solid var(--ta-border);border-radius:8px;height:41px}
+:root .number-field:hover,:root .select-wrap:hover {border-color:var(--ta-primary)}
+:root .number-field:focus-within,:root .select-wrap:focus-within {border-color:var(--ta-primary);box-shadow:0 0 0 3px var(--ta-primary-soft)}
+:root .number-field input,:root .select-wrap select {color:var(--ta-ink);font-size:12.5px}
+:root .number-unit {color:var(--ta-muted-2)}
+:root .select-wrap select option {background:var(--ta-panel);color:var(--ta-ink)}
+:root .select-wrap>svg {color:var(--ta-muted)}
+:root .mode-switch {background:var(--ta-faint);border:1px solid var(--ta-border)}
+:root .mode-switch button {color:var(--ta-muted);font-size:12px}
+:root .mode-switch button.active {background:var(--ta-panel);color:var(--ta-primary);box-shadow:0 1px 4px rgba(16,24,40,.09)}
+:root .range-head {color:var(--ta-muted)}
+:root .range-head strong {color:var(--ta-primary)}
+:root .range-field input {accent-color:var(--ta-primary)}
+:root .settings-foot {background:var(--ta-faint);color:var(--ta-muted);border-color:var(--ta-border)}
+:root .settings-disclaimer {color:var(--ta-muted)}
+:root .mobile-topbar {background:var(--ta-panel);color:var(--ta-ink);border-color:var(--ta-border)}
+:root .mobile-topbar strong {color:var(--ta-ink)}
+:root .mobile-topbar strong svg {color:var(--ta-primary)}
+:root .mobile-close {background:var(--ta-panel);color:var(--ta-ink);border:1px solid var(--ta-border)}
+:root .error-banner {color:#b42318;background:#fef3f2;border:1px solid #fecdca}
+:root .validation-banner {color:#b54708;background:#fffaeb;border-color:#fedf89}
+:root .stale-banner {background:#fffaeb;color:#b54708;border:1px solid #fedf89}
+:root .stale-banner button {color:#b54708}
+
+/* Responsive 12-column-inspired surfaces without artificial data. */
+@media(max-width:1480px) {
+  :root .app,:root .app:has(.settings-closed) {grid-template-columns:234px minmax(0,1fr)}
+  :root .app:has(.sidebar.collapsed) {grid-template-columns:82px minmax(0,1fr)}
+  :root .ta-top-dashboard {grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:16px}
+  :root .ta-stats-grid {gap:16px}
+  :root .ta-dashboard-left {gap:16px}
+  :root .ta-overview {gap:16px}
+  :root .ta-work-grid {gap:16px}
+  :root .ta-stat-card {padding:18px;min-height:165px}
+  :root .ta-stat-bottom strong {font-size:25px}
+  :root .ta-chart-card {padding:20px}
+  :root .content-shell {padding:25px 24px 50px}
+}
+@media(max-width:1110px) {
+  :root .app,:root .app:has(.settings-closed),:root .app:has(.sidebar.collapsed) {grid-template-columns:78px minmax(0,1fr)}
+  :root .ta-top-dashboard {grid-template-columns:minmax(0,1fr) minmax(265px,.85fr)}
+  :root .ta-capacity-footer strong {font-size:13px}
+  :root .ta-stat-bottom strong {font-size:22px}
+  :root .ta-stat-badge {font-size:9px}
+  :root .ta-work-grid {grid-template-columns:1fr}
+  :root .units-table {min-width:680px}
+  :root .sidebar {width:78px}
+  :root .sidebar .brand {justify-content:center;padding:0}
+  :root .sidebar .brand-name,.sidebar .sidebar-section-label,.sidebar .sidebar-lower,.sidebar .nav-entry span,.sidebar .nav-count {display:none}
+  :root .sidebar .sidebar-nav {padding:11px}
+  :root .sidebar .nav-entry {justify-content:center;padding:0}
+  :root .sidebar .sidebar-foot {justify-content:center;font-size:0;padding:0}
+}
+@media(max-width:960px) {
+  :root .app,:root .app:has(.settings-closed),:root .app:has(.sidebar.collapsed) {display:flex;flex-direction:column;height:100dvh}
+  :root .app > div:nth-child(2) {width:250px}
+  :root .sidebar,:root .sidebar.collapsed {width:250px}
+  :root .sidebar .brand {justify-content:flex-start;padding-left:22px}
+  :root .sidebar .brand-name,.sidebar .sidebar-section-label,.sidebar .sidebar-lower,.sidebar .nav-entry span {display:flex}
+  :root .sidebar .sidebar-nav {padding:5px 12px}
+  :root .sidebar .nav-entry {justify-content:flex-start;padding:0 14px}
+  :root .sidebar .sidebar-foot {justify-content:flex-start;padding:0 22px;font-size:10px}
+  :root .mobile-topbar {display:flex}
+  :root .app-main {height:calc(100dvh - 54px)}
+  :root .ta-settings-overlay {top:54px}
+  :root .settings-panel {top:54px;height:calc(100dvh - 54px)}
+  :root .content-shell {padding:22px 18px 38px}
+}
+@media(max-width:780px) {
+  :root .ta-top-dashboard {grid-template-columns:1fr}
+  :root .ta-capacity {min-height:390px}
+  :root .ta-gauge-wrap {margin-top:12px;min-height:168px;width:min(75%,260px)}
+  :root .ta-gauge-reading {top:79px}
+  :root .ta-gauge-reading strong {font-size:29px}
+  :root .ta-gauge-explain {min-height:0;margin-bottom:16px}
+  :root .ta-capacity-footer {padding:16px}
+  :root .ta-supply-chart {height:210px}
+  :root .ta-report-strip {grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:520px) {
+  :root .content-shell {padding:18px 12px 30px}
+  :root .ta-stats-grid {gap:10px}
+  :root .ta-stat-card {min-height:160px;padding:15px}
+  :root .ta-stat-icon {width:40px;height:40px;margin-bottom:13px}
+  :root .ta-stat-bottom {flex-wrap:wrap}
+  :root .ta-stat-bottom strong {font-size:22px}
+  :root .ta-capacity-footer strong {font-size:11.5px}
+  :root .ta-chart-card {padding:17px}
+  :root .ta-work-grid {grid-template-columns:1fr}
+  :root .ta-section-hint {display:none}
+  :root .workspace-heading h1 {font-size:22px}
+  :root .ta-wide-foot {flex-wrap:wrap}
+  :root .ta-card-title h3 {font-size:15px}
+  :root .ta-stat-badge {font-size:9px}
+}
+@media(prefers-reduced-motion:reduce) {
+  :root *, :root *::before, :root *::after {animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
