@@ -218,8 +218,8 @@ export default function App() {
           </div>
           <div className="work-grid">
             <UnitsTable offers={config.offers} targetId={config.target_unit_id}
-              onChange={offers => update({ ...config, offers })}
-              onTarget={target_unit_id => update({ ...config, target_unit_id })}/>
+              onChange={offers => setConfig(previous => previous ? { ...previous, offers } : previous)}
+              onTarget={target_unit_id => setConfig(previous => previous ? { ...previous, target_unit_id } : previous)}/>
             <Recommendation report={report} stale={stale} running={running} onRun={() => void run()}/>
           </div>
           {!report && <GettingStarted running={running} onRun={() => void run()}/>}
@@ -230,8 +230,8 @@ export default function App() {
         {view === "units" && <>
           <div className="section-note"><Boxes size={18}/><span>直接修改数据表格即可更新本轮场景。点击左侧圆点将机组设为优化目标。</span></div>
           <UnitsTable expanded offers={config.offers} targetId={config.target_unit_id}
-            onChange={offers => update({ ...config, offers })}
-            onTarget={target_unit_id => update({ ...config, target_unit_id })}/>
+            onChange={offers => setConfig(previous => previous ? { ...previous, offers } : previous)}
+            onTarget={target_unit_id => setConfig(previous => previous ? { ...previous, target_unit_id } : previous)}/>
         </>}
         {view === "analysis" && <ResultsContent report={report} stale={stale} running={running} onRun={() => void run()}/>}
         {view === "risk" && <>
