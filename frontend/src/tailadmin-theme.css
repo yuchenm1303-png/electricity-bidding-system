@@ -41,6 +41,8 @@ button,input,select {font-family:inherit}
 :root .nav-entry:hover {background:var(--ta-hover);color:var(--ta-ink)}
 :root .nav-entry.active {color:var(--ta-primary);background:var(--ta-primary-soft);border-color:transparent;box-shadow:none;font-weight:700}
 :root .nav-entry.active svg {color:var(--ta-primary)}
+:root .legacy-entry {text-decoration:none;margin-top:8px;border-top:1px solid var(--ta-border);border-radius:6px;padding-top:6px;color:var(--ta-ink-2)}
+:root .legacy-entry:hover {color:var(--ta-primary)}
 :root .nav-count {background:var(--ta-primary-soft);color:var(--ta-primary)}
 :root .simulation-note {background:var(--ta-hover);border:1px solid var(--ta-border);border-radius:12px;padding:13px}
 :root .simulation-note strong {color:var(--ta-ink-2);font-size:12px}
