@@ -207,7 +207,7 @@ if isinstance(pmss.get("results"), dict):
             (DemandStress("normal"),),
         )
         history = compare_dc_baseline_to_pmss(
-            network, original, target_id, pmss["results"]
+            snapshot, network, original, target_id, pmss["results"]
         )
     except (ValueError, RuntimeError) as exc:
         st.info(f"本次历史样本无法严格匹配拓扑/机组/线路ID：{exc}")
