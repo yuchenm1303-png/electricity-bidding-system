@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowRight, BarChart3, Boxes, ChevronRight, CircleHelp,
-  FileBarChart, LayoutDashboard, Menu, Moon, PanelRightClose, PanelRightOpen,
+  ExternalLink, FileBarChart, LayoutDashboard, Menu, Moon, PanelRightClose, PanelRightOpen,
   Play, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Sun, TrendingUp, X, Zap
 } from "lucide-react";
 import { loadScenario, runOptimization, fromScenario } from "./api";
@@ -55,10 +55,14 @@ function Sidebar({ active, change, report, compact, toggle, source }: {
           <Icon size={19}/>{!compact && <><span>{item.label}</span>{item.id === "trials" && report && <small className="nav-count">{report.count}</small>}</>}
         </button>;
       })}
+      <a className="nav-entry legacy-entry" href="/legacy/" title="老师 PMSS · 原版工作台">
+        <ExternalLink size={18} />
+        {!compact && <span>老师 PMSS 平台</span>}
+      </a>
     </nav>
     <div className="sidebar-spacer"/>
     {!compact && <div className="sidebar-lower">
-      <div className="simulation-note"><ShieldCheck size={17}/><div><strong>教学仿真环境</strong><p>所有推荐均基于模拟计算，不代表实时电力交易。</p></div></div>
+      <div className="simulation-note"><ShieldCheck size={17}/><div><strong>教学仿真环境</strong><p>React 工作台负责策略模拟。老师平台数据与高级实验功能可通过「老师 PMSS 平台」进入。</p></div></div>
       <div className="data-source"><span className="online-dot"/> {source}</div>
     </div>}
     <div className="sidebar-foot">{!compact ? <><span className="version-dot"/>POWERBID V1.0 <span>·</span> WORKBENCH</> : <span className="version-dot"/>}</div>
