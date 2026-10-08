@@ -12,8 +12,8 @@ from typing import Any
 
 from powerbid.network_dispatch import DcNetwork
 from powerbid.network_strategy import NetworkBidResult
-from powerbid.pmss_integration import PMSSSnapshot
 from powerbid.pmss_diagnostics import series24
+from powerbid.pmss_integration import PMSSSnapshot
 
 
 @dataclass(frozen=True, slots=True)
