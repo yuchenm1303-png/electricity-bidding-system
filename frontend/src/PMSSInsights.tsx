@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Activity, ChevronLeft, ChevronRight, Clock3, Download, Factory, Search, TrendingUp } from "lucide-react";
 import { csvExport, numeric, type PMSSInspection, type PMSSOptimization } from "./types";
+import "./pmss-insights.css";
 
 const axis = { fontSize: 11, fill: "#98a2b3" };
 const tooltip = {
