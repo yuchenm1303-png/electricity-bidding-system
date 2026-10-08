@@ -5,9 +5,10 @@ result. No network access, no bidding submission, and no run-clearing operation.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine
 from powerbid.models import MarketScenario, Offer
@@ -168,7 +169,9 @@ def optimize_segmented_bid(
     baseline_segments = curve_for_period(snapshot.bids[target_unit_id], 1)
     for hour in range(2, 25):
         if curve_for_period(snapshot.bids[target_unit_id], hour) != baseline_segments:
-            raise ValueError("Target already has different hourly curves; shared-curve optimizer not applicable")
+            raise ValueError(
+                "Target has different hourly curves; shared-curve optimizer not applicable"
+            )
     baseline = evaluate_curve(snapshot, target_unit_id, baseline_segments)
     capacity = baseline_segments[-1].end_power
     n = min(5, snapshot.limits.max_segments)
