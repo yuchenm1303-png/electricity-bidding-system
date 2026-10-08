@@ -262,6 +262,8 @@ def selected_leaf_ids(tree: list[dict[str, Any]], market_type: str) -> list[str]
     """
     def marker(node: Mapping[str, Any]) -> str:
         return " ".join(str(node.get(k, "")) for k in ("key", "value", "title", "marketTypeAtom")).lower()
+    if market_type not in {"DA", "RT"}:
+        raise ValueError("market_type must be DA or RT")
     tags = ("da", "日前") if market_type == "DA" else ("rt", "实时")
     parents = [item for item in tree if any(tag in marker(item) for tag in tags)]
     if len(parents) != 1:
