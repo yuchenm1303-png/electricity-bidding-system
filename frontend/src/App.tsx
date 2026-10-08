@@ -1,14 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity, ArrowRight, BarChart3, Boxes, ChevronDown, ChevronRight, CircleHelp, Clock3,
-  FileBarChart, LayoutDashboard, Menu, PanelRightClose, PanelRightOpen,
-  Play, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Target, TrendingUp, X, Zap
+  Activity, ArrowRight, BarChart3, Boxes, ChevronRight, CircleHelp,
+  FileBarChart, LayoutDashboard, Menu, Moon, PanelRightClose, PanelRightOpen,
+  Play, RotateCcw, Search, ShieldCheck, SlidersHorizontal, Sparkles, Sun, TrendingUp, X, Zap
 } from "lucide-react";
 import { loadScenario, runOptimization, fromScenario } from "./api";
 import { SettingsPanel } from "./SettingsPanel";
 import { UnitsTable } from "./UnitsTable";
+import { DashboardOverview } from "./DashboardOverview";
 import { Recommendation, ResultsContent, TrialDetails } from "./Results";
-import { numeric, type Mode, type Report, type Scenario, type Settings, type WorkspaceView } from "./types";
+import { type Mode, type Report, type Scenario, type Settings, type WorkspaceView } from "./types";
 
 const navigation: { id: WorkspaceView; label: string; hint: string; icon: typeof LayoutDashboard }[] = [
   { id: "workspace", label: "决策工作台", hint: "概览与操作", icon: LayoutDashboard },
@@ -63,14 +64,6 @@ function Sidebar({ active, change, report, compact, toggle, source }: {
   </aside>;
 }
 
-function Metric({ label, value, note, icon: Icon, tone = "default" }: {
-  label: string; value: string; note: string; icon: typeof Activity; tone?: "default" | "green";
-}) {
-  return <div className={"metric-tile " + (tone === "green" ? "metric-green" : "")}>
-    <div className="metric-top"><span>{label}</span><Icon size={17}/></div>
-    <strong>{value}</strong><small>{note}</small>
-  </div>;
-}
 function WorkspaceHeader({ view, onRun, running, onReset, onToggleSettings, settingsHidden, disabled }: {
   view: WorkspaceView; onRun: () => void; running: boolean; onReset: () => void;
   onToggleSettings: () => void; settingsHidden: boolean; disabled: boolean;
@@ -124,9 +117,14 @@ export default function App() {
   const [error, setError] = useState("");
   const [running, setRunning] = useState(false);
   const [sidebarCompact, setSidebarCompact] = useState(false);
-  const [settingsHidden, setSettingsHidden] = useState(() =>
-    typeof window !== "undefined" && window.matchMedia("(max-width: 960px)").matches
+  const [settingsHidden, setSettingsHidden] = useState(true);
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    window.localStorage.getItem("powerbid-theme") === "dark" ? "dark" : "light"
   );
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("powerbid-theme", theme);
+  }, [theme]);
   const [mobileNav, setMobileNav] = useState(false);
   useEffect(() => {
     let mounted = true;
@@ -184,7 +182,6 @@ export default function App() {
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
   }, [run]);
-  const totalCapacity = config?.offers.reduce((sum, o) => sum + o.quantity_mw, 0) ?? 0;
   return <div className="app">
     <div className="mobile-topbar"><button type="button" className="icon-button" onClick={() => setMobileNav(true)} aria-label="打开菜单"><Menu size={20}/></button>
       <strong><Activity size={17}/> PowerBid Studio</strong><button type="button" className="icon-button" title="切换参数面板" onClick={() => setSettingsHidden(v => !v)}><SlidersHorizontal size={19}/></button></div>
