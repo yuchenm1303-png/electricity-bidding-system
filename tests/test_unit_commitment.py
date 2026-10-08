@@ -120,7 +120,7 @@ def test_terminal_policy_must_be_explicit_and_valid():
         audit_dispatch(spec, [0.0] * 24, terminal_mode="unexpected")
     with pytest.raises(ValueError, match="24"):
         audit_dispatch(spec, [0.0], terminal_mode="complete")
-    with pytest.raises(ValueError, match="physical"):
+    with pytest.raises(ValueError, match="Physical"):
         replace(spec, ramp_up_mw=-1)
 
 
