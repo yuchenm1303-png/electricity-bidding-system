@@ -1,0 +1,77 @@
+{
+  "buses": [
+    "A",
+    "B"
+  ],
+  "lines": [
+    {
+      "lineId": "LINE-AB",
+      "fromBus": "A",
+      "toBus": "B",
+      "reactancePu": 0.1,
+      "limitMw": 30
+    }
+  ],
+  "unitBus": {
+    "G1": "A",
+    "G2": "B"
+  },
+  "hourlyDemandMw": {
+    "A": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "B": [
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160
+    ]
+  },
+  "slackBus": "A",
+  "baseMva": 100,
+  "topologySource": "PowerBid synthetic demonstrator, NOT PMSS verified topology",
+  "demandSource": "PowerBid synthetic 2-bus network, NOT PMSS observation"
+}
