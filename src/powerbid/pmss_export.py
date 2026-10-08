@@ -97,19 +97,18 @@ def build_da_scene_snapshot(
     *,
     context: TeacherPlatformContext,
     case: Mapping[str, Any],
+    include_results: bool = True,
 ) -> dict[str, Any]:
-    """Build a local 24h DA snapshot from actual PMSS scenario load inputs."""
+    """Build a sanitized 24h DA snapshot from real PMSS scenario inputs."""
     from powerbid.pmss_load import parse_da_nodal_loads
 
-    scene_id = str(case["pmSceneId"])
-    date_key = str(case["pmSceneDateKey"])
     load = parse_da_nodal_loads(
         adapter.get_da_nodal_loads(
-            pm_scene_id=scene_id,
-            pm_scene_date_key=date_key,
+            pm_scene_id=str(case["pmSceneId"]),
+            pm_scene_date_key=str(case["pmSceneDateKey"]),
         )
     )
-    return build_readonly_snapshot(
+    snapshot = build_readonly_snapshot(
         adapter,
         context=context,
         case=case,
@@ -119,3 +118,14 @@ def build_da_scene_snapshot(
             "historical scenario input, not future prediction"
         ),
     )
+    snapshot["loadSourceKind"] = "PMSS_DA_SCENE_LOAD_INPUT"
+    snapshot["loadNodeCount"] = load.node_count
+    snapshot["historicalBacktestOnly"] = True
+    snapshot["caseDate"] = str(case.get("caseDate", ""))
+    if include_results:
+        from powerbid.pmss_result_loader import read_market_results
+
+        snapshot["results"] = read_market_results(
+            adapter, case_id=str(case["caseId"]), market_type="DA"
+        )
+    return snapshot
