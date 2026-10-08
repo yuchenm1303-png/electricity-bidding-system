@@ -2,7 +2,6 @@ import pytest
 
 from powerbid.pmss_integration import (
     BidSegment,
-    MarketLimits,
     curve_for_period,
     flatten_pmss_units,
     parse_period_bids,
