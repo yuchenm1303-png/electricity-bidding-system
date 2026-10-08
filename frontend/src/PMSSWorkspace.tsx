@@ -3,8 +3,8 @@ import { Activity, ArrowRight, Database, Download, FileJson2, ShieldCheck, Uploa
 import {
   CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { inspectPMSS, optimizePMSS } from "./api";
-import { numeric, type PMSSInspection, type PMSSOptimization } from "./types";
+import { evaluatePMSSNetwork, inspectPMSS, optimizePMSS } from "./api";
+import { numeric, type PMSSInspection, type PMSSNetworkComparison, type PMSSOptimization } from "./types";
 import "./pmss-studio.css";
 
 const tooltipStyle = {
@@ -42,6 +42,8 @@ export function PMSSWorkspace() {
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null);
   const [inspection, setInspection] = useState<PMSSInspection | null>(null);
   const [analysis, setAnalysis] = useState<PMSSOptimization | null>(null);
+  const [networkResult, setNetworkResult] = useState<PMSSNetworkComparison | null>(null);
+  const [networkBusy, setNetworkBusy] = useState(false);
   const [target, setTarget] = useState("");
   const [minimum, setMinimum] = useState(0);
   const [maximum, setMaximum] = useState(1000);
@@ -54,7 +56,7 @@ export function PMSSWorkspace() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    setInspection(null); setSnapshot(null); setAnalysis(null); setError("");
+    setInspection(null); setSnapshot(null); setAnalysis(null);setNetworkResult(null); setNetworkResult(null); setError("");
     if (file.size > 700_000) {
       setError("文件超过 700 KB，使用只读导出器生成的精简脱敏 JSON。");
       return;
@@ -106,6 +108,24 @@ export function PMSSWorkspace() {
     }
   };
 
+  const runNetwork = async () => {
+    if (!snapshot || !analysis || !target || !inspection?.dc_grid_available ||
+        busy || networkBusy) return;
+    setNetworkBusy(true);
+    setNetworkResult(null);
+    setError("");
+    try {
+      const report = await evaluatePMSSNetwork(
+        snapshot, target, analysis.recommended.segments,
+      );
+      setNetworkResult(report);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "DC 网络约束试算失败");
+    } finally {
+      setNetworkBusy(false);
+    }
+  };
+
   const network = inspection?.network;
   const series = network?.hourly.map(item => ({
     period: item.hour, spread: item.lmp_spread,
@@ -116,6 +136,13 @@ export function PMSSWorkspace() {
     recommended: item.target_accepted_mw,
     actual: analysis.baseline_backtest?.hours[index]?.observed_accepted_mw ?? null,
     original: analysis.baseline_backtest?.hours[index]?.surrogate_accepted_mw ?? null,
+  })) || [];
+
+  const dcHours = networkResult?.baseline.hours.map((base, index) => ({
+    period: base.period,
+    originalDC: base.target_mw,
+    proposedDC: networkResult.recommended?.hours[index]?.target_mw ?? null,
+    observedPMSS: analysis?.baseline_backtest?.hours[index]?.observed_accepted_mw ?? null,
   })) || [];
 
   return <section className="pmss-workspace">
@@ -181,7 +208,7 @@ export function PMSSWorkspace() {
             <td>{item.peak_abs_flow_mw == null ? "—" : numeric(item.peak_abs_flow_mw, 2) + " MW"}</td>
           </tr>)}</tbody>
         </table></div>
-        <p className="pmss-footnote">非零影子价格不是线路过载证明。当前尚未建立真实网络拓扑、容量约束与节点机组映射。</p>
+        <p className="pmss-footnote">非零影子价格不是线路过载证明。{inspection.dc_grid_available ? "当前已经加载本地 DC 网络拓扑；该历史影子价格仍不能直接用来预测候选报价结果。" : "当前未导入真实网络拓扑和线路容量，无法重算网络出清。"}</p>
       </div>}
       <div className="pmss-panel">
         <div className="pmss-panel-head"><div><small>03 / FIVE-SEGMENT STRATEGY</small><h3>五段价格—电量曲线搜索</h3>
@@ -239,6 +266,75 @@ export function PMSSWorkspace() {
           </div>}
           <p className="pmss-footnote">新推荐没有在 PMSS 中提交或出清。历史 MAE 只评价原报价的模型拟合，不是新报价的真实收益保证。</p>
         </>}
+      </div>
+      <div className="pmss-panel">
+        <div className="pmss-panel-head">
+          <div>
+            <small>04 / NETWORK-CONSTRAINED VALIDATION</small>
+            <h3>DC 网络约束复算</h3>
+            <p>用核实的节点负荷、机组接入母线、线路电抗与额定 MW 进行逐小时线性网络出清。</p>
+          </div>
+          <span className="pmss-state-label">本地 DC-OPF</span>
+        </div>
+        {inspection.dc_grid_available ? <>
+          <p className="pmss-footnote">已加载 {inspection.dc_grid_buses} 个真实母线、
+            {inspection.dc_grid_lines} 条真实线路。只评估原始报价及当前单区域模型的候选报价，
+            不代表 PMSS 真实重出清，也不包含多时段机组启停、爬坡和备用约束。</p>
+          {!analysis && <p className="pmss-footnote">请先生成五段报价，再点击网络约束对照。</p>}
+          <div className="pmss-toolbar">
+            <p>逐时段 DC 潮流和线限额约束；节点边际电价来自本地线性规划。</p>
+            <button className="pmss-run-button" type="button"
+              disabled={!analysis || busy || networkBusy}
+              onClick={() => void runNetwork()}>
+              {networkBusy ? "网络模型计算中..." : "运行真实拓扑网络对照"}
+              <ArrowRight size={16}/>
+            </button>
+          </div>
+          {networkResult && <>
+            <div className="pmss-summary">
+              <Metric label="原报价 DC 模拟发电量"
+                value={numeric(networkResult.baseline.total_accepted_mwh, 2) + " MWh"}
+                detail="真实拓扑 / 模拟结果"/>
+              <Metric label="原报价 DC 模拟收益"
+                value={numeric(networkResult.baseline.total_profit, 2)}
+                detail="单独模型的假定边际成本口径"/>
+              <Metric label="候选曲线 DC 模拟收益"
+                value={networkResult.recommended
+                  ? numeric(networkResult.recommended.total_profit, 2) : "不可行"}
+                detail="不是 PMSS 结算收入"/>
+            </div>
+            <p className="pmss-footnote">
+              原报价约束活跃时段：{networkResult.baseline.hours_with_binding_lines}/24；
+              线路峰值负载比：{numeric(networkResult.baseline.max_line_utilization * 100, 2)}%。
+              模型忽略网损和机组跨时段约束，节点电价不保证重现 PMSS。
+            </p>
+            {networkResult.recommended_error && <div className="pmss-error">
+              候选报价无法在当前 DC 模型中完成出清：{networkResult.recommended_error}
+            </div>}
+            <div className="pmss-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dcHours} margin={{top:16,right:18,bottom:4,left:-9}}>
+                  <CartesianGrid stroke="var(--ta-border)" vertical={false}/>
+                  <XAxis dataKey="period" tick={axisStyle} axisLine={false} tickLine={false}/>
+                  <YAxis tick={axisStyle} axisLine={false} tickLine={false}/>
+                  <Tooltip contentStyle={tooltipStyle}/><Legend verticalAlign="top" height={32}/>
+                  <Line dataKey="observedPMSS" name="PMSS 已出清历史中标 MW"
+                    isAnimationActive={false} dot={false} stroke="#039855" strokeWidth={2.6}/>
+                  <Line dataKey="originalDC" name="原报价 DC 模型 MW"
+                    isAnimationActive={false} dot={false} stroke="#98a2b3" strokeWidth={2.1}/>
+                  <Line dataKey="proposedDC" name="候选报价 DC 模型 MW"
+                    isAnimationActive={false} dot={false} stroke="#465fff" strokeWidth={2.5}/>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="pmss-footnote">该对照可以发现候选在本地线性网络模型中的潮流与中标变化，
+              但不能证明策略在老师 PMSS 或真实电力市场中安全、最优或可执行。</p>
+          </>}
+        </> : <p className="pmss-footnote">
+          当前快照没有 `grid` 网络参数。请从可信服务器使用
+          `scripts/merge_pmss_grid.py` 将只读节点、线路和机组接入数据合入脱敏快照，
+          缺少经核实的电抗或额定 MW 时禁止猜测。
+        </p>}
       </div>
     </>}
   </section>;
