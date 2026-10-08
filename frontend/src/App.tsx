@@ -8,6 +8,7 @@ import { loadScenario, runOptimization, fromScenario } from "./api";
 import { SettingsPanel } from "./SettingsPanel";
 import { UnitsTable } from "./UnitsTable";
 import { DashboardOverview } from "./DashboardOverview";
+import { CommandSearch } from "./CommandSearch";
 import { Recommendation, ResultsContent, TrialDetails } from "./Results";
 import { type Mode, type Report, type Scenario, type Settings, type WorkspaceView } from "./types";
 
@@ -193,10 +194,23 @@ export default function App() {
     </div>
     <div className="app-main">
       <header className="global-header">
-        <div className="global-locator"><span>POWERBID</span><ChevronRight size={14}/><strong>决策研究中心</strong><ChevronDown size={13}/></div>
-        <div className="global-right"><span className="environment-pill"><span className="online-dot"/> 教学模拟环境</span>
-          <span className="header-divider"/><span className="head-help" title="按 Ctrl + Enter 快速运行分析"><CircleHelp size={16}/> 快捷键 Ctrl + Enter</span>
-          <span className="avatar-mark">PB</span></div>
+        <div className="ta-header-left">
+          <button className="ta-menu-toggle" type="button" onClick={() => setSidebarCompact(v => !v)}
+            aria-label={sidebarCompact ? "展开侧边导航" : "折叠侧边导航"}><Menu size={19}/></button>
+          <CommandSearch destinations={navigation} onNavigate={changeView}/>
+        </div>
+        <div className="global-right">
+          <button className="ta-header-icon" type="button"
+            onClick={() => setTheme(v => v === "light" ? "dark" : "light")}
+            aria-label={theme === "light" ? "切换为深色模式" : "切换为浅色模式"}
+            title={theme === "light" ? "切换为深色模式" : "切换为浅色模式"}>
+            {theme === "light" ? <Moon size={19}/> : <Sun size={19}/>}
+          </button>
+          <span className="environment-pill"><span className="online-dot"/> 教学模拟环境</span>
+          <button className="ta-header-icon" type="button" title="打开策略参数" aria-label="打开策略参数"
+            onClick={() => setSettingsHidden(false)}><SlidersHorizontal size={19}/></button>
+          <span className="avatar-mark">PB</span>
+        </div>
       </header>
       {error && <div className="error-banner" role="alert"><span>{error}</span><button type="button" onClick={() => setError("")} aria-label="关闭错误"><X size={16}/></button></div>}
       {!config ? <div className="loading-workspace"><div className="loading-symbol"><Activity size={27}/></div><h2>{error ? "无法加载市场场景" : "正在载入报价工作台"}</h2><p>PowerBid 正在连接本地仿真计算服务...</p><button className="outline-button" onClick={() => window.location.reload()}>重新加载</button></div> :
@@ -239,8 +253,11 @@ export default function App() {
         <footer className="app-footer"><span>POWERBID STUDIO · 市场策略研究</span><span>Simulation only · Not for live trading</span></footer>
       </div>}
     </div>
-    {config && <SettingsPanel config={config} onChange={update} onClose={() => setSettingsHidden(v => !v)}
-      collapsed={settingsHidden} onModeChange={setMode}/>}
+    {config && !settingsHidden && <>
+      <button className="ta-settings-overlay" type="button" aria-label="关闭策略参数" onClick={() => setSettingsHidden(true)}/>
+      <SettingsPanel config={config} onChange={update} onClose={() => setSettingsHidden(true)}
+        collapsed={false} onModeChange={setMode}/>
+    </>}
   </div>;
 }
 
