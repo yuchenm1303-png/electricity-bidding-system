@@ -209,6 +209,45 @@ def test_missing_history_points_not_zero_filled():
     data = _pmss_from_model(baseline)
     data["unitResults"][0]["accepted_mw"][10] = None
     data["branchFlows"][0]["flow_mw"][2] = None
-    compared = compare_dc_baseline_to_pmss(network, baseline, "G1", data)
+    compared = compare_dc_baseline_to_pmss(snapshot, network, baseline, "G1", data)
     assert compared.observed_accepted_points == 23
     assert compared.observed_line_flow_points == 23
+
+
+def test_optional_physical_constraints_screen_network_market_outcomes():
+    from powerbid.unit_commitment import ThermalConstraints
+
+    snapshot, network = _snapshot(), _network()
+    physical = ThermalConstraints(
+        unit_id="G1", min_mw=15, max_mw=100, ramp_up_mw=100,
+        ramp_down_mw=100, startup_ramp_mw=100, shutdown_ramp_mw=100,
+        min_up_hours=1, min_down_hours=1, startup_cost=50, shutdown_cost=0,
+        initial_on=True, initial_mw=30, initial_state_hours=10,
+    )
+    result = compare_network_policies(
+        snapshot, network, "G1",
+        policies=(BidPolicy("cost"), BidPolicy("high", markup=200)),
+        scenarios=(DemandStress("normal"),),
+        physical=physical,
+    )
+    assert result.baseline.physically_feasible is True
+    assert result.recommended.physically_feasible is True
+    assert any(item.physically_feasible is False for item in result.ranked)
+
+
+def test_if_no_physically_credible_network_plan_then_no_recommendation():
+    from powerbid.unit_commitment import ThermalConstraints
+
+    snapshot, network = _snapshot(), _network()
+    impossible = ThermalConstraints(
+        unit_id="G1", min_mw=99, max_mw=100, ramp_up_mw=100,
+        ramp_down_mw=100, startup_ramp_mw=100, shutdown_ramp_mw=100,
+        min_up_hours=1, min_down_hours=1, startup_cost=50, shutdown_cost=0,
+        initial_on=True, initial_mw=100, initial_state_hours=10,
+    )
+    with pytest.raises(ValueError, match="No candidate passed"):
+        compare_network_policies(
+            snapshot, network, "G1", policies=(BidPolicy("cost"),),
+            scenarios=(DemandStress("normal"),),
+            physical=impossible,
+        )
