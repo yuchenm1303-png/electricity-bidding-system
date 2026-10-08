@@ -219,24 +219,25 @@ export default function App() {
           onToggleSettings={() => setSettingsHidden(v => !v)} settingsHidden={settingsHidden} disabled={!!validationError}/>
         {validationError && <div className="validation-banner"><CircleHelp size={15}/>{validationError}</div>}
         {view === "workspace" && <>
-          <div className="overview-strap"><span className="eyebrow">SCENARIO 01 <span className="eyebrow-dot"/> {sourceMap[scenario?.data_source ?? "unknown"]}</span>
-            <span className="strap-sub">单市场区域 · 本地模拟 · 不连接真实交易</span></div>
-          <div className="metric-grid">
-            <Metric label="市场总负荷" value={numeric(config.demand_mw) + " MW"} note="当前需求规模" icon={Activity} tone="green"/>
-            <Metric label="目标发电机组" value={config.target_unit_id} note={"共 " + config.offers.length + " 台机组参与"} icon={Target}/>
-            <Metric label="报价搜索区间" value={numeric(config.start) + " – " + numeric(config.stop)} note={"步长 " + numeric(config.step)} icon={TrendingUp}/>
-            <Metric label="结算时间" value={numeric(config.interval_hours, 2) + " h"} note={"总申报容量 " + numeric(totalCapacity) + " MW"} icon={Clock3}/>
-          </div>
-          <div className="work-grid">
-            <UnitsTable offers={config.offers} targetId={config.target_unit_id}
-              onChange={offers => setConfig(previous => previous ? { ...previous, offers } : previous)}
-              onTarget={target_unit_id => setConfig(previous => previous ? { ...previous, target_unit_id } : previous)}/>
-            <Recommendation report={report} stale={stale} running={running} onRun={() => void run()}/>
+          <DashboardOverview offers={config.offers} demand={config.demand_mw}
+            targetId={config.target_unit_id} report={report}
+            onNavigate={() => changeView(report ? "analysis" : "units")}/>
+          <div className="ta-secondary-section">
+            <div className="ta-section-heading"><div><span>WORKSPACE DATA</span><h2>机组与报价数据</h2>
+              <p>编辑机组申报信息后运行策略计算。所有修改会参与下一次模拟。</p></div>
+              <span className="ta-section-hint">共 {config.offers.length} 台发电机组</span>
+            </div>
+            <div className="ta-work-grid">
+              <UnitsTable offers={config.offers} targetId={config.target_unit_id}
+                onChange={offers => setConfig(previous => previous ? { ...previous, offers } : previous)}
+                onTarget={target_unit_id => setConfig(previous => previous ? { ...previous, target_unit_id } : previous)}/>
+              <Recommendation report={report} stale={stale} running={running} onRun={() => void run()}/>
+            </div>
           </div>
           {!report && <GettingStarted running={running} onRun={() => void run()}/>}
           {report && <><AnalysisTeaser report={report} onNavigate={changeView}/>
             <ResultsContent report={report} stale={stale} running={running} onRun={() => void run()} compact/>
-            </>}
+          </>}
         </>}
         {view === "units" && <>
           <div className="section-note"><Boxes size={18}/><span>直接修改数据表格即可更新本轮场景。点击左侧圆点将机组设为优化目标。</span></div>
