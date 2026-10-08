@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from math import isfinite, sqrt
+from typing import Any
 
 from powerbid.pmss_strategy import CurveEvaluation
 
