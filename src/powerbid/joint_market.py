@@ -17,7 +17,7 @@ from math import isfinite
 
 from powerbid.network_dispatch import DcNetwork
 from powerbid.network_strategy import verify_network_inputs
-from powerbid.pmss_integration import PMSSSnapshot, PeriodBid, curve_for_period
+from powerbid.pmss_integration import PeriodBid, PMSSSnapshot, curve_for_period
 from powerbid.unit_commitment import TerminalMode, ThermalConstraints
 
 
@@ -106,9 +106,6 @@ def joint_clear_day(
 
     curves = _unit_curves(snapshot, target_unit_id, candidate_plan)
     units = tuple(unit.unit_id for unit in snapshot.units)
-    buses = {bus: index for index, bus in enumerate(network.buses)}
-    nb = len(buses)
-    line_count = len(network.lines)
 
     try:
         import numpy as np
