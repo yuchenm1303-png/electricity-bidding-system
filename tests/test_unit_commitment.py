@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from powerbid.unit_commitment import (
@@ -119,7 +121,7 @@ def test_terminal_policy_must_be_explicit_and_valid():
     with pytest.raises(ValueError, match="24"):
         audit_dispatch(spec, [0.0], terminal_mode="complete")
     with pytest.raises(ValueError, match="physical"):
-        ThermalConstraints(**(vars(spec) | {"ramp_up_mw": -1}))
+        replace(spec, ramp_up_mw=-1)
 
 
 def test_zero_startup_ramp_prevents_online_dispatch_from_off():
