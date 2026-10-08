@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VIEW = ROOT / "app" / "streamlit_app.py"
 DESIGN = ROOT / "app" / "design_system.py"
+CSS = ROOT / "app" / "assets" / "powerbid.css"
 THEME_CONFIG = ROOT / ".streamlit" / "config.toml"
 
 
@@ -18,14 +19,16 @@ def test_frontend_python_compiles():
 def test_design_is_shared_and_offline_friendly():
     view = VIEW.read_text(encoding="utf-8")
     design = DESIGN.read_text(encoding="utf-8")
+    css = CSS.read_text(encoding="utf-8")
     assert "from design_system import APP_CSS" in view
     assert 'st.markdown(APP_CSS, unsafe_allow_html=True)' in view
-    assert ".pb-hero" in design
-    assert ".pb-empty" in design
-    assert "@media (max-width:900px)" in design
-    assert "prefers-reduced-motion:reduce" in design
-    assert "@import" not in design
-    assert "https://" not in design
+    assert "CSS_PATH.read_text" in design
+    assert ".pb-hero" in css
+    assert ".pb-empty" in css
+    assert "@media (max-width:900px)" in css
+    assert "prefers-reduced-motion:reduce" in css
+    assert "@import" not in css
+    assert "https://" not in css
     assert THEME_CONFIG.exists()
 
 
