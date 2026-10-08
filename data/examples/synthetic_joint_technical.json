@@ -1,0 +1,34 @@
+{
+  "G1": {
+    "unit_id": "G1",
+    "min_mw": 15,
+    "max_mw": 100,
+    "ramp_up_mw": 30,
+    "ramp_down_mw": 30,
+    "startup_ramp_mw": 40,
+    "shutdown_ramp_mw": 40,
+    "min_up_hours": 3,
+    "min_down_hours": 2,
+    "startup_cost": 100,
+    "shutdown_cost": 5,
+    "initial_on": true,
+    "initial_mw": 30,
+    "initial_state_hours": 10
+  },
+  "G2": {
+    "unit_id": "G2",
+    "min_mw": 0,
+    "max_mw": 150,
+    "ramp_up_mw": 150,
+    "ramp_down_mw": 150,
+    "startup_ramp_mw": 150,
+    "shutdown_ramp_mw": 150,
+    "min_up_hours": 1,
+    "min_down_hours": 1,
+    "startup_cost": 200,
+    "shutdown_cost": 5,
+    "initial_on": true,
+    "initial_mw": 130,
+    "initial_state_hours": 10
+  }
+}
