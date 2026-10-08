@@ -1,8 +1,8 @@
 """Observed PMSS feedback remains read-only and non-predictive."""
 import pytest
+from test_physical_strategy_audit import _physical
 
 from powerbid.observed_feedback import audit_observed_dispatch, observed_unit_day
-from test_physical_strategy_audit import _physical
 
 
 def _result():
