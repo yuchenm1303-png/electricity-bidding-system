@@ -37,3 +37,22 @@ def test_da_load_rejects_missing_hour():
     del row["da"]["t24"]
     with pytest.raises(ValueError, match="t24"):
         parse_da_nodal_loads(payload([row]))
+
+
+def test_pmss_total_row_is_not_double_counted():
+    row = load_row("aggregate", 200)
+    row["elementName"] = "统调负荷"
+    result = parse_da_nodal_loads(
+        payload([row, load_row("n1", 75), load_row("n2", 125)], row_count=2)
+    )
+    assert result.node_count == 2
+    assert result.total_load_mw == (200.0,) * 24
+
+
+def test_pmss_total_row_must_match_nodal_sum():
+    row = load_row("aggregate", 220)
+    row["elementName"] = "统调负荷"
+    with pytest.raises(ValueError, match="does not match node sum"):
+        parse_da_nodal_loads(
+            payload([row, load_row("n1", 75), load_row("n2", 125)], row_count=2)
+        )
