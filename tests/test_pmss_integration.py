@@ -181,8 +181,15 @@ def test_preview_payload_does_not_do_network_io():
     payload = build_pmss_dry_run_payload(
         scope_id="placeholder", unit_id="G30",
         segments=[BidSegment(0, 20, 50), BidSegment(20, 100, 70)],
+        existing_bid={
+            "minTechPowerCost": 12,
+            "startCostHot": 13,
+            "startCostWarm": 14,
+            "startCostCold": 15,
+        },
     )
     assert payload["datas"][0]["segmentDatas"][1]["segmentOrder"] == 2
     assert payload["unitId"] == "G30"
+    assert payload["startCostHot"] == 13
     with pytest.raises(ValueError):
         validate_curve([BidSegment(0, 30, 20), BidSegment(40, 100, 25)])
