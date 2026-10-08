@@ -2,6 +2,7 @@
 from dataclasses import replace
 
 import pytest
+from test_strategy_lab import _snapshot
 
 from powerbid.physical_strategy_audit import (
     best_physical_candidate,
@@ -9,7 +10,6 @@ from powerbid.physical_strategy_audit import (
 )
 from powerbid.strategy_lab import DemandStress, compare_strategies
 from powerbid.unit_commitment import ThermalConstraints
-from test_strategy_lab import _snapshot
 
 
 def _physical(**overrides):
