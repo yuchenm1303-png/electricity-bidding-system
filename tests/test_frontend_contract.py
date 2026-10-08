@@ -48,3 +48,14 @@ def test_report_persists_and_marks_stale_inputs():
     assert "POWERBID_PLATFORM_BASE_URL" in view
     assert "老师仿真平台 · 只读联调" in view
     assert "teacher_platform_card" in view
+
+
+def test_pmss_page_compiles_and_stays_read_only():
+    page = ROOT / "app" / "pages" / "1_PMSS_5段报价.py"
+    source = page.read_text(encoding="utf-8")
+    ast.parse(source, filename=str(page))
+    assert "analyze_historical_network" in source
+    assert "compare_baseline_to_pmss" in source
+    assert 'raw.get("loadSourceKind")' in source
+    assert "save_unit_bid(" not in source
+    assert "run_clearing(" not in source
