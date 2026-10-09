@@ -170,3 +170,33 @@ def test_cli_writes_only_new_0600_snapshot_and_never_overwrites(tmp_path):
     assert output.read_bytes() == before
     assert "PRIVATE" not in first.stdout
     assert os.path.isfile(market)
+
+
+
+def test_inspect_rejects_tampered_casebound_evidence_without_disclosing_source():
+    from fastapi.testclient import TestClient
+    from app.web_server import app
+    client = TestClient(app)
+    file = _attach(
+        private_grid=_grid(), scene_summary=_scene(),
+        scene_case_date="2025-09-01",
+        scene_source_note="Course case identity was attested by authorized operator",
+    )
+    response = client.post("/api/pmss/inspect", json={"snapshot": file})
+    assert response.status_code == 200, response.text
+    status = response.json()["evidence_binding"]
+    assert status["content_digests_matched"] is True
+    assert status["teacher_platform_source_authenticated"] is False
+    assert status["teacher_physical_semantics_verified"] is False
+    assert status["model_technical_parameters_verified"] is False
+    assert "Course case identity was attested" not in response.text
+    bad = deepcopy(file)
+    bad["technicalEvidence"]["observedFields"]["launchCost"]["max"] = 14
+    rejected = client.post("/api/pmss/inspect", json={"snapshot": bad})
+    assert rejected.status_code == 422
+    assert "digest" in rejected.text
+    changed_date = deepcopy(file)
+    changed_date["caseDate"] = "2025-09-02"
+    assert client.post("/api/pmss/inspect", json={
+        "snapshot": changed_date,
+    }).status_code == 422
