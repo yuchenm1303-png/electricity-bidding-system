@@ -20,7 +20,7 @@ from powerbid.joint_market import JointMwhExtreme, joint_clear_day
 from powerbid.network_dispatch import DcNetwork
 from powerbid.network_strategy import verify_network_inputs
 from powerbid.pmss_bid_rule_safety import validate_new_curve
-from powerbid.pmss_integration import BidSegment, PMSSSnapshot, PeriodBid
+from powerbid.pmss_integration import BidSegment, PeriodBid, PMSSSnapshot
 from powerbid.pmss_joint_research import (
     JointReadiness,
     _spec,
