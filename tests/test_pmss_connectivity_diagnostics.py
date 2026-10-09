@@ -116,6 +116,19 @@ def test_uses_head_without_following_redirects_or_logging_remote_address():
     assert "token" not in str(argv)
 
 
+def test_proxy_gateway_http_502_does_not_mean_private_vpn_is_reachable():
+    def fake_run(argv, **kwargs):
+        return subprocess.CompletedProcess(argv, 0, "502", "")
+    with patch("scripts.diagnose_pmss_connectivity.subprocess.run", fake_run):
+        result = _head(
+            "http://private.example.test/pmss/main.html",
+            proxy="socks5h://127.0.0.1:11080", timeout=7,
+        )
+    assert result.http_status == 502
+    assert result.transport_reachable is False
+    assert result.fault_category == "http_5xx_ambiguous"
+
+
 def test_network_timeout_has_stable_diagnostic_code():
     def timed_out(*args, **kwargs):
         raise subprocess.TimeoutExpired("curl", 10)
