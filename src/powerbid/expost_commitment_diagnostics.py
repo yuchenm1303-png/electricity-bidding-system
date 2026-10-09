@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
-from math import isfinite, sqrt
+from math import isfinite
 from typing import Any
 
 from powerbid.network_dispatch import (
@@ -199,13 +199,13 @@ def replay_zero_output_restriction(
             if baseline.accepted_by_unit[uid] > zero_tolerance_mw:
                 unit_mismatch_counts[uid] += 1
 
-        def errors(dispatch):
+        def errors(dispatch, hour_idx=t):
             unit_error = {
-                uid: dispatch.accepted_by_unit[uid] - float(power[uid][t])
+                uid: dispatch.accepted_by_unit[uid] - float(power[uid][hour_idx])
                 for uid in unit_ids
             }
             line_error = [
-                abs(abs(dispatch.line_flows_mw[line]) - abs(observed[t]))
+                abs(abs(dispatch.line_flows_mw[line]) - abs(observed[hour_idx]))
                 for line, observed in flows.items() if observed[t] is not None
             ]
             price_error = [
