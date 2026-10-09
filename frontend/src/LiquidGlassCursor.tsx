@@ -58,7 +58,7 @@ function isEligibleSurface(element: HTMLElement) {
 function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
   const rect = element.getBoundingClientRect();
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
-  const padding = compact ? 6 : element.matches(".brand-home-link, .mobile-brand-home") ? 6 : 8;
+  const padding = compact ? 6 : element.matches(".brand-home-link, .mobile-brand-home") ? 11 : 8;
 
   // The viewport may crop part of a control near its edges; frame the
   // entire *visible* control rather than moving the center away and
@@ -500,6 +500,7 @@ function createProgram(gl: WebGLRenderingContext) {
     uniform vec2 u_lensCenter;
     uniform vec2 u_lensSize;
     uniform float u_cornerRadius;
+    uniform float u_brandFrame;
     uniform float u_strength;
     uniform float u_pinch;
     uniform float u_aberration;
@@ -534,6 +535,22 @@ function createProgram(gl: WebGLRenderingContext) {
       float d = sdRoundBox(local, halfSize, corner);
       if (d > 1.5) {
         gl_FragColor = vec4(0.0);
+        return;
+      }
+
+      // A brand is a graphic, not material to magnify. Refracting the
+      // rasterized logo draws stretched copies *over* the real DOM logo.
+      // Show only a restrained optical edge here; leave the centre fully
+      // transparent so Smirel and PowerBid remain untouched and crisp.
+      if (u_brandFrame > 0.5) {
+        float rimBand = 1.0 - smoothstep(0.65, 5.5, abs(d));
+        float edgeMask = 1.0 - smoothstep(-0.75, 1.4, d);
+        vec2 lightVector = normalize(vec2(-0.72, -0.69));
+        vec2 edgeVector = normalize(local + vec2(0.0001));
+        float highlight = pow(max(dot(edgeVector, lightVector), 0.0), 3.0);
+        float opacity = rimBand * edgeMask * (0.15 + 0.28 * highlight);
+        vec3 glassEdge = mix(vec3(0.36, 0.62, 0.84), vec3(0.78, 0.91, 1.0), highlight);
+        gl_FragColor = vec4(glassEdge, opacity);
         return;
       }
 
@@ -679,6 +696,7 @@ export function LiquidGlassCursor() {
       lensCenter: gl.getUniformLocation(program, "u_lensCenter"),
       lensSize: gl.getUniformLocation(program, "u_lensSize"),
       cornerRadius: gl.getUniformLocation(program, "u_cornerRadius"),
+      brandFrame: gl.getUniformLocation(program, "u_brandFrame"),
       strength: gl.getUniformLocation(program, "u_strength"),
       pinch: gl.getUniformLocation(program, "u_pinch"),
       aberration: gl.getUniformLocation(program, "u_aberration"),
@@ -1037,6 +1055,7 @@ export function LiquidGlassCursor() {
       if (textureReady) {
         const pressWeight = Math.max(0, Math.min(1, deformation));
         const releaseWeight = Math.max(0, -deformation);
+        const isBrandSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home"));
         const readingSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home, .ta-global-search, input, textarea, select, [contenteditable='true']"));
         // Lower refraction on typography-rich surfaces: no ghosted search
         // placeholder or oversized, displaced brand lettering.
@@ -1058,11 +1077,12 @@ export function LiquidGlassCursor() {
         gl.uniform2f(uniforms.lensCenter, (x.value - roiLeft) * dpr, (y.value - roiTop) * dpr);
         gl.uniform2f(uniforms.lensSize, width.value * dpr * (1 + 0.025 * deformation), height.value * dpr * (1 - 0.085 * deformation));
         gl.uniform1f(uniforms.cornerRadius, cornerRadius.value * dpr);
+        gl.uniform1f(uniforms.brandFrame, isBrandSurface ? 1 : 0);
         gl.uniform1f(uniforms.strength, strength);
         gl.uniform1f(uniforms.pinch, pinch);
         gl.uniform1f(uniforms.aberration, aberration);
         gl.uniform1f(uniforms.zoom, zoom);
-        gl.uniform1f(uniforms.wobble, wobble);
+        gl.uniform1f(uniforms.wobble, isBrandSurface ? 0.035 : wobble);
         gl.uniform1f(uniforms.time, now / 1000);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       }
