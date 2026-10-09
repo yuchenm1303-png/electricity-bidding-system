@@ -4,12 +4,12 @@ import LandingPage from "./LandingPage";
 
 // Keep the full functional workbench (and its heavier chart dependencies)
 // out of the public homepage's initial JavaScript chunk.
-const Workspace = React.lazy(() => import("./WorkspaceEntry"));
+const Workspace = React.lazy(() => import("./AccountGate"));
 const base = import.meta.env.BASE_URL;
 const route = window.location.pathname.startsWith(base)
   ? window.location.pathname.slice(base.length)
   : window.location.pathname.replace(/^\/+/, "");
-const inWorkspace = route === "app" || route.startsWith("app/")
+const inWorkspace = route === "login" || route === "register" || route === "app" || route.startsWith("app/")
   || new URLSearchParams(window.location.search).get("workspace") === "1";
 const workspaceHref = base + "app";
 

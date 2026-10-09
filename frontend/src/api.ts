@@ -19,7 +19,7 @@ export const loadScenario = async () => unpack<Scenario>(await fetch(BASE + "api
 export const runOptimization = async (settings: Settings) =>
   unpack<Report>(await fetch(BASE + "api/optimize", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-PowerBid-Request": "1" },
     body: JSON.stringify(settings),
   }));
 export const fromScenario = (scenario: Scenario): Settings => ({
@@ -40,7 +40,7 @@ export const fromScenario = (scenario: Scenario): Settings => ({
 
 export async function inspectPMSS(snapshot: Record<string, unknown>): Promise<PMSSInspection> {
   return unpack<PMSSInspection>(await fetch(BASE + "api/pmss/inspect", {
-    method: "POST", headers: { "Content-Type": "application/json" },
+    method: "POST", headers: { "Content-Type": "application/json", "X-PowerBid-Request": "1" },
     body: JSON.stringify({ snapshot }),
   }));
 }
@@ -51,7 +51,7 @@ export async function optimizePMSS(
   iterations: number,
 ): Promise<PMSSOptimization> {
   return unpack<PMSSOptimization>(await fetch(BASE + "api/pmss/optimize", {
-    method: "POST", headers: { "Content-Type": "application/json" },
+    method: "POST", headers: { "Content-Type": "application/json", "X-PowerBid-Request": "1" },
     body: JSON.stringify({ snapshot, target_unit_id, candidate_prices, iterations }),
   }));
 }
@@ -63,7 +63,7 @@ export async function evaluatePMSSNetwork(
 ): Promise<PMSSNetworkComparison> {
   return unpack<PMSSNetworkComparison>(await fetch(BASE + "api/pmss/network-evaluate", {
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: {"Content-Type": "application/json", "X-PowerBid-Request": "1"},
     body: JSON.stringify({snapshot, target_unit_id, recommended_segments}),
   }));
 }
@@ -76,7 +76,7 @@ export async function rankPMSSNetwork(
 ): Promise<PMSSNetworkRank> {
   return unpack<PMSSNetworkRank>(await fetch(BASE + "api/pmss/network-rank", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "X-PowerBid-Request": "1" },
     body: JSON.stringify({ snapshot, target_unit_id, risk_aversion, peer_price_deviation }),
   }));
 }
@@ -91,7 +91,7 @@ export async function analyzePMSSCandidateDispatch(
   return unpack<PMSSCandidateDispatchRange>(
     await fetch(BASE + "api/pmss/network-dispatch-range", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: {"Content-Type": "application/json", "X-PowerBid-Request": "1"},
       body: JSON.stringify({snapshot, target_unit_id, recommended_segments}),
     }),
   );
@@ -110,7 +110,7 @@ export async function analyzePMSSJointCandidateMwh(
   return unpack<PMSSJointMwhRange>(
     await fetch(BASE + "api/pmss/network-joint-mwh-range", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: {"Content-Type": "application/json", "X-PowerBid-Request": "1"},
       body: JSON.stringify({
         snapshot, target_unit_id, recommended_segments, technical, technical_lineage,
         technical_source: "course_verified_by_user",
@@ -129,7 +129,7 @@ export async function inspectPMSSHoldoutReport(
   return unpack<PMSSHoldoutReview>(
     await fetch(BASE + "api/pmss/holdout-gate", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: {"Content-Type": "application/json", "X-PowerBid-Request": "1"},
       body: JSON.stringify({report}),
     }),
   );
