@@ -6,16 +6,34 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  isolation: isolate;
+  /* A transparent sticky overlay: the scroll layer can move BEHIND the header.
+     The old opaque strip had no underlying content to sample. */
+  margin-bottom: -76px;
   overflow: visible;
   background: linear-gradient(110deg,
-    rgba(250,252,255,.72) 0%,
-    rgba(245,248,255,.66) 58%,
-    rgba(237,243,255,.73) 100%);
-  -webkit-backdrop-filter: blur(24px) saturate(155%);
-  backdrop-filter: blur(24px) saturate(155%);
+    rgba(237,245,255,.30) 0%,
+    rgba(227,238,255,.20) 58%,
+    rgba(223,235,255,.28) 100%);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  backdrop-filter: blur(16px) saturate(170%);
   border-bottom: 1px solid rgba(129,147,189,.22);
   box-shadow: 0 10px 34px rgba(31,55,95,.065), inset 0 1px 0 rgba(255,255,255,.4);
+}
+/* The content shell starts behind the glass, but its *children* stay in their
+   original positions at rest. During scrolling, actual cards and charts pass
+   beneath the translucent header instead of being cut off at its bottom edge. */
+@media(min-width:961px) {
+  :root .app-main > .global-header + .content-shell { padding-top:104px; }
+  :root .app-main > .global-header + .loading-workspace { margin-top:76px; }
+  :root .app-main > .global-header + .error-banner { margin-top:76px; }
+}
+@media(min-width:961px) and (max-width:1540px) {
+  :root .app-main > .global-header + .content-shell { padding-top:101px; }
+}
+/* If the same component shows an error banner, its following content shell
+   already begins below the banner, so it must not receive the extra offset. */
+@media(min-width:961px) {
+  :root .app-main > .error-banner + .content-shell { padding-top:28px; }
 }
 /* A light reflection gives the material a visible edge even before scrolling. */
 :root .app-main > .global-header::before {
@@ -28,9 +46,9 @@
 }
 :root[data-theme="dark"] .app-main > .global-header {
   background: linear-gradient(112deg,
-    rgba(27,40,62,.72) 0%,
-    rgba(22,34,56,.58) 54%,
-    rgba(24,37,60,.67) 100%);
+    rgba(24,39,64,.29) 0%,
+    rgba(18,34,57,.17) 54%,
+    rgba(24,40,66,.27) 100%);
   border-bottom-color:rgba(149,176,238,.17);
   box-shadow:0 11px 38px rgba(2,8,23,.24),inset 0 1px 0 rgba(212,226,255,.095);
 }
