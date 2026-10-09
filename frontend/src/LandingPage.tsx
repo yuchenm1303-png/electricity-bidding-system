@@ -1,3 +1,4 @@
+import smirelLogo from "./assets/smirel-logo.png";
 import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, Activity, BarChart3, Check, ChevronRight, CircleDot, Compass, Gauge, Layers3, Menu, MousePointer2, MoveUpRight, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import "./landing.css";
@@ -14,7 +15,7 @@ const flowSteps = [
 
 function Brand({ inverse = false }: { inverse?: boolean }) {
   return <span className={"pb-brand" + (inverse ? " pb-brand-inverse" : "")}>
-    <img className="pb-brand-smirel" src={import.meta.env.BASE_URL + "smirel-logo.png"} alt="Smirel" width={92} height={30} />
+    <img className="pb-brand-smirel" src={smirelLogo} alt="Smirel" width={92} height={30} />
     <span className="pb-brand-word">PowerBid</span>
   </span>;
 }
