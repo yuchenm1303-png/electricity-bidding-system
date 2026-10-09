@@ -450,6 +450,7 @@ function createProgram(gl: WebGLRenderingContext) {
     uniform float u_aberration;
     uniform float u_zoom;
     uniform float u_wobble;
+    uniform float u_snap;
     uniform float u_time;
 
     float sdRoundBox(vec2 p, vec2 b, float r) {
@@ -499,7 +500,11 @@ function createProgram(gl: WebGLRenderingContext) {
       float edgeSafety = smoothstep(0.012, 0.075, textureEdgeDistance);
       displacement *= edgeSafety;
 
-      vec2 sampleUv = screenUv - normal * (displacement / u_resolution);
+      // A free lens bends toward its center as in Loom. When attached to a
+      // button, bend OUTWARD: otherwise every ray lands on the button's flat
+      // fill and optical refraction becomes invisible.
+      float outwardBend = mix(-1.0, 1.0, smoothstep(0.1, 0.82, u_snap));
+      vec2 sampleUv = screenUv + normal * (displacement / u_resolution) * outwardBend;
 
       vec2 centerUv = u_lensCenter / u_resolution;
       sampleUv = (sampleUv - centerUv) / max(u_zoom, 1.0) + centerUv;
@@ -511,19 +516,34 @@ function createProgram(gl: WebGLRenderingContext) {
       color.g = texture2D(u_texture, sampleUv).g;
       color.b = texture2D(u_texture, clamp(sampleUv - chroma, 0.0, 1.0)).b;
 
-      // Keep the surface almost optically clear.
-      float edge = smoothstep(0.76, 1.0, distNorm);
-      vec3 reflected = texture2D(u_texture, clamp(sampleUv + normal * 0.008 * edge, 0.0, 1.0)).rgb;
-      color = mix(color, reflected, edge * 0.035);
+      // Fresnel reflection makes the refracting edge visible even on a
+      // featureless, single-color CTA. Keep the lens optically clear in its
+      // center so the browser's native button labels remain sharp underneath.
+      float edge = smoothstep(0.54, 1.0, distNorm);
+      float fresnel = edge * edge;
+      vec3 reflected = texture2D(
+        u_texture,
+        clamp(sampleUv + normal * (0.008 + 0.018 * u_snap) * edge, 0.0, 1.0)
+      ).rgb;
+      color = mix(color, reflected, edge * (0.035 + 0.18 * u_snap));
 
       vec2 lightDir = normalize(vec2(-0.62, -0.78));
       float directional = pow(max(dot(normal, lightDir), 0.0), 7.0);
+      float trailingLight = pow(max(dot(normal, -lightDir), 0.0), 4.0);
       float rim = edge * (0.008 + directional * 0.070);
-      color += vec3(0.62, 0.78, 0.88) * rim;
+      float caustic = fresnel * u_snap *
+        (0.055 + 0.16 * directional + 0.055 * trailingLight);
+      color += vec3(0.62, 0.78, 0.88) * rim +
+        vec3(0.78, 0.9, 1.0) * caustic;
 
       float mask = 1.0 - smoothstep(-1.15, 0.9, d);
-      float edgeGlass = smoothstep(0.90, 1.0, distNorm) * 0.015;
-      gl_FragColor = vec4((color + vec3(edgeGlass)) * mask, mask);
+      float edgeGlass = smoothstep(0.90, 1.0, distNorm) * (0.015 + 0.035 * u_snap);
+      // An opaque WebGL overlay hides the real label, but lowering opacity
+      // of the WHOLE canvas also erases refraction. Instead use per-pixel
+      // transparency: clear center, strong optical rim and outside sampling.
+      float snapAlpha = mix(0.075, 0.96, pow(distNorm, 3.0));
+      float lensAlpha = mask * mix(1.0, snapAlpha, u_snap);
+      gl_FragColor = vec4((color + vec3(edgeGlass)) * lensAlpha, lensAlpha);
     }
   `);
   if (!vertex || !fragment) return null;
@@ -621,6 +641,7 @@ export function LiquidGlassCursor() {
       aberration: gl.getUniformLocation(program, "u_aberration"),
       zoom: gl.getUniformLocation(program, "u_zoom"),
       wobble: gl.getUniformLocation(program, "u_wobble"),
+      snap: gl.getUniformLocation(program, "u_snap"),
       time: gl.getUniformLocation(program, "u_time"),
     };
 
@@ -946,9 +967,9 @@ export function LiquidGlassCursor() {
 
       canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      // The original 100% lens can duplicate high-contrast CTA lettering.
-      // Fade the glass while snapped so native labels remain readable.
-      canvas.style.opacity = pointerInside && textureReady ? (activeTarget ? ".48" : "1") : "0";
+      // Shader manages snapped alpha per pixel, preserving real refraction
+      // at the rim and readability at the center.
+      canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
       if (textureReady) {
@@ -974,6 +995,7 @@ export function LiquidGlassCursor() {
         gl.uniform1f(uniforms.aberration, aberration);
         gl.uniform1f(uniforms.zoom, zoom);
         gl.uniform1f(uniforms.wobble, wobble);
+        gl.uniform1f(uniforms.snap, snap.value);
         gl.uniform1f(uniforms.time, now / 1000);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       }
