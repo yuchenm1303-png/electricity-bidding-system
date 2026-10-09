@@ -1,11 +1,10 @@
 """Tests for PMSS original-bid ex-post zero-generation restrictions."""
-from test_historical_validation import _fixture
-
 import pytest
+from test_historical_validation import _fixture
+from test_network_strategy import _network
 
 from powerbid.expost_commitment_diagnostics import replay_zero_output_restriction
 from powerbid.network_dispatch import DcInfeasibleError, DcOffer, dc_clear_hour
-from test_network_strategy import _network
 
 
 def test_optional_forced_off_dc_clearing_changes_dispatch_without_changing_offers():
