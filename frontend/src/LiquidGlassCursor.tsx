@@ -58,15 +58,28 @@ function isEligibleSurface(element: HTMLElement) {
 function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
   const rect = element.getBoundingClientRect();
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
-  const padding = compact ? 6 : element.matches(".brand-home-link, .mobile-brand-home") ? 11 : 8;
+  const brandLink = element.matches(".brand-home-link, .mobile-brand-home");
+  const padding = compact ? 6 : 8;
 
   // The viewport may crop part of a control near its edges; frame the
   // entire *visible* control rather than moving the center away and
   // leaving its first/last letters outside the lens.
-  const left = Math.max(0, rect.left - padding);
-  const right = Math.min(window.innerWidth, rect.right + padding);
-  const top = Math.max(0, rect.top - padding);
-  const bottom = Math.min(window.innerHeight, rect.bottom + padding);
+  let left = Math.max(0, rect.left - padding);
+  let right = Math.min(window.innerWidth, rect.right + padding);
+  let top = Math.max(0, rect.top - padding);
+  let bottom = Math.min(window.innerHeight, rect.bottom + padding);
+  if (brandLink) {
+    const header = element.closest<HTMLElement>(".brand, .mobile-topbar");
+    const area = header?.getBoundingClientRect();
+    const menu = header?.querySelector<HTMLElement>(".sidebar-collapse, .ta-menu-toggle");
+    const menuRect = menu?.getBoundingClientRect();
+    const rightLimit = menuRect && menuRect.left > rect.right
+      ? menuRect.left - 8 : (area ? area.right - 8 : window.innerWidth - 8);
+    left = Math.max(area ? area.left + 8 : 8, rect.left - 26);
+    right = Math.min(window.innerWidth, Math.max(rect.right, Math.min(rightLimit, rect.right + 26)));
+    top = Math.max(0, area ? area.top + 8 : rect.top - 31, rect.top - 31);
+    bottom = Math.min(window.innerHeight, area ? area.bottom - 8 : rect.bottom + 31, rect.bottom + 31);
+  }
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
   const height = Math.max(1, Math.min(window.innerHeight, Math.max(MIN_LENS_HEIGHT, bottom - top)));
   // Liquid-capsule curvature even for buttons with square native corners.
@@ -538,19 +551,18 @@ function createProgram(gl: WebGLRenderingContext) {
         return;
       }
 
-      // A brand is a graphic, not material to magnify. Refracting the
-      // rasterized logo draws stretched copies *over* the real DOM logo.
-      // Show only a restrained optical edge here; leave the centre fully
-      // transparent so Smirel and PowerBid remain untouched and crisp.
+      // Transparent centre, restrained neutral glass only along the outer rim.
+      // Premultiplied colour avoids the cyan solid-fill regression.
       if (u_brandFrame > 0.5) {
-        float rimBand = 1.0 - smoothstep(0.65, 5.5, abs(d));
-        float edgeMask = 1.0 - smoothstep(-0.75, 1.4, d);
-        vec2 lightVector = normalize(vec2(-0.72, -0.69));
+        float innerBand = smoothstep(-18.0, -2.0, d);
+        float outerMask = 1.0 - smoothstep(-0.9, 1.3, d);
+        vec2 lightVector = normalize(vec2(-0.68, -0.73));
         vec2 edgeVector = normalize(local + vec2(0.0001));
-        float highlight = pow(max(dot(edgeVector, lightVector), 0.0), 3.0);
-        float opacity = rimBand * edgeMask * (0.15 + 0.28 * highlight);
-        vec3 glassEdge = mix(vec3(0.36, 0.62, 0.84), vec3(0.78, 0.91, 1.0), highlight);
-        gl_FragColor = vec4(glassEdge, opacity);
+        float highlight = pow(max(dot(edgeVector, lightVector), 0.0), 4.0);
+        float alpha = innerBand * outerMask * (0.12 + 0.14 * highlight);
+        vec3 background = texture2D(u_texture, screenUv).rgb;
+        vec3 glass = mix(background, vec3(0.9, 0.94, 1.0), 0.16 + 0.16 * highlight);
+        gl_FragColor = vec4(glass * alpha, alpha);
         return;
       }
 
