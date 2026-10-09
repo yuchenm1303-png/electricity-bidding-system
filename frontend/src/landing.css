@@ -24,9 +24,10 @@ html:has(.pb-landing) { scroll-behavior: smooth; }
 .pb-landing ::selection { background: #a8adfb; color: #171a35; }
 .pb-container { width: min(100% - 112px, 1392px); margin-inline: auto; }
 .pb-site-header { position: absolute; inset: 0 0 auto; height: 94px; z-index: 50; transition: background .35s, border-color .35s; border-bottom: 1px solid rgba(166,176,203,.25); }
-.pb-header-inner { width: min(100% - 112px, 1392px); height: 100%; margin-inline: auto; display: flex; align-items: center; gap: 45px; }
+.pb-header-inner { width: min(100% - 112px, 1392px); height: 100%; margin-inline: auto; display: flex; align-items: center; gap: 25px; }
 .pb-logo-link { display: inline-flex; flex-shrink: 0; }
 .pb-brand { display: inline-flex; align-items: center; gap: 11px; white-space: nowrap; color: #162042; }
+.pb-brand-smirel { display: block; width: 92px; height: 30px; object-fit: contain; flex-shrink: 0; }
 .pb-brand-symbol { display: grid; place-items: center; color: #fff; width: 34px; height: 34px; border-radius: 11px; background: #5566ee; box-shadow: 0 5px 19px rgba(74,94,211,.15); }
 .pb-brand-word { font-size: 19px; font-weight: 820; letter-spacing: -.075em; line-height: 1; }
 .pb-brand-period { color: #6775e9; }

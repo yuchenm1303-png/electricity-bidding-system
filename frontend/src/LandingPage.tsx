@@ -14,8 +14,8 @@ const flowSteps = [
 
 function Brand({ inverse = false }: { inverse?: boolean }) {
   return <span className={"pb-brand" + (inverse ? " pb-brand-inverse" : "")}>
-    <span className="pb-brand-symbol"><Activity size={19} strokeWidth={2.25}/></span>
-    <span className="pb-brand-word">PowerBid<span className="pb-brand-period">.</span></span>
+    <img className="pb-brand-smirel" src={import.meta.env.BASE_URL + "smirel-logo.png"} alt="Smirel" width={92} height={30} />
+    <span className="pb-brand-word">PowerBid</span>
   </span>;
 }
 

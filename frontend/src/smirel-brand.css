@@ -1,0 +1,59 @@
+/* Shared Smirel wordmark extracted from the original Loom site asset.
+   Transparent SVG, original aspect ratio, no recoloring or redrawing. */
+:root .sidebar .brand {
+  gap: 8px;
+}
+:root .sidebar .brand-mark-smirel {
+  width: 91px;
+  height: 32px;
+  min-width: 91px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  flex: 0 0 91px;
+  overflow: visible;
+}
+:root .brand-mark-smirel img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+:root .sidebar .brand-name strong {
+  font-size: 20px;
+  letter-spacing: -.055em;
+  white-space: nowrap;
+}
+:root .sidebar .brand-name small {
+  font-size: 8px;
+  letter-spacing: .07em;
+}
+:root .mobile-topbar .mobile-smirel-logo {
+  width: 55px;
+  height: 19px;
+  object-fit: contain;
+  flex: 0 0 55px;
+}
+@media (max-width:1110px) and (min-width:961px) {
+  :root .sidebar .brand-mark-smirel {
+    width: 63px;
+    min-width: 63px;
+    flex-basis: 63px;
+  }
+}
+:root .sidebar.collapsed .brand-mark-smirel {
+  width: 63px;
+  min-width: 63px;
+  height: 24px;
+  flex: 0 0 63px;
+}
+@media(max-width:960px) {
+  :root .sidebar .brand-mark-smirel {
+    width: 86px;
+    min-width: 86px;
+    flex-basis: 86px;
+  }
+  :root .sidebar .brand-name strong { font-size: 18px; }
+}
