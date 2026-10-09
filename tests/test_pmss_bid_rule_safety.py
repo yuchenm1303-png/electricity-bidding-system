@@ -2,7 +2,9 @@
 import pytest
 
 from powerbid.pmss_bid_rule_safety import (
-    audit_saved_bid_price_limits, validate_new_bid_prices, validate_new_curve,
+    audit_saved_bid_price_limits,
+    validate_new_bid_prices,
+    validate_new_curve,
 )
 from powerbid.pmss_integration import BidSegment, snapshot_from_pmss
 
@@ -73,7 +75,8 @@ def test_pmss_mutating_posts_not_automatically_replayed_after_timeout():
     from unittest.mock import Mock
 
     from powerbid.adapters.teacher_platform import (
-        TeacherPlatformAdapter, TeacherPlatformError,
+        TeacherPlatformAdapter,
+        TeacherPlatformError,
     )
 
     adapter = TeacherPlatformAdapter(base_url="https://example.invalid")
