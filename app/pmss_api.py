@@ -17,6 +17,7 @@ from starlette.concurrency import run_in_threadpool
 
 from powerbid.network_dispatch import network_from_dict
 from powerbid.network_feedback import compare_dc_baseline_to_pmss
+from powerbid.network_historical_audit import audit_pmss_historical_grid
 from powerbid.network_strategy import evaluate_network_plan, verify_network_inputs
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
@@ -307,15 +308,28 @@ async def evaluate_network_snapshot(request: Request) -> dict[str, Any]:
         finally:
             _NETWORK_LIMITER.release()
         historical = None
+        historical_grid_audit = None
+        historical_unavailable_reason = None
         observed = params.snapshot.get("results")
         if observed is not None:
             try:
+                # Before any modeled-versus-history diagnostics, validate
+                # original PMSS curve, neutral scenario and exact result IDs.
                 historical = asdict(compare_dc_baseline_to_pmss(
                     snapshot, network, baseline, params.target_unit_id, observed
                 ))
-            except (ValueError, KeyError, TypeError):
-                # Do not invent a zero error when historic rows are incomplete.
+                historical_grid_audit = asdict(audit_pmss_historical_grid(
+                    network,
+                    observed,
+                    case_date=str(params.snapshot.get("caseDate") or ""),
+                    modeled_hours=baseline.scenarios[0].hours,
+                    target_unit_id=params.target_unit_id,
+                ))
+            except (ValueError, KeyError, TypeError) as exc:
+                # Do not silently display zero error or a "good" label.
                 historical = None
+                historical_grid_audit = None
+                historical_unavailable_reason = str(exc)
     except (ValidationError, KeyError, TypeError, ValueError, StopIteration) as exc:
         raise HTTPException(422, detail=str(exc)) from exc
     return {
@@ -326,6 +340,8 @@ async def evaluate_network_snapshot(request: Request) -> dict[str, Any]:
         ),
         "recommended_error": error,
         "historical_calibration": historical,
+        "historical_grid_audit": historical_grid_audit,
+        "historical_unavailable_reason": historical_unavailable_reason,
         "topology_source": network.topology_source,
         "network_model": "Existing PowerBid network_dispatch lossless DC-OPF",
         "excluded_constraints": [
