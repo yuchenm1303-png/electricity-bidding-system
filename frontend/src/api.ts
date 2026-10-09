@@ -1,4 +1,4 @@
-import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange, PMSSJointMwhRange } from "./types";
+import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange, PMSSJointMwhRange, PMSSHoldoutReview } from "./types";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -117,6 +117,20 @@ export async function analyzePMSSJointCandidateMwh(
         technical_source_description,
         terminal_mode: "carryover",
       }),
+    }),
+  );
+}
+
+
+/** Pure local audit of an anonymized report; no PMSS connection or write. */
+export async function inspectPMSSHoldoutReport(
+  report: Record<string, unknown>,
+): Promise<PMSSHoldoutReview> {
+  return unpack<PMSSHoldoutReview>(
+    await fetch(BASE + "api/pmss/holdout-gate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({report}),
     }),
   );
 }

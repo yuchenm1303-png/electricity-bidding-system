@@ -436,3 +436,32 @@ export type PMSSJointMwhRange = {
   pmss_write_performed: false;
   pmss_clearing_executed: false;
 };
+
+/** Historical original-bid diagnostics only; never approval to submit. */
+export type PMSSHoldoutReview = {
+  status: "TRAINING_GUARD_BLOCKED" | "HOLDOUT_DETERIORATION_OBSERVED" |
+    "DESCRIPTIVE_ONLY_INSUFFICIENT_EXTERNAL_VALIDATION";
+  researchOnly: true;
+  historicalOriginalBidsOnly: true;
+  sourceAuthenticatedByThisReport: false;
+  liveBidAllowed: false;
+  pmssCounterfactualValidated: false;
+  profitForecastValidated: false;
+  trainingDates: string[];
+  holdoutDates: string[];
+  trainingWinner: string;
+  trainingGuardPassed: boolean;
+  trainingGuardReasons: string[];
+  lockedConservativeComparator: string;
+  trainingWinnerHoldoutMaeMw: number;
+  canonicalHoldoutMaeMw: number;
+  conservativeHoldoutMaeMw: number;
+  trainingWinnerHoldoutDeltaMaeMw: number;
+  conservativeHoldoutDeltaMaeMw: number;
+  conservativeWorstSingleDayDeteriorationMaeMw: number;
+  holdoutDatesReusingTrainingOffers: number;
+  distinctTrainingBidCurves: number;
+  holdoutDayCount: number;
+  statisticalConfidenceEstablished: false;
+  disclaimer: string;
+};

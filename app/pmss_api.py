@@ -28,6 +28,7 @@ from powerbid.pmss_bid_rule_safety import (
 )
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
 from powerbid.pmss_evidence_attachment import verify_pmss_evidence_binding
+from powerbid.pmss_holdout_gate import review_holdout_report
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_joint_research import FIELDS, assess_joint_readiness
 from powerbid.pmss_network_rank import rank_network_bid_strategies
@@ -583,3 +584,26 @@ async def candidate_joint_day_mwh_bounds(request: Request) -> dict[str, Any]:
         "pmss_write_performed": False,
         "pmss_clearing_executed": False,
     }
+
+
+
+class HoldoutReportInput(BaseModel):
+    """Anonymized historical ORIGINAL-bid holdout report; never raw PMSS rows."""
+    model_config = ConfigDict(extra="forbid")
+    report: dict[str, Any]
+
+
+@router.post("/holdout-gate")
+async def inspect_holdout_gate(request: Request) -> dict[str, Any]:
+    """Purely local arithmetic review; neither PMSS login nor bid approval."""
+    try:
+        params = HoldoutReportInput.model_validate(await _read_payload(request))
+        return await run_in_threadpool(review_holdout_report, params.report)
+    except (ValidationError, ValueError, KeyError, TypeError) as exc:
+        # Do not echo uploaded free text or source payload in response errors.
+        raise HTTPException(
+            422, detail=(
+                "匿名历史留出报告缺字段、数值不一致或安全声明不符合要求；"
+                "请用最新只读导出工具重新生成"
+            ),
+        ) from exc
