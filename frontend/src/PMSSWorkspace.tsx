@@ -21,10 +21,11 @@ function Metric({label, value, detail}: {label: string; value: string; detail: s
   return <article className="pmss-metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>;
 }
 
-function saveReview(result: PMSSOptimization) {
+function saveReview(result: PMSSOptimization, caseDate: string) {
   const data = {
     source: "LOCAL SURROGATE ONLY - NOT PMSS CLEARED OR SUBMITTED",
-    targetUnitId: result.target_unit_id, marketType: "DA",
+    caseDate, targetUnitId: result.target_unit_id, marketType: "DA",
+    shared24hCurve: true, manualReviewOnly: true, submittedToPMSS: false,
     startPeriod: 1, endPeriod: 24,
     segments: result.recommended.segments.map((s, index) => ({
       segmentOrder: index + 1, startPower: s.start_power,
@@ -522,7 +523,7 @@ export function PMSSWorkspace() {
               numeric(analysis.baseline_backtest.power_mae_mw, 2) + " MW"} detail="原报价模型与真实出清偏差"/>
           </div>
           <div className="pmss-result-toolbar"><h4>本地推荐分段</h4>
-            <button type="button" onClick={() => saveReview(analysis)}><Download size={15}/> 下载审核 JSON</button>
+            <button type="button" onClick={() => saveReview(analysis, inspection.case_date)}><Download size={15}/> 下载审核 JSON</button>
           </div>
           <div className="pmss-table-scroll"><table className="pmss-table">
             <thead><tr><th>段号</th><th>起始出力</th><th>结束出力</th><th>本段容量</th><th>报价</th></tr></thead>
