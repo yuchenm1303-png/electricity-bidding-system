@@ -159,6 +159,39 @@ units = pd.DataFrame([
 ])
 st.dataframe(units, hide_index=True, use_container_width=True)
 
+st.subheader("逐节点价格误差")
+node_df = pd.DataFrame([
+    {
+        "节点 ID": item.element_id,
+        "价格 MAE": item.metric.mae,
+        "价格 RMSE": item.metric.rmse,
+        "历史数据覆盖率": item.metric.coverage,
+    }
+    for item in selected_day.per_node
+])
+st.dataframe(
+    node_df.sort_values("价格 MAE", ascending=False, na_position="last"),
+    hide_index=True, use_container_width=True,
+)
+
+st.subheader("逐线路潮流幅值误差")
+line_df = pd.DataFrame([
+    {
+        "线路 ID": item.element_id,
+        "潮流绝对值 MAE (MW)": item.metric.mae,
+        "潮流绝对值 RMSE (MW)": item.metric.rmse,
+        "历史数据覆盖率": item.metric.coverage,
+    }
+    for item in selected_day.per_branch
+])
+if not line_df.empty:
+    st.dataframe(
+        line_df.sort_values("潮流绝对值 MAE (MW)", ascending=False, na_position="last"),
+        hide_index=True, use_container_width=True,
+    )
+else:
+    st.info("该网络没有可比较的线路历史数据，不能进行线路模型校准。")
+
 report = {
     "notice": (
         "Historical original PMSS bids vs offline DC baseline ONLY. "
