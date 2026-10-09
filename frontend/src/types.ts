@@ -165,6 +165,35 @@ export type PMSSInspection = {
     message: string;
   };
   joint_required_technical_fields: string[];
+
+  physical_evidence_gaps: {
+    unit_count: number;
+    fields_required_per_unit: number;
+    fields_with_any_anonymous_observations: number;
+    fields_missing_observations: number;
+    individually_verified_fields: 0;
+    independent_technical_parameters_ready: false;
+    scenario_switch_codes_interpreted: false;
+    generator_initial_states_confirmed: false;
+    verdict: string;
+    disclaimer: string;
+    fields: {
+      field: string;
+      model_unit: string;
+      observed_source_field: string | null;
+      observed_source_kind: string | null;
+      aggregate_values_present: number;
+      aggregate_rows_reported: number;
+      status: "NO_FIELD_OBSERVATION" | "PARTIAL_ANONYMOUS_OBSERVATION" | "ANONYMOUS_OBSERVATION_NOT_VERIFIED";
+      relevant_switch_name_unverified: string | null;
+      relevant_switch_value_1: number | null;
+      relevant_switch_value_0: number | null;
+      required_next_evidence: string;
+      semantically_verified: false;
+      linked_to_individual_generator: false;
+      usable_as_model_input: false;
+    }[];
+  };
   historical_bid_rule_audit: {
     price_floor: number | null;
     price_ceiling: number | null;
