@@ -75,6 +75,8 @@ def test_full_24h_baseline_fixture_has_zero_error_and_complete_coverage():
         assert metric.coverage == 1.0
         assert metric.mae == pytest.approx(0.0, abs=1e-7)
     assert all(item.dispatch.mae == pytest.approx(0) for item in day.per_unit)
+    assert all(item.metric.mae == pytest.approx(0) for item in day.per_node)
+    assert all(item.metric.mae == pytest.approx(0) for item in day.per_branch)
 
 
 def test_real_historical_errors_are_measured_not_hidden():
@@ -87,6 +89,10 @@ def test_real_historical_errors_are_measured_not_hidden():
     assert day.unit_dispatch.mae == pytest.approx(15 / 48)
     assert day.nodal_price.mae == pytest.approx(100 / 48)
     assert day.line_flow_abs.mae == pytest.approx(10 / 24)
+    bus = next(x for x in day.per_node if x.element_id == "A")
+    assert bus.metric.mae == pytest.approx(100 / 24)
+    line = next(x for x in day.per_branch if x.element_id == "LINE-AB")
+    assert line.metric.mae == pytest.approx(10 / 24)
 
 
 def test_missing_values_never_become_zero():
