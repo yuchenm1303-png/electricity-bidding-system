@@ -8,7 +8,8 @@ import pytest
 from powerbid.network_dispatch import network_from_dict
 from powerbid.pmss_integration import snapshot_from_pmss
 from powerbid.pmss_joint_research import (
-    assess_joint_readiness, compare_joint_legal_candidates,
+    assess_joint_readiness,
+    compare_joint_legal_candidates,
 )
 from powerbid.strategy_lab import BidPolicy
 
