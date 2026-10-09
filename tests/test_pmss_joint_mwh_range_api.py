@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 from test_pmss_web_api import _synthetic_network_case  # noqa: E402
+from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
+from powerbid.pmss_physical_lineage import draft_lineage_template  # noqa: E402
 
 from app.web_server import app  # noqa: E402
 
@@ -88,3 +90,72 @@ def test_joint_rejects_get_or_unsupported_empty_body():
     assert client.get("/api/pmss/network-joint-mwh-range").status_code == 405
     response = client.post("/api/pmss/network-joint-mwh-range", json={})
     assert response.status_code == 422
+
+
+
+def _course_payload():
+    data = _payload()
+    data["technical_source"] = "course_verified_by_user"
+    data["technical_source_description"] = "Example course handbook page 12, 2025-09-01"
+    snap = data["snapshot"]
+    snapshot = snapshot_from_pmss(
+        unit_tree=snap["unitTree"],
+        unit_bids=snap["unitBids"],
+        market_system=snap["marketSystem"],
+        demand_forecast_mw=snap["demandForecastMw"],
+        forecast_source=snap["forecastSource"],
+    )
+    ledger = draft_lineage_template(
+        snapshot, data["technical"], case_date=snap["caseDate"]
+    )
+    for uid, entries in ledger["units"].items():
+        for field, entry in entries.items():
+            entry["reference"] = f"course handbook section {uid} page 12 {field}"
+    data["technical_lineage"] = ledger
+    return data
+
+
+def test_course_labeled_joint_api_requires_field_evidence_and_never_certifies_pmss():
+    data = _course_payload()
+    response = client.post("/api/pmss/network-joint-mwh-range", json=data)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    audit = result["technical_lineage_audit"]
+    assert audit["attested_fields"] == 26
+    assert audit["total_required_fields"] == 26
+    assert audit["user_source_attested"] is True
+    assert audit["independent_pmss_semantics_verified"] is False
+    assert result["independent_pmss_technical_verification"] is False
+    assert result["safe_for_live_submission"] is False
+    assert "course handbook section" not in response.text
+
+
+@pytest.mark.parametrize("change", [
+    lambda p: p.pop("technical_lineage"),
+    lambda p: p["technical_lineage"]["units"]["G30"]["initial_on"].update(
+        {"reference": ""}
+    ),
+    lambda p: p["technical_lineage"]["units"]["G30"]["ramp_up_mw"].update(
+        {"unit": "MW/min"}
+    ),
+    lambda p: p["technical_lineage"]["units"]["G30"]["startup_cost"].update(
+        {"value": 1234}
+    ),
+    lambda p: p["technical_lineage"].update({"case_date": "2025-09-02"}),
+    lambda p: p["technical_lineage"]["units"]["G31"].pop("initial_state_hours"),
+    lambda p: p["technical_lineage"]["units"]["G30"]["max_mw"].update(
+        {"reference": "https://example.test?token=forbidden"}
+    ),
+])
+def test_course_joint_api_blocks_missing_stale_or_unverifiable_field_evidence(change):
+    payload = _course_payload()
+    change(payload)
+    result = client.post("/api/pmss/network-joint-mwh-range", json=payload)
+    assert result.status_code == 422, result.text
+
+
+def test_synthetic_cannot_masquerade_as_course_attestation():
+    payload = _course_payload()
+    payload["technical_source"] = "synthetic"
+    result = client.post("/api/pmss/network-joint-mwh-range", json=payload)
+    assert result.status_code == 422
