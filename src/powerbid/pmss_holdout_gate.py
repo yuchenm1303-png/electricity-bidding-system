@@ -7,7 +7,6 @@ authenticity, authorizes live bidding, or improves the out-of-sample model.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
 from datetime import date
 from math import isfinite
 from typing import Any
