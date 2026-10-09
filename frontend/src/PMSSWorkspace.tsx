@@ -38,6 +38,25 @@ function saveReview(result: PMSSOptimization) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
+function saveTechnicalTemplate(inspection: PMSSInspection) {
+  // Deliberately leave every unknown physical parameter null.
+  // The offline joint MILP refuses these placeholders until independently supplied.
+  const data = Object.fromEntries(inspection.units.map(unit => [
+    unit.unit_id,
+    Object.fromEntries(inspection.joint_required_technical_fields.map(field => [
+      field, field === "unit_id" ? unit.unit_id : null,
+    ])),
+  ]));
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(data, null, 2)], {type:"application/json"})
+  );
+  const link = window.document.createElement("a");
+  link.href = url;
+  link.download = "powerbid_24h_unit_technical_BLANK_TEMPLATE.json";
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function PMSSWorkspace() {
   const picker = useRef<HTMLInputElement | null>(null);
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null);
@@ -239,6 +258,43 @@ export function PMSSWorkspace() {
           历史最高申报价为 {numeric(inspection.historical_bid_rule_audit.largest_original_price, 2)}。
           不能仅凭当前规则断定历史提交违规，也不能用历史报价为新报价越界提供依据。
         </div>}
+      <div className="pmss-panel">
+        <div className="pmss-panel-head">
+          <div>
+            <small>05 / INTEGRATED 24H MODEL</small>
+            <h3>24小时联合机组约束 · 数据准入</h3>
+            <p>联合 DC 网络 + 机组启停 + 爬坡 + 最短开停机已有独立 MILP 研究引擎；
+              没有逐机组可靠参数时，不允许用猜测值计算。</p>
+          </div>
+          <span className="pmss-state-label">真实参数未齐全</span>
+        </div>
+        <div className="pmss-summary">
+          <Metric label="需要独立运行参数的机组"
+            value={inspection.joint_readiness.total_units + " 台"}
+            detail="必须与 PMSS 机组 ID 完全一致"/>
+          <Metric label="已完整提供的机组"
+            value={inspection.joint_readiness.supplied_units + " 台"}
+            detail="当前快照不包含联合模型技术参数"/>
+          <Metric label="实际联合 MILP 准入"
+            value={inspection.joint_readiness.ready ? "可试算" : "已阻止"}
+            detail="禁止推断爬坡、启停与初始状态"/>
+        </div>
+        <div className="pmss-toolbar">
+          <p>可生成无默认值的参数模板，再使用课程或可信来源逐台补齐。
+            在完成之前，继续使用上方独立 DC 网络报价研究，不冒充联合优化。</p>
+          <button className="pmss-run-button" type="button"
+            onClick={() => saveTechnicalTemplate(inspection)}>
+            <Download size={16}/> 下载空白参数模板
+          </button>
+        </div>
+        <p className="pmss-footnote">
+          模板内尚未知晓的字段统一为 null，**不是默认值**；
+          需要补齐全部机组初始开停机状态、出力、持续时间、爬坡、启停成本和最短开停机时间。
+          目前联合策略研究仅通过合成教学数据测试；真实 PMSS 机组参数尚未验证。
+          在受控本地环境中可使用 scripts/study_pmss_joint.py 离线检查及求解，
+          不会自动向老师平台提交。
+        </p>
+      </div>
       <MarketExplorer inspection={inspection}/>
       <div className="pmss-panel">
         <div className="pmss-panel-head">
