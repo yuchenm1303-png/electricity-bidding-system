@@ -16,7 +16,7 @@ const BRAND_TARGET_SELECTOR = ".brand-mark-smirel, .brand-name strong, .brand-na
 const SNAP_SELECTOR = [
   BRAND_TARGET_SELECTOR,
   ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
-  ".nav-entry > svg", ".nav-entry > span", ".nav-count",
+  ".nav-entry > svg", ".nav-entry .nav-label-text", ".nav-count",
   ".ta-menu-toggle svg", ".ta-header-icon svg", ".sidebar-collapse svg",
   ".primary-button > svg", ".primary-button > span",
   ".outline-button > svg", ".outline-button > span",
@@ -66,8 +66,8 @@ function getLensBounds(element: HTMLElement, pointerX: number, pointerY: number)
   const rect = element.getBoundingClientRect();
   const brand = isBrandSurface(element);
   const padding = brand ? 5 : SNAP_PADDING;
-  const maxWidth = brand ? BRAND_LENS_MAX_WIDTH : GENERAL_LENS_MAX_WIDTH;
-  const maxHeight = brand ? BRAND_LENS_MAX_HEIGHT : GENERAL_LENS_MAX_HEIGHT;
+  const maxWidth = brand ? BRAND_LENS_MAX_WIDTH : element.matches(".nav-entry") ? 150 : GENERAL_LENS_MAX_WIDTH;
+  const maxHeight = brand ? BRAND_LENS_MAX_HEIGHT : element.matches(".nav-entry") ? 62 : GENERAL_LENS_MAX_HEIGHT;
   const width = Math.min(Math.max(MIN_LENS_WIDTH, window.innerWidth - 20), Math.max(MIN_LENS_WIDTH, Math.min(rect.width + 2 * padding, maxWidth)));
   const height = Math.min(Math.max(MIN_LENS_HEIGHT, window.innerHeight - 20), Math.max(MIN_LENS_HEIGHT, Math.min(rect.height + 2 * padding, maxHeight)));
   // Large interactive surfaces get a local lens near the cursor, not an
