@@ -8,9 +8,9 @@ No network access and no PMSS write/execute methods appear here.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from math import isfinite
-from typing import Sequence
 
 from powerbid.pmss_integration import BidSegment, PMSSSnapshot
 from powerbid.pmss_strategy import validate_curve
