@@ -37,12 +37,27 @@ class ErrorMetric:
 class UnitError:
     unit_id: str
     dispatch: ErrorMetric
+    max_abs_error_mw: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class ElementError:
     element_id: str
     metric: ErrorMetric
+    max_abs_error: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class HourlyError:
+    """Identifier-free hourly historical error; hour is 1..24."""
+
+    hour: int
+    unit_dispatch_mae_mw: float | None
+    nodal_price_mae: float | None
+    line_flow_abs_mae_mw: float | None
+    max_unit_abs_error_mw: float | None
+    max_nodal_price_abs_error: float | None
+    max_line_flow_abs_error_mw: float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +80,7 @@ class DayValidation:
         "historical original-bid read-only DC surrogate, "
         "NOT PMSS validation of new bids"
     )
+    hourly_profile: tuple[HourlyError, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -219,6 +235,7 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
     all_flow_errors: list[float] = []
     unit_hour_peak: list[float] = []
     price_hour_peak: list[float] = []
+    hourly_profile: list[HourlyError] = []
     for hour in range(24):
         offers: list[DcOffer] = []
         for unit in snapshot.units:
@@ -255,6 +272,15 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
         all_unit_errors.extend(unit_errors)
         all_price_errors.extend(price_errors)
         all_flow_errors.extend(flow_errors)
+        hourly_profile.append(HourlyError(
+            hour=hour + 1,
+            unit_dispatch_mae_mw=_error_metric(unit_errors, len(unit_ids)).mae,
+            nodal_price_mae=_error_metric(price_errors, len(network.buses)).mae,
+            line_flow_abs_mae_mw=_error_metric(flow_errors, len(line_ids)).mae,
+            max_unit_abs_error_mw=max(map(abs, unit_errors), default=None),
+            max_nodal_price_abs_error=max(map(abs, price_errors), default=None),
+            max_line_flow_abs_error_mw=max(map(abs, flow_errors), default=None),
+        ))
         if unit_errors:
             unit_hour_peak.append(sum(abs(x) for x in unit_errors) / len(unit_errors))
         if price_errors:
@@ -298,19 +324,32 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
         nodal_price=_error_metric(all_price_errors, 24 * len(network.buses)),
         line_flow_abs=_error_metric(all_flow_errors, 24 * len(network.lines)),
         per_unit=tuple(
-            UnitError(unit_id=uid, dispatch=_error_metric(per_unit[uid], 24))
+            UnitError(
+                unit_id=uid,
+                dispatch=_error_metric(per_unit[uid], 24),
+                max_abs_error_mw=max(map(abs, per_unit[uid]), default=None),
+            )
             for uid in sorted(unit_ids)
         ),
         per_node=tuple(
-            ElementError(element_id=bus, metric=_error_metric(per_node[bus], 24))
+            ElementError(
+                element_id=bus,
+                metric=_error_metric(per_node[bus], 24),
+                max_abs_error=max(map(abs, per_node[bus]), default=None),
+            )
             for bus in sorted(network.buses)
         ),
         per_branch=tuple(
-            ElementError(element_id=line, metric=_error_metric(per_branch[line], 24))
+            ElementError(
+                element_id=line,
+                metric=_error_metric(per_branch[line], 24),
+                max_abs_error=max(map(abs, per_branch[line]), default=None),
+            )
             for line in sorted(line_ids)
         ),
         max_hourly_dispatch_mae=max(unit_hour_peak, default=None),
         max_hourly_lmp_mae=max(price_hour_peak, default=None),
+        hourly_profile=tuple(hourly_profile),
     )
 
 
