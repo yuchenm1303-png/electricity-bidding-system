@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import sqlite3
+import sys
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app import account_auth
-from app.web_server import app
+# Match the repository's existing API tests: CI runs pytest with only src on PYTHONPATH.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app import account_auth  # noqa: E402
+from app.web_server import app  # noqa: E402
 
 HEADERS = {"X-PowerBid-Request": "1"}
 
