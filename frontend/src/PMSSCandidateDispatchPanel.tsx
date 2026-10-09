@@ -4,6 +4,7 @@ import {
   CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { analyzePMSSCandidateDispatch } from "./api";
+import { PMSSJointMwhPanel } from "./PMSSJointMwhPanel";
 import {
   numeric, type PMSSCandidateDispatchRange, type PMSSInspection,
   type PMSSNetworkRank, type PMSSOptimization,
@@ -191,6 +192,14 @@ export function PMSSCandidateDispatchPanel({
         </button>
       </div>
     </>}
+    {plan && inspection.dc_grid_available && <PMSSJointMwhPanel
+      key={key}
+      snapshot={snapshot}
+      target={target}
+      candidate={plan}
+      planLabel={label}
+      disabled={busy || otherBusy}
+    />}
     <p className="pmss-footnote"><Activity size={14}/>
       模型边界：逐小时无损DC网络、同行历史报价固定，未纳入启停、
       爬坡、备用、AC损耗与老师PMSS特有的结算规则。
