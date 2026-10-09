@@ -26,6 +26,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("snapshots", type=Path, nargs="+")
     parser.add_argument("--holdout-dates", type=int, default=1)
+    parser.add_argument(
+        "--min-training-improvement-mw", type=float, default=1.0,
+        help="Predeclared minimum paired MAE improvement per training day; not fit on holdout",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     if not 3 <= len(args.snapshots) <= 12:
@@ -45,7 +49,9 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Historical input exceeds 4 MiB")
             cases.append(json.loads(path.read_text("utf-8")))
         report = evaluate_heldout_tiebreak_rules(
-            cases, holdout_dates=args.holdout_dates
+            cases,
+            holdout_dates=args.holdout_dates,
+            min_training_improvement_mw=args.min_training_improvement_mw,
         )
         # Do not put raw offers, IDs, source paths or data in the report.
         payload = json.dumps(

@@ -136,3 +136,106 @@ def test_cli_private_nonoverwriting_heldout_report(tmp_path):
     assert "G1" not in encoded
     repeat = subprocess.run(cmd, capture_output=True, text=True, timeout=100)
     assert repeat.returncode != 0
+
+
+
+def test_three_day_result_shows_day_paired_risks_and_reused_original_offers():
+    cases = _triple()
+    original = evaluate_heldout_tiebreak_rules(cases)
+    assert original["trainingDistinctOriginalBidCurves"] == 1
+    assert original["holdoutDatesReusingTrainingBidCurves"] == 1
+    assert original["holdoutDistinctOriginalBidCurves"] == 1
+    assert len(original["trainingDailyDiagnostics"]) == 2
+    assert len(original["holdoutDailyDiagnostics"]) == 1
+    assert original["holdoutRobustnessAssessment"] == (
+        "ONLY_ONE_HOLDOUT_DATE_NO_STATISTICAL_CONFIDENCE"
+    )
+    assert not original["statisticalSignificanceEstablished"]
+    assert not original["readyForForwardBidOptimization"]
+    assert not original["predeclaredTrainingGuardrail"]["passed"]
+    assert (
+        "TRAINING_OFFER_DIVERSITY_LT_2" in
+        original["predeclaredTrainingGuardrail"]["reasons"]
+    )
+    assert all(
+        day["caseDate"] == f"2025-09-0{i}"
+        for i, day in enumerate(
+            original["trainingDailyDiagnostics"] +
+            original["holdoutDailyDiagnostics"], 1
+        )
+    )
+    assert original["largestHoldoutDeteriorationMaeMw"] == pytest.approx(0)
+
+
+def test_training_guardrail_uses_no_holdout_labels_or_offer_novelty(monkeypatch):
+    from types import SimpleNamespace
+
+    import powerbid.pmss_tiebreak_holdout as module
+
+    samples = _triple()
+    # Different offer segment boundaries but identical marginal offer prices.
+    # For this isolated selection test, mock the heavy local LP study.
+    samples[1]["unitBids"]["G2"]["datas"][0]["segmentDatas"] = [
+        {"startPower": 0, "endPower": 75, "price": 90, "segmentOrder": 1},
+        {"startPower": 75, "endPower": 150, "price": 90, "segmentOrder": 2},
+    ]
+    def fake_study(raw):
+        heldout = raw["caseDate"] == "2025-09-03"
+        return SimpleNamespace(
+            compared_hours=24,
+            examined_hours=24,
+            generator_count=2,
+            canonical_order_baseline_mae_mw=20.0,
+            ascending_dispatch_mae_mw=40.0 if heldout else 10.0,
+            descending_dispatch_mae_mw=5.0 if heldout else 30.0,
+            source_order_baseline_mae_mw=20.0,
+        )
+
+    monkeypatch.setattr(module, "audit_historical_tiebreaks", fake_study)
+    a = evaluate_heldout_tiebreak_rules(samples)
+    assert a["policyLockedUsingTrainingOnly"] == "unit_id_ascending"
+    assert a["predeclaredTrainingGuardrail"]["passed"]
+    assert a["predeclaredTrainingGuardrail"][
+        "trainingOnlyConservativeComparator"
+    ] == "unit_id_ascending"
+    assert a["trainingDistinctOriginalBidCurves"] == 2
+    assert a["holdoutDatesReusingTrainingBidCurves"] == 1
+    assert a["holdoutMaeMwByPolicy"]["unit_id_ascending"] == pytest.approx(40)
+    assert a["largestHoldoutDeteriorationMaeMw"] == pytest.approx(20)
+    assert a["holdoutSelectedDaysBetterThanCanonical"] == 0
+    assert a["trainingSelectedDaysBetterThanCanonical"] == 2
+    assert a["selectionUsesHoldoutObservations"] is False
+    # Change held-out observations in the mocked study. The training choice
+    # and predeclared guardrail MUST remain unchanged.
+    def alternate_holdout(raw):
+        study = fake_study(raw)
+        if raw["caseDate"] == "2025-09-03":
+            study.ascending_dispatch_mae_mw = 0.1
+            study.descending_dispatch_mae_mw = 100
+        return study
+    monkeypatch.setattr(module, "audit_historical_tiebreaks", alternate_holdout)
+    b = evaluate_heldout_tiebreak_rules(samples)
+    assert b["policyLockedUsingTrainingOnly"] == a["policyLockedUsingTrainingOnly"]
+    assert b["predeclaredTrainingGuardrail"] == a["predeclaredTrainingGuardrail"]
+    assert b["holdoutMaeMwByPolicy"] != a["holdoutMaeMwByPolicy"]
+
+
+def test_minimum_material_training_margin_must_be_valid_and_declared():
+    for threshold in (0, -1, True, float("nan"), float("inf"), 101, "5"):
+        with pytest.raises(ValueError, match="training improvement"):
+            evaluate_heldout_tiebreak_rules(
+                _triple(), min_training_improvement_mw=threshold
+            )
+
+
+def test_two_heldout_days_are_reported_as_descriptive_not_statistical():
+    samples = [_fixture(f"2025-09-0{d}") for d in range(1, 5)]
+    report = evaluate_heldout_tiebreak_rules(samples, holdout_dates=2)
+    assert report["trainingCaseCount"] == 2
+    assert report["holdoutCaseCount"] == 2
+    assert report["holdoutRobustnessAssessment"] == (
+        "DESCRIPTIVE_MULTIDAY_HOLDOUT_NO_STATISTICAL_CONFIDENCE"
+    )
+    assert len(report["holdoutDailyDiagnostics"]) == 2
+    assert report["statisticalSignificanceEstablished"] is False
+    assert report["holdoutDatesReusingTrainingBidCurves"] == 2
