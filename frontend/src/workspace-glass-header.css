@@ -1,149 +1,124 @@
-/* PowerBid console frosted-glass topbar
-   A single backdrop sampling layer on the sticky header; nested controls
-   use translucency (no nested backdrop-filter) to preserve cursor rendering
-   and scroll performance. */
+/* PowerBid console / quiet neutral frosted glass.
+ * One compositing surface only: no blue overlays, bloom or decorative
+ * highlights. Workspace scrolls behind the sticky header (negative margin).
+ * This file intentionally overrides older theme and motion header rules.
+ */
 :root .app-main > .global-header {
   position: sticky;
   top: 0;
   z-index: 40;
-  /* A transparent sticky overlay: the scroll layer can move BEHIND the header.
-     The old opaque strip had no underlying content to sample. */
   margin-bottom: -76px;
   overflow: visible;
-  background: linear-gradient(110deg,
-    rgba(237,245,255,.30) 0%,
-    rgba(227,238,255,.20) 58%,
-    rgba(223,235,255,.28) 100%);
-  -webkit-backdrop-filter: blur(16px) saturate(170%);
-  backdrop-filter: blur(16px) saturate(170%);
-  border-bottom: 1px solid rgba(129,147,189,.22);
-  box-shadow: 0 10px 34px rgba(31,55,95,.065), inset 0 1px 0 rgba(255,255,255,.4);
+  background: rgba(247, 248, 250, .42);
+  -webkit-backdrop-filter: blur(22px) saturate(85%);
+  backdrop-filter: blur(22px) saturate(85%);
+  border-bottom: 1px solid rgba(40, 46, 56, .11);
+  box-shadow: 0 2px 12px rgba(18, 21, 30, .045);
 }
-/* The content shell starts behind the glass, but its *children* stay in their
-   original positions at rest. During scrolling, actual cards and charts pass
-   beneath the translucent header instead of being cut off at its bottom edge. */
-@media(min-width:961px) {
-  :root .app-main > .global-header + .content-shell { padding-top:104px; }
-  :root .app-main > .global-header + .loading-workspace { margin-top:76px; }
-  :root .app-main > .global-header + .error-banner { margin-top:76px; }
-}
-@media(min-width:961px) and (max-width:1540px) {
-  :root .app-main > .global-header + .content-shell { padding-top:101px; }
-}
-/* If the same component shows an error banner, its following content shell
-   already begins below the banner, so it must not receive the extra offset. */
-@media(min-width:961px) {
-  :root .app-main > .error-banner + .content-shell { padding-top:28px; }
-}
-/* A light reflection gives the material a visible edge even before scrolling. */
-:root .app-main > .global-header::before {
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:-1;
-  pointer-events:none;
-  background:linear-gradient(180deg,rgba(255,255,255,.14),transparent 67%);
-}
+/* The previous gradient/highlight layer made a second cloudy film. */
+:root .app-main > .global-header::before { content: none; }
 :root[data-theme="dark"] .app-main > .global-header {
-  background: linear-gradient(112deg,
-    rgba(24,39,64,.29) 0%,
-    rgba(18,34,57,.17) 54%,
-    rgba(24,40,66,.27) 100%);
-  border-bottom-color:rgba(149,176,238,.17);
-  box-shadow:0 11px 38px rgba(2,8,23,.24),inset 0 1px 0 rgba(212,226,255,.095);
+  background: rgba(17, 19, 24, .35);
+  -webkit-backdrop-filter: blur(24px) saturate(65%);
+  backdrop-filter: blur(24px) saturate(65%);
+  border-bottom-color: rgba(229, 233, 242, .10);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .12);
 }
-:root[data-theme="dark"] .app-main > .global-header::before {
-  background:linear-gradient(180deg,rgba(210,227,255,.078) 0%,rgba(195,219,255,.018) 52%,transparent 100%);
+/* Preserve initial page alignment but allow charts/cards behind glass
+ * as the page scrolls. Do not alter the mobile workspace header. */
+@media (min-width: 961px) {
+  :root .app-main > .global-header + .content-shell { padding-top: 104px; }
+  :root .app-main > .global-header + .loading-workspace { margin-top: 76px; }
+  :root .app-main > .global-header + .error-banner { margin-top: 76px; }
+  :root .app-main > .error-banner + .content-shell { padding-top: 28px; }
 }
-/* Search surface: translucent, but without another blur layer. */
-:root .app .global-header .ta-global-search {
-  border-radius:13px;
-  background:rgba(255,255,255,.28);
-  border:1px solid rgba(118,141,183,.22);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.41),0 5px 18px rgba(25,50,91,.045);
+@media (min-width: 961px) and (max-width: 1540px) {
+  :root .app-main > .global-header + .content-shell { padding-top: 101px; }
 }
-:root[data-theme="dark"] .app .global-header .ta-global-search {
-  color:#9dafcb;
-  background:rgba(12,25,45,.42);
-  border-color:rgba(150,175,232,.23);
-  box-shadow:inset 0 1px 0 rgba(208,222,255,.057),0 7px 25px rgba(2,7,22,.1);
+/* Quiet neutral controls; a single blurred parent, no nested blur. */
+:root .app .global-header :is(.ta-global-search, .ta-menu-toggle, .ta-header-icon, .pb-account-trigger) {
+  background: rgba(248, 249, 252, .24);
+  border: 1px solid rgba(29, 35, 44, .13);
+  border-radius: 12px;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+:root[data-theme="dark"] .app .global-header :is(.ta-global-search, .ta-menu-toggle, .ta-header-icon, .pb-account-trigger) {
+  background: rgba(13, 16, 21, .17);
+  border-color: rgba(233, 237, 247, .12);
+  color: #bec6d2;
+  box-shadow: none;
+}
+:root .app .global-header :is(.ta-global-search, .ta-menu-toggle, .ta-header-icon, .pb-account-trigger):hover:not(:disabled) {
+  background: rgba(178, 188, 207, .19);
+  border-color: rgba(116, 126, 145, .36);
+  box-shadow: none;
+  transform: none;
+}
+:root[data-theme="dark"] .app .global-header :is(.ta-global-search, .ta-menu-toggle, .ta-header-icon, .pb-account-trigger):hover:not(:disabled) {
+  background: rgba(225, 232, 245, .09);
+  border-color: rgba(224, 230, 243, .24);
+  color: #f1f3f7;
 }
 :root .app .global-header .ta-global-search:focus-within {
-  border-color:rgba(115,139,243,.68);
-  box-shadow:0 0 0 3px rgba(109,131,245,.13),inset 0 1px 0 rgba(255,255,255,.14);
+  border-color: rgba(117, 132, 168, .55);
+  box-shadow: 0 0 0 2px rgba(130, 144, 186, .10);
 }
-/* Search suggestions stay legible above glass and page charts. */
-:root .app .global-header .ta-search-results {
-  border-radius:14px;
-  border-color:rgba(135,156,206,.28);
-  box-shadow:0 18px 48px rgba(2,9,28,.24);
-}
-:root[data-theme="dark"] .app .global-header .ta-search-results {
-  background:#1c2a41;
+:root[data-theme="dark"] .app .global-header .ta-global-search:focus-within {
+  border-color: rgba(210, 216, 232, .33);
+  box-shadow: 0 0 0 2px rgba(228, 232, 241, .07);
 }
 :root .app .global-header .ta-global-search kbd {
-  border:1px solid rgba(127,148,189,.17);
-  border-radius:7px;
-  background:rgba(117,142,187,.085);
+  border: 1px solid rgba(42, 50, 65, .12);
+  border-radius: 7px;
+  background: rgba(80, 91, 109, .09);
+  box-shadow: none;
 }
 :root[data-theme="dark"] .app .global-header .ta-global-search kbd {
-  color:#a1b3d4;
-  background:rgba(130,160,214,.12);
-  border-color:rgba(156,185,239,.12);
+  color: #acb4c0;
+  border-color: rgba(225, 230, 243, .10);
+  background: rgba(218, 223, 236, .065);
 }
-/* Matching semi-transparent material for the three utility controls. */
-:root .app .global-header :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger) {
-  border-radius:13px;
-  border:1px solid rgba(116,142,189,.23);
-  background:rgba(255,255,255,.26);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 5px 15px rgba(19,41,88,.055);
-}
-:root[data-theme="dark"] .app .global-header :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger) {
-  color:#b3c2df;
-  border-color:rgba(152,177,235,.2);
-  background:rgba(20,34,56,.37);
-  box-shadow:inset 0 1px 0 rgba(204,222,255,.055),0 5px 18px rgba(2,8,25,.09);
-}
-:root .app .global-header :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger):hover:not(:disabled) {
-  transform:translateY(-1px);
-  border-color:rgba(115,136,235,.48);
-  background:rgba(132,158,231,.18);
-  box-shadow:0 8px 22px rgba(27,53,120,.13),inset 0 1px 0 rgba(255,255,255,.17);
-}
-:root[data-theme="dark"] .app .global-header :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger):hover:not(:disabled) {
-  color:#f1f5ff;
-  background:rgba(85,112,187,.22);
-  border-color:rgba(157,182,249,.47);
-}
+/* Keep the environment chip meaningful, but remove its neon glow. */
 :root .app .global-header .environment-pill {
-  border:1px solid rgba(34,153,99,.1);
-  background:rgba(35,175,113,.09);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.13);
+  box-shadow: none;
+  border-color: rgba(53, 151, 112, .10);
+  background: rgba(49, 154, 113, .08);
 }
 :root[data-theme="dark"] .app .global-header .environment-pill {
-  background:rgba(38,153,103,.19);
-  border-color:rgba(95,215,154,.16);
-  color:#8fe8bc;
+  color: #95dcb7;
+  background: rgba(43, 135, 94, .16);
+  border-color: rgba(99, 189, 135, .15);
 }
-:root .app .global-header .environment-pill .online-dot {
-  box-shadow:0 0 0 3px rgba(55,182,115,.1);
+:root .app .global-header .environment-pill .online-dot { box-shadow: none; }
+/* Opaque menus open above the frosted surface without receiving blur. */
+:root .app .global-header .pb-account-menu { z-index: 2; }
+:root .app .global-header .ta-search-results {
+  border-color: rgba(117, 124, 140, .20);
+  border-radius: 12px;
+  box-shadow: 0 15px 38px rgba(0, 0, 0, .24);
 }
-/* Explicitly keep open account menus above the content surface. */
-:root .app .global-header .pb-account-menu {z-index:2}
+:root[data-theme="dark"] .app .global-header .ta-search-results {
+  background: #20252e;
+}
 :root .app .global-header .pb-account-dropdown {
-  border-color:rgba(138,165,223,.27);
-  box-shadow:0 22px 50px rgba(2,8,24,.42);
+  border-color: rgba(205, 213, 225, .14);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .30);
 }
-/* Revert to a readable solid surface if blur is unavailable. */
-@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
-  :root .app-main > .global-header {background:rgba(247,250,255,.98)}
-  :root[data-theme="dark"] .app-main > .global-header {background:rgba(23,35,56,.97)}
+:root[data-theme="dark"] .app .global-header .pb-account-dropdown { background: #20252e; }
+:root .app .global-header :is(button, input):focus-visible {
+  outline: 2px solid rgba(156, 168, 193, .78);
+  outline-offset: 2px;
 }
-/* Original responsive rules hide this bar on mobile, leave that unchanged. */
-@media(prefers-reduced-transparency:reduce){
-  :root .app-main > .global-header {background:rgba(246,249,255,.96)}
-  :root[data-theme="dark"] .app-main > .global-header {background:rgba(23,35,56,.96)}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root .app-main > .global-header { background: rgba(247, 248, 250, .96); }
+  :root[data-theme="dark"] .app-main > .global-header { background: rgba(25, 28, 35, .96); }
 }
-@media(prefers-reduced-motion:reduce){
-  :root .app-main > .global-header {transition:none}
+@media (prefers-reduced-transparency: reduce) {
+  :root .app-main > .global-header { background: rgba(247, 248, 250, .96); }
+  :root[data-theme="dark"] .app-main > .global-header { background: rgba(25, 28, 35, .96); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .app-main > .global-header { transition: none; }
 }
