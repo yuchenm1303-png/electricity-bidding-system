@@ -32,7 +32,11 @@ class ReadOnlyFake:
         self.events.append(("context", project_id))
         return TeacherPlatformContext(
             project={"projectId": self.project_id},
-            cases=self.cases, market_system={}, units=(),
+            cases=self.cases, market_system={},
+            units=(
+                {"unitId": "G30", "key": "G30"},
+                {"unitId": "G31", "key": "G31"},
+            ),
         )
 
     def get_scene_unit_constraints(self, *, scene_id, page_no, page_size):
@@ -100,6 +104,23 @@ def test_bad_local_case_date_and_existing_binding_block_without_network():
     with pytest.raises(ValueError, match="Already-attached"):
         _export(fake, market=existing)
     assert fake.events == []
+
+
+def test_project_generator_identity_mismatch_rejected_before_scene_queries():
+    class WrongGeneratorContext(ReadOnlyFake):
+        def get_context(self, project_id):
+            context = super().get_context(project_id)
+            return TeacherPlatformContext(
+                project=context.project,
+                cases=context.cases,
+                market_system=context.market_system,
+                units=({"unitId": "G30"}, {"unitId": "NOT_THE_SAME_UNIT"}),
+            )
+
+    fake = WrongGeneratorContext()
+    with pytest.raises(ValueError, match="generator IDs differ"):
+        _export(fake)
+    assert not any(e[0] in {"calculation", "initial"} for e in fake.events)
 
 
 @pytest.mark.parametrize("mode", ["wrong_project", "missing_day", "ambiguous_day",
