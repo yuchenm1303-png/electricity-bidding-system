@@ -20,6 +20,9 @@ from powerbid.flow_error_attribution import (  # noqa: E402
     compare_dispatch_and_network_sources,
 )
 from powerbid.historical_ambiguity import audit_historical_optimal_ambiguity  # noqa: E402
+from powerbid.historical_price_hypotheses import (  # noqa: E402
+    audit_historical_price_caps,
+)
 from powerbid.historical_validation import (  # noqa: E402
     ValidationPolicy,
     judge_historical_model,
@@ -332,6 +335,64 @@ if zero_stress.paired_hours:
         "后者使用了事后真实信息，禁止作为未来预测性能对外展示。"
     )
 
+st.subheader("历史节点价格上限假设 · 原模型对偶电价 vs 报告价格")
+st.caption(
+    "此检查仅对历史原始报价的本地DC模型输出节点价作事后假设变换。"
+    "不修改原始报价、实际电价、出清求解器或策略评分。"
+    "假设1000对应当前申报上限；1001只来自这个历史数据的异常表现，"
+    "不代表已证实PMSS存在1001的结算价格上限。"
+)
+with st.spinner("正在逐节点比较原始DC价格与两种假设上限"):
+    price_study = audit_historical_price_caps(
+        raw_by_date[selected_day.case_date],
+        hypothetical_ceilings=(1000.0, 1001.0),
+    )
+st.dataframe(
+    pd.DataFrame([
+        {
+            "对照方式": hypothesis.label,
+            "观测节点×小时": hypothesis.observed_points,
+            "节点价格MAE": hypothesis.mae,
+            "RMSE": hypothesis.rmse,
+            "完全匹配点数": hypothesis.matching_points,
+            "相对原模型改善点数": hypothesis.improved_points_vs_uncapped,
+            "相对原模型变差点数": hypothesis.worsened_points_vs_uncapped,
+        }
+        for hypothesis in price_study.hypotheses
+    ]),
+    hide_index=True, use_container_width=True,
+)
+st.dataframe(
+    pd.DataFrame([
+        {
+            "小时": hour.period,
+            "有效节点": hour.observed_points,
+            "未处理DC价格MAE": hour.raw_mae,
+            "未处理价格不吻合节点": hour.raw_mismatching_points,
+            "未处理DC最大节点电价": hour.raw_peak_price,
+            "PMSS历史最大节点电价": hour.observed_peak_price,
+            "假设1000上限后MAE": hour.capped_mae_by_hypothesis[0],
+            "假设1001上限后MAE": hour.capped_mae_by_hypothesis[1],
+        }
+        for hour in price_study.hours
+    ]),
+    hide_index=True, use_container_width=True,
+)
+if price_study.historically_exact_price_fit_for_any_hypothesis:
+    st.warning(
+        "至少一项输出变换完全拟合本日历史价格，但这仍是事后匹配！"
+        "尤其在目前只有单个真实日期、且老师的报价上限与结算规则"
+        "尚未独立核实的情况下，不允许自动套用到未来报价或收益计算。"
+    )
+st.info(
+    "历史保存的最大原报价 "
+    f"{price_study.maximum_price_in_saved_original_offers:g}；"
+    "当前快照申报价格上限 "
+    f"{price_study.price_ceiling_in_current_market_rule}。"
+    "历史保存价格超当前规则不意味着当时违规，"
+    "也不表示新报价可以突破当前申报上限。"
+)
+
 report = {
     "notice": (
         "Historical original PMSS bids vs offline DC baseline ONLY. "
@@ -342,6 +403,7 @@ report = {
     "days": [asdict(day) for day in sorted(days, key=lambda item: item.case_date)],
     "selected_day_attribution": asdict(diagnostic.comparison),
     "selected_day_optimal_face": asdict(ambiguity),
+    "selected_day_price_hypotheses": asdict(price_study),
     "selected_day_expost_zero_sensitivity": asdict(zero_stress),
     "selected_day_fixed_dispatch_lines": [
         asdict(line) for line in diagnostic.observed_dispatch.per_line
