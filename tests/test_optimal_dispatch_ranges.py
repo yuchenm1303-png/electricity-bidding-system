@@ -1,6 +1,4 @@
 """Optimal-face intervals expose multiple equivalent dispatches honestly."""
-from dataclasses import replace
-
 import pytest
 
 from powerbid.network_dispatch import DcLine, DcNetwork, DcOffer
