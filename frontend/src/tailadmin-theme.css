@@ -10,6 +10,7 @@
   --ta-primary:#465fff; --ta-primary-hover:#3641f5; --ta-primary-soft:#eff3ff;
   --ta-success:#039855; --ta-success-soft:#ecfdf3; --ta-field:#fff;
   --ta-shadow:0 1px 3px rgba(16,24,40,.035);
+  --ta-chart-hover:rgba(70,95,255,.065);
 }
 :root[data-theme="dark"] {
   --ta-bg:#101828; --ta-panel:#1d2939; --ta-rail:#151f2e;
@@ -18,6 +19,7 @@
   --ta-primary:#8194ff; --ta-primary-hover:#a2b0ff; --ta-primary-soft:#29365d;
   --ta-success:#6ce9a6; --ta-success-soft:#233f37; --ta-field:#243144;
   --ta-shadow:0 1px 3px rgba(0,0,0,.06);
+  --ta-chart-hover:rgba(129,148,255,.12);
 }
 html,body,#root {background:var(--ta-bg)!important;color:var(--ta-ink)!important}
 :root body {font-family:Outfit,Inter,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif!important}
