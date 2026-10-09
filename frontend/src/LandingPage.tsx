@@ -49,7 +49,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
   const [activeStep, setActiveStep] = useState(1);
   useEffect(() => {
     const oldTitle = document.title;
-    document.title = "PowerBid Lab — 看见能量，预见决策";
+    document.title = "PowerBid Lab — 电力报价系统小组作业";
     const desc = document.querySelector('meta[name="description"]');
     const oldDesc = desc?.getAttribute("content");
     desc?.setAttribute("content", "PowerBid Lab — 面向电力市场教学与研究的报价决策实验室。探索市场、策略、出清与风险之间的联系。");
@@ -91,7 +91,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
         <div className="pb-container pb-hero-inner">
           <div className="pb-hero-copy">
             <div className="pb-hero-eyebrow"><span className="pb-eyebrow-line"/>POWER MARKET INTELLIGENCE<span className="pb-eyebrow-number">© 2026</span></div>
-            <h1 id="pb-hero-title">看见能量，<br/><em>预见决策<span className="pb-hero-dot">.</span></em></h1>
+            <h1 id="pb-hero-title">电力报价系统<br/><em>小组作业</em></h1>
             <p className="pb-hero-subtitle">从每一度电的流动，到每一次报价的选择。<br/>探索电力市场复杂系统背后，更清晰的决策路径。</p>
             <div className="pb-hero-actions"><a className="pb-button-main" href={workspaceHref}>开启决策实验室 <span><ArrowUpRight size={21}/></span></a><a className="pb-text-link" href="#philosophy">探索设计 <ArrowDown size={16}/></a></div>
           </div>
