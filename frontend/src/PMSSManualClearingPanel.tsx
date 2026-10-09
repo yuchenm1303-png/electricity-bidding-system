@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from "react";
-import { ArrowRight, Download, FileJson2, ShieldCheck, UploadCloud } from "lucide-react";
+import { Download, FileJson2, ShieldCheck, UploadCloud } from "lucide-react";
 import { reviewManuallyImportedPMSSResult } from "./api";
 import { numeric, type PMSSManualClearingReview, type PMSSOptimization } from "./types";
 
