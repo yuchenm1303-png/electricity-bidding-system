@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
+from test_pmss_web_api import safe_snapshot  # noqa: E402
 
 from app.web_server import app  # noqa: E402
 from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
@@ -18,8 +19,6 @@ from powerbid.pmss_scene_constraint_evidence import (  # noqa: E402
 from powerbid.pmss_technical_evidence import (  # noqa: E402
     sanitize_pmss_technical_evidence,
 )
-
-from test_pmss_web_api import safe_snapshot  # noqa: E402
 
 client = TestClient(app)
 
