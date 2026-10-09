@@ -125,7 +125,7 @@
 })();
 
 (() => {
-  const ANIME_SRC = "https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js";
+  const ANIME_SRC = new URL("./listing-anime-3.2.1.min.js", document.currentScript?.src || window.location.href).href;
 
   const loadAnime321 = () => {
     if (window.anime?.version === "3.2.1") return Promise.resolve(window.anime);
