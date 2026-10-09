@@ -137,12 +137,17 @@ def dc_clear_hour(
     *,
     load_multiplier: float = 1.0,
     time_limit_seconds: float = 12.0,
+    forced_off_units: frozenset[str] | None = None,
 ) -> DcClearing:
     """Solve hourly bid-based DC dispatch with explicit thermal line limits.
 
     Duals are derived from node load-balance equalities with the convention
     generation - net_exports = demand. The marginal derivative of minimum
     offer-cost with respect to nodal demand is the reported nodal price.
+
+    forced_off_units is ONLY a user-specified diagnostic restriction (it
+    never infers availability or commitment from the real PMSS market).
+    It can be infeasible when the remaining units cannot meet nodal demand.
     """
     if not 1 <= period <= 24:
         raise ValueError("period must be 1..24")
@@ -160,6 +165,9 @@ def dc_clear_hour(
         raise ValueError("Unmapped generator in market offers")
     if set(network.unit_bus) != {offer.unit_id for offer in offers}:
         raise ValueError("Every mapped generator must submit an offer")
+    forced_off = frozenset() if forced_off_units is None else frozenset(forced_off_units)
+    if not forced_off <= network.unit_bus.keys():
+        raise ValueError("Forced-off unit ID is not in the mapped network")
 
     try:
         import numpy as np
@@ -184,7 +192,7 @@ def dc_clear_hour(
     for i, offer in enumerate(offers):
         cost[i] = offer.price
         lower.append(0.0)
-        upper.append(offer.quantity_mw)
+        upper.append(0.0 if offer.unit_id in forced_off else offer.quantity_mw)
     lower.extend([None] * len(angle_nodes))
     upper.extend([None] * len(angle_nodes))
     lower.extend(-line.limit_mw for line in network.lines)
