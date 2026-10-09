@@ -113,6 +113,7 @@ class TeacherPlatformAdapter:
         readonly_posts = {
             "tmScene/spot/unit/getUnitDictTreeFilterByTypesWithMva",
             "scene/loadFc/list",
+            "scene/unitParam/list",
             "marketResult/unitBid/listForGd",
             "marketResult/nodalLmp/list",
             "marketResult/branchFlow/list",
@@ -270,6 +271,43 @@ class TeacherPlatformAdapter:
                 "pageSize": page_size,
                 "sceneDateKey": pm_scene_date_key,
                 "sceneId": pm_scene_id,
+            },
+        ) or {}
+
+    def get_scene_unit_constraints(
+        self, *, scene_id: str, page_no: int = 1, page_size: int = 999,
+    ) -> dict[str, Any]:
+        """Read calculation-rule switches; source JS: scene/unitParam/list.
+
+        Query-only POST; never call scene/unitParam/updateCalculateParam.
+        """
+        return self._request(
+            "POST",
+            "scene/unitParam/list",
+            json_body={
+                "sceneId": scene_id,
+                "pageNo": page_no,
+                "pageSize": page_size,
+            },
+        ) or {}
+
+    def get_unit_initial_state_inputs(
+        self, *, scene_id: str, project_id: str, case_id: str,
+        page_no: int = 1, page_size: int = 999,
+    ) -> dict[str, Any]:
+        """Read initial state entries; source JS: project/getUnitInitialStateInput.
+
+        This query neither sets nor assumes initial unit commitment.
+        """
+        return self._request(
+            "GET",
+            "project/getUnitInitialStateInput",
+            params={
+                "sceneId": scene_id,
+                "projectId": project_id,
+                "caseId": case_id,
+                "pageNo": page_no,
+                "pageSize": page_size,
             },
         ) or {}
 

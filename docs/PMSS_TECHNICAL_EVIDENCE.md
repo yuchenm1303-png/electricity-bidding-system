@@ -47,3 +47,16 @@ python scripts/merge_pmss_grid.py \
 ## 下一步
 
 对照老师的课程技术说明核实 `incRate` 单位、`minOnTime=0` 和 `launchCost=0` 的语义；在全部初始状态、启停过渡和成本口径核实前，不解除联合MILP真实运行限制。获取多个独立日期历史后另行验证中标预测精度。
+
+
+## 场景约束查询（只读补充）
+
+原课程前端显示两个查询：`scene/unitParam/list` 与 `project/getUnitInitialStateInput`。前者返回计算约束选项，后者返回初始状态相关字段。另有不同的保存接口，研究流程绝不调用。
+
+新增 `scripts/summarize_pmss_scene_constraints.py` 用于离线读取经过授权获得的完整响应文件：
+
+```sh
+python scripts/summarize_pmss_scene_constraints.py --calculation-json /private/calc.json --initial-json /private/initial.json --expected-units 10 --output /private/summary.json
+```
+
+该摘要只保留开关原始编码的0/1计数、缺失数量，以及初始字段的覆盖与数值范围；不会输出原始机组行。由于开关编码和时间单位尚未独立验证，0/1 **不能直接解释为启用/关闭**，所有真实联合优化准入仍保持关闭。若返回不完整分页，程序拒绝出具摘要。
