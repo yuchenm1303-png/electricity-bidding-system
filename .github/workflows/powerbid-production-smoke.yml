@@ -1,0 +1,23 @@
+name: PowerBid Production Parity Smoke
+
+# Operators run this after a PowerBid deployment. It is intentionally NOT
+# a required PR check: production can legitimately be behind an open PR.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-public-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe only our public research app
+        run: python scripts/smoke_powerbid_release.py --origin https://power.smirel.com
