@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, Activity, BarChart3, Check, ChevronRight, CircleDot, Compass, Gauge, Layers3, Menu, MousePointer2, MoveUpRight, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import "./landing.css";
 import "./landing-dark.css";
+import "./portal-polish.css";
 import PowerConstellation from "./PowerConstellation";
 
 type LandingProps = { workspaceHref: string };
@@ -96,17 +97,32 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
     <main>
       <section className="pb-hero" aria-labelledby="pb-hero-title">
         <div className="pb-hero-grid" aria-hidden="true"/>
-        <div className="pb-hero-orb"><PowerConstellation/></div>
+        <div className="pb-hero-orb">
+          <PowerConstellation/>
+          <div className="pb-hero-hud pb-hero-hud-top" aria-hidden="true"><span className="pb-hero-hud-label"><i/> NETWORK / VISUAL</span><strong>电网潮流 · 可视化</strong><small>拓扑与能量轨迹示意</small></div>
+          <div className="pb-hero-hud pb-hero-hud-bottom" aria-hidden="true"><span className="pb-hero-hud-label"><i/> STRATEGY / LAB</span><strong>报价决策空间</strong><small>从市场数据到情景分析</small></div>
+        </div>
         <div className="pb-container pb-hero-inner">
           <div className="pb-hero-copy">
             <div className="pb-hero-eyebrow"><span className="pb-eyebrow-line"/>POWER MARKET INTELLIGENCE<span className="pb-eyebrow-number">© 2026</span></div>
             <h1 id="pb-hero-title">电力报价系统<br/><em>小组作业</em></h1>
             <p className="pb-hero-subtitle">从每一度电的流动，到每一次报价的选择。<br/>探索电力市场复杂系统背后，更清晰的决策路径。</p>
             <div className="pb-hero-actions"><a className="pb-button-main" href={workspaceHref}>开启决策实验室 <span><ArrowUpRight size={21}/></span></a><a className="pb-text-link" href="#philosophy">探索设计 <ArrowDown size={16}/></a></div>
+            <div className="pb-hero-proof" aria-label="系统研究方向">
+              <div className="pb-hero-proof-item"><strong>24H</strong><span>多时段研究</span></div>
+              <div className="pb-hero-proof-item"><strong>5 段</strong><span>报价方案探索</span></div>
+              <div className="pb-hero-proof-item"><strong>PMSS</strong><span>市场仿真研究</span></div>
+            </div>
           </div>
           <div className="pb-hero-bottom"><span><span className="pb-hero-cross">✳</span> A DIFFERENT PERSPECTIVE ON ENERGY</span><a href="#philosophy">SCROLL TO DISCOVER <ArrowDown size={15}/></a><span>01 / 05</span></div>
         </div>
       </section>
+
+      <div className="pb-signal-ribbon" aria-label="研究工作流">
+        <div><span>01 / DATA</span><strong>研究市场数据</strong><small>从机组、价格与负荷开始</small></div>
+        <div><span>02 / DECISION</span><strong>构建报价策略</strong><small>比较候选报价与约束</small></div>
+        <div><span>03 / INSIGHT</span><strong>评估决策表现</strong><small>审视收益、风险与出清</small></div>
+      </div>
 
       <section className="pb-intro pb-section" id="philosophy">
         <div className="pb-container">
