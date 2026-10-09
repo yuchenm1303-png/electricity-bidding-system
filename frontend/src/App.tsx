@@ -45,7 +45,7 @@ function Sidebar({ active, change, report, compact, toggle, source }: {
 }) {
   return <aside className={"sidebar " + (compact ? "collapsed" : "")}>
     <div className="brand">
-      <a className="brand-home-link" href={import.meta.env.BASE_URL} aria-label="返回 PowerBid 首页" title="返回首页">
+      <a className="brand-home-link" href={import.meta.env.BASE_URL} aria-label="返回 PowerBid 首页">
         <div className="brand-mark brand-mark-smirel"><img src={smirelLogo} alt="Smirel" width={91} height={30} /></div>
         {!compact && <div className="brand-name"><strong>PowerBid</strong><small>STUDIO / MARKET LAB</small></div>}
       </a>
