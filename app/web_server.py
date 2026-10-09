@@ -19,6 +19,7 @@ from app import admin_setup  # noqa: F401 - registers the one-time setup endpoin
 from app.account_auth import protect_api
 from app.account_auth import router as auth_router
 from app.pmss_api import router as pmss_router
+from app.social_auth import router as oauth_router
 from powerbid.adapters.pypsa_engine import PyPSAClearingEngine
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine
 from powerbid.models import MarketScenario, Offer
@@ -39,6 +40,7 @@ app = FastAPI(
 
 app.include_router(pmss_router)
 app.include_router(auth_router)
+app.include_router(oauth_router)
 app.middleware("http")(protect_api)
 
 

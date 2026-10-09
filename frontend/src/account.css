@@ -235,3 +235,19 @@
 .pb-identity-primary:disabled{cursor:not-allowed;opacity:.64;transform:none;box-shadow:none}
 .pb-identity-demo-link{color:#b9c8ff;font-weight:650;text-decoration:none;display:inline-flex;align-items:center;gap:7px}
 .pb-identity-demo-link:hover{text-decoration:underline}
+
+/* Compact social login + explicit human verification, shared by login and signup. */
+.pb-social-auth{margin-top:23px}
+.pb-social-divider{display:flex;align-items:center;gap:13px;color:#8296b6;font-size:11px;white-space:nowrap;margin:0 0 18px}
+.pb-social-divider span{flex:1;height:1px;background:#354560}
+.pb-social-options{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.pb-social-button{min-height:49px;display:flex;align-items:center;justify-content:center;gap:10px;border:1px solid #415477;border-radius:11px;background:#192942;color:#edf3ff;font-size:13px;font-weight:650;text-decoration:none;transition:background .16s,border-color .16s}
+.pb-social-button:not(.is-disabled):hover{background:#263c5c;border-color:#8598ed}
+.pb-social-button.is-disabled{cursor:not-allowed;opacity:.52}
+.pb-social-button small{font-size:9px;font-weight:400;color:#b3c0d9}
+.pb-google-mark{font-size:20px;font-weight:800;line-height:1;color:#a7b7ff}
+.pb-social-note{color:#90a4c6;font-size:11px;line-height:1.6;margin:13px 0 0}
+.pb-social-captcha{display:flex;flex-direction:column;gap:9px;min-width:0;margin-top:3px}
+.pb-social-captcha-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:650;color:#c5d3ef}
+.pb-social-captcha-widget{min-height:64px}
+@media(max-width:420px){.pb-social-button{min-height:47px;gap:6px;font-size:12px}.pb-social-button small{display:none}}
