@@ -605,5 +605,5 @@ async def inspect_holdout_gate(request: Request) -> dict[str, Any]:
             422, detail=(
                 "匿名历史留出报告缺字段、数值不一致或安全声明不符合要求；"
                 "请用最新只读导出工具重新生成"
-            
+            ),
         ) from exc
