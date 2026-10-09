@@ -13,9 +13,13 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from powerbid.expost_commitment_diagnostics import (  # noqa: E402
+    replay_zero_output_restriction,
+)
 from powerbid.flow_error_attribution import (  # noqa: E402
     compare_dispatch_and_network_sources,
 )
+from powerbid.historical_ambiguity import audit_historical_optimal_ambiguity  # noqa: E402
 from powerbid.historical_validation import (  # noqa: E402
     ValidationPolicy,
     judge_historical_model,
@@ -254,6 +258,80 @@ if not fixed_lines.empty:
         hide_index=True, use_container_width=True,
     )
 
+st.subheader("同成本多解诊断 · PMSS 历史中标能否构成本地最优解？")
+st.caption(
+    "采用同一天已提交的原始报价、固定网架和全部机组历史中标量。"
+    "每小时额外求解机组独立最优范围及整组中标量的网络可行性、"
+    "报价成本最优性；不预测新报价结果。"
+)
+with st.spinner("正在计算每小时同成本最优解空间（额外线性规划）"):
+    ambiguity = audit_historical_optimal_ambiguity(
+        raw_by_date[selected_day.case_date]
+    )
+    zero_stress = replay_zero_output_restriction(
+        raw_by_date[selected_day.case_date]
+    )
+z1, z2, z3 = st.columns(3)
+z1.metric(
+    "存在多组近似等成本最优解的小时",
+    f"{ambiguity.multiple_optima_hours}/{ambiguity.examined_hours}",
+)
+z2.metric(
+    "老师实际全机组组合在本地最优成本面的小时",
+    f"{ambiguity.observed_joint_model_optimal_hours}/"
+    f"{ambiguity.observed_complete_hours}",
+)
+z3.metric(
+    "各机组历史出力落在独立可行区间",
+    f"{ambiguity.observed_individual_in_range}/"
+    f"{ambiguity.observed_individual_evaluated}",
+)
+st.warning(
+    "即使全部小时落在同一优化成本面，也只能说明原始报价数据在我们"
+    "简化DC模型中存在一种等成本配置，不能证明两套市场出清规则相同，"
+    "更不能证明节点电价或新报价利润预测准确。"
+)
+st.dataframe(
+    pd.DataFrame([
+        {
+            "时段": hour.period,
+            "出清出力唯一": "是" if hour.model_unique_allocation else "否",
+            "最大单机组最优出力范围 MW": hour.max_individual_range_width_mw,
+            "该小时实测出力齐全": hour.observed_unit_mw_count
+            == ambiguity.distinct_units,
+            "整组历史出力满足DC网架": hour.observed_jointly_feasible,
+            "历史组合保持成本最优": hour.observed_on_model_optimal_face,
+            "历史组合申报成本差额": hour.observed_bid_cost_gap,
+        }
+        for hour in ambiguity.hours
+    ]),
+    hide_index=True, use_container_width=True,
+)
+st.subheader("零出力状态敏感性：仅用于历史归因")
+z4, z5, z6 = st.columns(3)
+z4.metric(
+    "历史零出力的机组×小时", str(zero_stress.observed_zero_unit_hours)
+)
+z5.metric(
+    "原模型仍给零出力机组发电次数",
+    str(zero_stress.baseline_positive_on_observed_zero_unit_hours),
+)
+z6.metric(
+    "事后零出力约束可求解的小时",
+    f"{zero_stress.paired_hours}/24",
+)
+st.caption(
+    "施加事后零出力约束可能触发LP求解器选择另一组等成本最优出力。"
+    "如果原始模型已经让这些机组发电量为零，改进并不能归因于机组启停规则。"
+)
+if zero_stress.paired_hours:
+    st.write(
+        "在相同可比小时中，机组中标 MAE："
+        f"原模型 {zero_stress.baseline_paired_dispatch_mae_mw:.3f} MW；"
+        f"事后约束 {zero_stress.masked_paired_dispatch_mae_mw:.3f} MW。"
+        "后者使用了事后真实信息，禁止作为未来预测性能对外展示。"
+    )
+
 report = {
     "notice": (
         "Historical original PMSS bids vs offline DC baseline ONLY. "
@@ -263,6 +341,8 @@ report = {
     "verdict": asdict(verdict),
     "days": [asdict(day) for day in sorted(days, key=lambda item: item.case_date)],
     "selected_day_attribution": asdict(diagnostic.comparison),
+    "selected_day_optimal_face": asdict(ambiguity),
+    "selected_day_expost_zero_sensitivity": asdict(zero_stress),
     "selected_day_fixed_dispatch_lines": [
         asdict(line) for line in diagnostic.observed_dispatch.per_line
     ],
