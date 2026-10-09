@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import os
 from copy import deepcopy
-from pathlib import Path
 
 import pytest
 from test_pmss_scene_constraint_evidence import fixture as scene_fixture
@@ -179,6 +178,10 @@ def test_cli_exports_only_new_private_0600_file_and_preserves_input(tmp_path, mo
     assert verify_pmss_evidence_binding(result)["content_digests_matched"]
     assert "opaque-test" not in out.read_text()
     assert json.loads(historical.read_text()) == historic
+    previous_bytes = out.read_bytes()
+    with pytest.raises(SystemExit):
+        cli.main(argv)  # refusal to overwrite existing output
+    assert out.read_bytes() == previous_bytes
     assert os.path.exists(historical)
 
 
