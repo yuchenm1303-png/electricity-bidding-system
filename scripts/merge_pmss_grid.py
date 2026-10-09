@@ -17,9 +17,6 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from powerbid.pmss_grid_bridge import sanitize_pmss_network  # noqa: E402
 from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
-from powerbid.pmss_scene_constraint_evidence import (  # noqa: E402
-    validate_scene_constraint_evidence,
-)
 from powerbid.pmss_technical_evidence import (  # noqa: E402
     sanitize_pmss_technical_evidence,
 )
@@ -31,7 +28,6 @@ def main() -> int:
     parser.add_argument("--grid", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--include-technical-evidence", action="store_true")
-    parser.add_argument("--scene-constraint-evidence", type=Path)
     args = parser.parse_args()
     if args.output.exists() or args.output.resolve() in {
         args.snapshot.resolve(), args.grid.resolve()
@@ -52,14 +48,6 @@ def main() -> int:
         original["technicalEvidence"] = sanitize_pmss_technical_evidence(
             raw_grid, snapshot=snapshot
         )
-    if args.scene_constraint_evidence is not None:
-        document = json.loads(
-            args.scene_constraint_evidence.read_text(encoding="utf-8")
-        )
-        validate_scene_constraint_evidence(
-            document, expected_units=len(snapshot.units)
-        )
-        original["sceneConstraintEvidence"] = document
     fd, temporary = tempfile.mkstemp(
         prefix=".powerbid-dc-", suffix=".tmp", dir=args.output.parent
     )
