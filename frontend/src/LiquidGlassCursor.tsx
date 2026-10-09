@@ -433,7 +433,20 @@ function rasterizePortal(
         ctx.fillStyle = placeholder && visibleColor(placeholderColor) ? placeholderColor : style.color;
         ctx.font = `${style.fontStyle || "normal"} ${style.fontWeight || "400"} ${style.fontSize || "16px"} ${style.fontFamily || "sans-serif"}`;
         ctx.textBaseline = "middle";
-        ctx.fillText(text, localX + leftInset - el.scrollLeft, localY + rect.height / 2);
+        // Numeric inputs may right-align their value. The old left-aligned
+        // Canvas sample drew "220" on the opposite side of the input.
+        const rtl = style.direction === "rtl";
+        const align = style.textAlign;
+        ctx.direction = rtl ? "rtl" : "ltr";
+        ctx.textAlign = align === "center" ? "center"
+          : align === "right" || (align === "start" && rtl) || (align === "end" && !rtl)
+            ? "right" : "left";
+        const textX = ctx.textAlign === "right"
+          ? localX + rect.width - rightInset
+          : ctx.textAlign === "center"
+            ? localX + leftInset + clipWidth / 2
+            : localX + leftInset;
+        ctx.fillText(text, textX - el.scrollLeft, localY + rect.height / 2);
         ctx.restore();
       }
     }
