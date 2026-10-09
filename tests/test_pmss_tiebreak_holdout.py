@@ -169,6 +169,17 @@ def test_three_day_result_shows_day_paired_risks_and_reused_original_offers():
         )
     )
     assert original["largestHoldoutDeteriorationMaeMw"] == pytest.approx(0)
+    assert original["conservativeComparatorLockedBeforeHoldout"] is True
+    assert original["conservativeComparatorEligibleForLivePMSS"] is False
+    assert original["trainingConservativeVsCanonicalDeltaMaeMw"] == pytest.approx(0)
+    assert original["holdoutConservativeVsCanonicalDeltaMaeMw"] == pytest.approx(0)
+    assert original["holdoutConservativeComparatorMaeMw"] == pytest.approx(
+        original["holdoutMaeMwByPolicy"]["canonical_lp"]
+    )
+    assert all(
+        daily["guardedVsCanonicalDeltaMaeMw"] == pytest.approx(0)
+        for daily in original["holdoutDailyDiagnostics"]
+    )
 
 
 def test_training_guardrail_uses_no_holdout_labels_or_offer_novelty(monkeypatch):
@@ -209,6 +220,12 @@ def test_training_guardrail_uses_no_holdout_labels_or_offer_novelty(monkeypatch)
     assert a["holdoutSelectedDaysBetterThanCanonical"] == 0
     assert a["trainingSelectedDaysBetterThanCanonical"] == 2
     assert a["selectionUsesHoldoutObservations"] is False
+    assert a["trainingConservativeComparatorMaeMw"] == pytest.approx(10)
+    assert a["holdoutConservativeComparatorMaeMw"] == pytest.approx(40)
+    assert a["holdoutConservativeVsCanonicalDeltaMaeMw"] == pytest.approx(20)
+    assert a["largestHoldoutConservativeDeteriorationMaeMw"] == pytest.approx(20)
+    assert a["holdoutConservativeDaysBetterThanCanonical"] == 0
+    assert a["holdoutDailyDiagnostics"][0]["guardedBetterThanCanonical"] is False
     # Change held-out observations in the mocked study. The training choice
     # and predeclared guardrail MUST remain unchanged.
     def alternate_holdout(raw):
@@ -221,6 +238,12 @@ def test_training_guardrail_uses_no_holdout_labels_or_offer_novelty(monkeypatch)
     b = evaluate_heldout_tiebreak_rules(samples)
     assert b["policyLockedUsingTrainingOnly"] == a["policyLockedUsingTrainingOnly"]
     assert b["predeclaredTrainingGuardrail"] == a["predeclaredTrainingGuardrail"]
+    assert b["trainingConservativeComparatorMaeMw"] == a[
+        "trainingConservativeComparatorMaeMw"
+    ]
+    assert b["holdoutConservativeComparatorMaeMw"] != a[
+        "holdoutConservativeComparatorMaeMw"
+    ]
     assert b["holdoutMaeMwByPolicy"] != a["holdoutMaeMwByPolicy"]
 
 
@@ -243,3 +266,43 @@ def test_two_heldout_days_are_reported_as_descriptive_not_statistical():
     assert len(report["holdoutDailyDiagnostics"]) == 2
     assert report["statisticalSignificanceEstablished"] is False
     assert report["holdoutDatesReusingTrainingBidCurves"] == 2
+
+
+
+def test_training_winner_can_be_guarded_to_canonical_before_holdout(monkeypatch):
+    # Both training days use an identical offer curve. Ascending is better
+    # on BOTH days, yet the predeclared train-only offer-diversity veto
+    # must select canonical for subsequent descriptive holdout evaluation.
+    from types import SimpleNamespace
+
+    import powerbid.pmss_tiebreak_holdout as module
+
+    def fake_study(case):
+        is_holdout = case["caseDate"] == "2025-09-03"
+        return SimpleNamespace(
+            compared_hours=24,
+            examined_hours=24,
+            generator_count=2,
+            canonical_order_baseline_mae_mw=20.0,
+            ascending_dispatch_mae_mw=40.0 if is_holdout else 10.0,
+            descending_dispatch_mae_mw=30.0,
+            source_order_baseline_mae_mw=20.0,
+        )
+
+    monkeypatch.setattr(module, "audit_historical_tiebreaks", fake_study)
+    report = evaluate_heldout_tiebreak_rules(_triple())
+    assert report["policyLockedUsingTrainingOnly"] == "unit_id_ascending"
+    guard = report["predeclaredTrainingGuardrail"]
+    assert guard["passed"] is False
+    assert guard["trainingOnlyConservativeComparator"] == "canonical_lp"
+    assert "TRAINING_OFFER_DIVERSITY_LT_2" in guard["reasons"]
+    assert report["holdoutSelectedVsCanonicalDeltaMaeMw"] == pytest.approx(20)
+    assert report["holdoutConservativeVsCanonicalDeltaMaeMw"] == pytest.approx(0)
+    assert report["largestHoldoutDeteriorationMaeMw"] == pytest.approx(20)
+    assert report["largestHoldoutConservativeDeteriorationMaeMw"] == pytest.approx(0)
+    assert report["holdoutConservativeComparatorMaeMw"] == pytest.approx(20)
+    assert report["holdoutDailyDiagnostics"][0][
+        "guardedVsCanonicalDeltaMaeMw"
+    ] == pytest.approx(0)
+    assert report["conservativeComparatorLockedBeforeHoldout"] is True
+    assert report["conservativeComparatorEligibleForLivePMSS"] is False
