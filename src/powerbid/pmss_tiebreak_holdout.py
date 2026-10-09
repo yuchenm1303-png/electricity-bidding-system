@@ -107,6 +107,7 @@ def evaluate_heldout_tiebreak_rules(
     cases: Sequence[Mapping[str, Any]],
     *,
     holdout_dates: int = 1,
+    min_training_improvement_mw: float = 1.0,
 ) -> dict[str, Any]:
     """No future leakage: select on first N-1 (or N-K) chronological days.
 
@@ -114,6 +115,12 @@ def evaluate_heldout_tiebreak_rules(
     policy from the training reports; it does not choose the winner. Every
     selected policy is independent of generator-ID names or PMSS outcomes.
     """
+    if (
+        type(min_training_improvement_mw) not in (int, float)
+        or not isfinite(min_training_improvement_mw)
+        or not 0 < min_training_improvement_mw <= 100
+    ):
+        raise ValueError("Required training improvement must be in (0,100] MW")
     if isinstance(cases, (str, bytes)) or not 3 <= len(cases) <= 12:
         raise ValueError("Require 3..12 dated PMSS original-bid cases")
     if type(holdout_dates) is not int or not 1 <= holdout_dates <= len(cases)-2:
@@ -156,6 +163,58 @@ def evaluate_heldout_tiebreak_rules(
     testing_scores = _summaries(testing)
     train_margin = training_scores[winner] - training_scores["canonical_lp"]
     test_margin = testing_scores[winner] - testing_scores["canonical_lp"]
+
+    # Per-DAY paired deltas prevent pooled unit-hour averages hiding a
+    # failure concentrated in one day. All gate decisions use TRAINING only.
+    # Later cases are observed strictly for descriptive validation.
+    train_bids = signatures[:-holdout_dates]
+    heldout_bids = signatures[-holdout_dates:]
+    training_diversity = len(set(train_bids))
+    reused_heldout = sum(s in set(train_bids) for s in heldout_bids)
+    training_daily = []
+    for i, report in enumerate(training):
+        daily_scores = _summaries((report,))
+        selected_delta = daily_scores[winner] - daily_scores["canonical_lp"]
+        training_daily.append({
+            "caseDate": train_dates[i],
+            "maeMwByPolicy": daily_scores,
+            "selectedVsCanonicalDeltaMaeMw": selected_delta,
+            "selectedBetterThanCanonical": selected_delta < -1e-8,
+            "identicalOfferCurveSeenEarlierInTraining": (
+                train_bids[i] in train_bids[:i]
+            ),
+        })
+    testing_daily = []
+    for i, report in enumerate(testing):
+        daily_scores = _summaries((report,))
+        selected_delta = daily_scores[winner] - daily_scores["canonical_lp"]
+        testing_daily.append({
+            "caseDate": test_dates[i],
+            "maeMwByPolicy": daily_scores,
+            "selectedVsCanonicalDeltaMaeMw": selected_delta,
+            "selectedBetterThanCanonical": selected_delta < -1e-8,
+            "identicalOfferCurveSeenInTraining": heldout_bids[i] in train_bids,
+        })
+
+    # A reproducible, PREDECLARED minimum improvement helps prevent
+    # a tiny solver-driven training MAE difference being called a priority
+    # discovery. With only 2 training dates this is a cautious screening
+    # criterion, NOT a significance test nor PMSS rule certification.
+    reasons = []
+    if winner == "canonical_lp":
+        reasons.append("CANONICAL_ALREADY_TRAINING_BEST")
+    if training_diversity < 2:
+        reasons.append("TRAINING_OFFER_DIVERSITY_LT_2")
+    if train_margin > -min_training_improvement_mw + 1e-10:
+        reasons.append("POOLED_TRAINING_IMPROVEMENT_BELOW_THRESHOLD")
+    if any(
+        day["selectedVsCanonicalDeltaMaeMw"] >
+        -min_training_improvement_mw + 1e-10
+        for day in training_daily
+    ):
+        reasons.append("NOT_EVERY_TRAINING_DAY_IMPROVES_MATERIALLY")
+    guardrail_pass = not reasons
+    guarded_policy = winner if guardrail_pass else "canonical_lp"
     holdout_winner = min(_TIE_ORDER, key=lambda policy: (
         testing_scores[policy], _TIE_ORDER.index(policy)
     ))
@@ -180,6 +239,34 @@ def evaluate_heldout_tiebreak_rules(
         ),
         "distinctCaseDates": len(days),
         "identicalOriginalBidPairsAcrossDates": same_bid_pairs,
+        "trainingDistinctOriginalBidCurves": training_diversity,
+        "holdoutDistinctOriginalBidCurves": len(set(heldout_bids)),
+        "holdoutDatesReusingTrainingBidCurves": reused_heldout,
+        "trainingDailyDiagnostics": training_daily,
+        "holdoutDailyDiagnostics": testing_daily,
+        "trainingSelectedDaysBetterThanCanonical": sum(
+            day["selectedBetterThanCanonical"] for day in training_daily
+        ),
+        "holdoutSelectedDaysBetterThanCanonical": sum(
+            day["selectedBetterThanCanonical"] for day in testing_daily
+        ),
+        "largestHoldoutDeteriorationMaeMw": max(
+            0.0, *(day["selectedVsCanonicalDeltaMaeMw"] for day in testing_daily)
+        ),
+        "predeclaredTrainingGuardrail": {
+            "minimumMeaningfulImprovementMw": min_training_improvement_mw,
+            "requiresAllTrainingDaysAndTwoDistinctOfferCurves": True,
+            "passed": guardrail_pass,
+            "reasons": reasons,
+            "trainingOnlyConservativeComparator": guarded_policy,
+        },
+        "holdoutRobustnessAssessment": (
+            "ONLY_ONE_HOLDOUT_DATE_NO_STATISTICAL_CONFIDENCE"
+            if len(test_dates) == 1 else
+            "DESCRIPTIVE_MULTIDAY_HOLDOUT_NO_STATISTICAL_CONFIDENCE"
+        ),
+        "statisticalSignificanceEstablished": False,
+        "readyForForwardBidOptimization": False,
         "sameTopology": True,
         "fullObservedDispatchCoverage": True,
         "selectionUsesHoldoutObservations": False,
