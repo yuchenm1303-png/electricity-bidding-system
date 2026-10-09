@@ -368,6 +368,19 @@ export function PMSSWorkspace() {
                 </ResponsiveContainer>
               </div>
               <p className="pmss-footnote">
+                全节点模型电价与 PMSS 完全一致的时段：
+                <strong>{networkResult.historical_grid_audit.modeled_price_matching_hours}/24</strong>；
+                电价不一致时段：
+                {networkResult.historical_grid_audit.modeled_price_mismatch_periods.join("、") || "无"}。
+                DC 模型节点价格峰值：
+                {networkResult.historical_grid_audit.modeled_peak_node_price == null
+                  ? "—" : numeric(networkResult.historical_grid_audit.modeled_peak_node_price, 2)}；
+                PMSS 历史节点价格峰值：
+                {networkResult.historical_grid_audit.observed_peak_node_price == null
+                  ? "—" : numeric(networkResult.historical_grid_audit.observed_peak_node_price, 2)}。
+                当前只定位可能的结算定价规则差异，没有据此自动裁剪或调整候选策略的电价。
+              </p>
+              <p className="pmss-footnote">
                 本报告只对已提交的原始报价做同一天的事后核验，
                 不用历史价格替代未来预测。线路方向按读取的两端节点和原始潮流符号计算，
                 并额外核对反向符号；节点有功平衡残差不等同于违规或线路过载。

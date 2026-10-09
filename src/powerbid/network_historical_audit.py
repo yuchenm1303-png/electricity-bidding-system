@@ -57,6 +57,11 @@ class PMSSHistoricalGridAudit:
     modeled_target_dispatch_mae_mw: float | None
     modeled_nodal_price_mae: float | None
     modeled_abs_flow_mae_mw: float | None
+    modeled_price_matching_hours: int
+    modeled_price_mismatch_periods: tuple[int, ...]
+    modeled_price_mismatch_points: int
+    modeled_peak_node_price: float | None
+    observed_peak_node_price: float | None
     observed_line_over_nameplate_hours: int
     observed_missing_hours: int
     hours: tuple[GridAuditHour, ...]
@@ -166,6 +171,11 @@ def audit_pmss_historical_grid(
     flow_by_line: dict[str, list[float]] = {line: [] for line in lines}
     observed_over_limit = 0
     missing_hours = 0
+    matching_price_hours = 0
+    mismatching_price_periods: list[int] = []
+    mismatching_price_points = 0
+    modeled_peak_price: float | None = None
+    observed_peak_price: float | None = None
     for idx in range(24):
         load = sum(series[idx] for series in network.hourly_demand_mw.values())
         # A partial observed hour is NOT silently assumed to be zero output.
@@ -212,13 +222,34 @@ def audit_pmss_historical_grid(
                 e = abs(modeled.dispatched_mw - actual)
                 unit_errors.append(e)
                 modeled_units.append(e)
+            matched_price_points = 0
+            compared_price_points = 0
             for bus, values in lmp.items():
                 actual = values[idx]
                 if actual is not None:
-                    e = abs(modeled.nodal_prices[bus] - actual)
+                    simulated = modeled.nodal_prices[bus]
+                    e = abs(simulated - actual)
                     node_errors.append(e)
                     modeled_nodes.append(e)
                     node_by_bus[bus].append(e)
+                    compared_price_points += 1
+                    if e <= 1e-6:
+                        matched_price_points += 1
+                    else:
+                        mismatching_price_points += 1
+                    modeled_peak_price = (
+                        simulated if modeled_peak_price is None
+                        else max(modeled_peak_price, simulated)
+                    )
+                    observed_peak_price = (
+                        actual if observed_peak_price is None
+                        else max(observed_peak_price, actual)
+                    )
+            if compared_price_points == len(network.buses):
+                if matched_price_points == compared_price_points:
+                    matching_price_hours += 1
+                else:
+                    mismatching_price_periods.append(idx + 1)
             for line, values in flow.items():
                 actual = values[idx]
                 if actual is not None:
@@ -255,6 +286,11 @@ def audit_pmss_historical_grid(
         modeled_target_dispatch_mae_mw=_mean_abs(modeled_units),
         modeled_nodal_price_mae=_mean_abs(modeled_nodes),
         modeled_abs_flow_mae_mw=_mean_abs(modeled_flows),
+        modeled_price_matching_hours=matching_price_hours,
+        modeled_price_mismatch_periods=tuple(mismatching_price_periods),
+        modeled_price_mismatch_points=mismatching_price_points,
+        modeled_peak_node_price=modeled_peak_price,
+        observed_peak_node_price=observed_peak_price,
         observed_line_over_nameplate_hours=observed_over_limit,
         observed_missing_hours=missing_hours,
         hours=tuple(hours),
