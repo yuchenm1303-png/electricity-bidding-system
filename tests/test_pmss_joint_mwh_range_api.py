@@ -10,10 +10,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 from test_pmss_web_api import _synthetic_network_case  # noqa: E402
-from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
-from powerbid.pmss_physical_lineage import draft_lineage_template  # noqa: E402
 
 from app.web_server import app  # noqa: E402
+from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
+from powerbid.pmss_physical_lineage import draft_lineage_template  # noqa: E402
 
 client = TestClient(app)
 
