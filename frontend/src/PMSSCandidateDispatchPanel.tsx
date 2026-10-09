@@ -16,9 +16,8 @@ function downloadRiskSummary(report: PMSSCandidateDispatchRange, label: string) 
   // The reviewed JSON contains only research diagnostics and curve identity,
   // never raw PMSS bids, observed dispatch, credentials or settlement amounts.
   const payload = {
-    study_only: true,
+    ...report,
     source: label,
-    ...(report),
   };
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"}),
