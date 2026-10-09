@@ -7,6 +7,7 @@ import { evaluatePMSSNetwork, inspectPMSS, optimizePMSS, rankPMSSNetwork } from 
 import { numeric, type PMSSInspection, type PMSSNetworkComparison, type PMSSNetworkRank, type PMSSOptimization } from "./types";
 import "./pmss-studio.css";
 import { MarketExplorer, OptimizationHourReview } from "./PMSSInsights";
+import { PMSSCandidateDispatchPanel } from "./PMSSCandidateDispatchPanel";
 
 const tooltipStyle = {
   background: "var(--ta-panel)", color: "var(--ta-ink)",
@@ -448,7 +449,7 @@ export function PMSSWorkspace() {
           <span className="pmss-state-label">本地模拟</span>
         </div>
         <div className="pmss-controls">
-          <label>目标机组<select disabled={busy || networkBusy} value={target} onChange={e => {setTarget(e.target.value);setAnalysis(null);setNetworkResult(null);}}>
+          <label>目标机组<select disabled={busy || networkBusy} value={target} onChange={e => {setTarget(e.target.value);setAnalysis(null);setNetworkResult(null);setRankResult(null);}}>
             {inspection.units.map(item => <option key={item.unit_id} value={item.unit_id}>{item.name}</option>)}
           </select></label>
           <label>最低报价<input type="number" disabled={busy || networkBusy} min="0" max="10000" value={minimum} onChange={e => {setMinimum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);}}/></label>
@@ -644,6 +645,15 @@ export function PMSSWorkspace() {
           缺少经核实的电抗或额定 MW 时禁止猜测。
         </p>}
       </div>
+      {snapshot && <PMSSCandidateDispatchPanel
+        key={fileName + ":" + target}
+        snapshot={snapshot}
+        inspection={inspection}
+        target={target}
+        analysis={analysis}
+        rankResult={rankResult}
+        otherBusy={busy || networkBusy || rankBusy}
+      />}
     </>}
   </section>;
 }

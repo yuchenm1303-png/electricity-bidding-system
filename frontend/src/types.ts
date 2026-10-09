@@ -303,3 +303,32 @@ export type PMSSNetworkRank = {
   pmss_counterfactual_verified: false;
   safe_for_live_submission: false;
 };
+
+export type PMSSCandidateDispatchHour = {
+  period: number;
+  minimum_accepted_mw: number;
+  maximum_accepted_mw: number;
+  default_lp_accepted_mw: number;
+  range_width_mw: number;
+  primary_optimum_offer_cost: number;
+};
+
+export type PMSSCandidateDispatchRange = {
+  target_unit_id: string;
+  hours: PMSSCandidateDispatchHour[];
+  minimum_accepted_mwh: number;
+  maximum_accepted_mwh: number;
+  default_lp_accepted_mwh: number;
+  ambiguous_hours: number;
+  maximum_hourly_width_mw: number;
+  original_peer_units_over_current_price_rule: number;
+  confidence_status: string;
+  safe_for_live_submission: false;
+  counterfactual_pmss_verified: false;
+  uses_historical_outcomes_as_forecast: false;
+  remark: string;
+  study_only: true;
+  historical_model_training_days: number;
+  pmss_write_performed: false;
+  pmss_clearing_executed: false;
+};
