@@ -1,10 +1,11 @@
 import smirelLogo from "./assets/smirel-logo.png";
 import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
-import { ArrowDown, ArrowRight, ArrowUpRight, Activity, BarChart3, Check, ChevronRight, CircleDot, Compass, Gauge, Layers3, Menu, MousePointer2, MoveUpRight, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUpRight, Activity, BarChart3, Check, ChevronRight, CircleDot, Compass, Gauge, Layers3, Menu, Minus, MousePointer2, MoveUpRight, Plus, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import "./landing.css";
 import "./landing-dark.css";
 import "./portal-polish.css";
 import "./landing-buttons.css";
+import "./landing-showcase-polish.css";
 import PowerConstellation from "./PowerConstellation";
 
 type LandingProps = { workspaceHref: string };
@@ -46,6 +47,28 @@ function NetworkGraphic() {
   </svg>;
 }
 
+// Sample the exact same three cubic Bezier segments used by the demo SVG.
+// This ensures the marker stays on the displayed curve at every slider value.
+const demoCurveSegments = [
+  [[20,244],[80,232],[118,180],[174,174]],
+  [[174,174],[230,168],[276,211],[332,128]],
+  [[332,128],[388,45],[438,86],[540,38]],
+] as const;
+function demoCurvePoint(percent: number) {
+  const x = 20 + Math.min(100, Math.max(0, percent)) * 5.2;
+  const segment = x <= 174 ? demoCurveSegments[0] : x <= 332 ? demoCurveSegments[1] : demoCurveSegments[2];
+  const cubic = (a: number, b: number, c: number, d: number, t: number) =>
+    ((1-t)**3)*a + 3*((1-t)**2)*t*b + 3*(1-t)*(t**2)*c + (t**3)*d;
+  let low = 0, high = 1;
+  for (let i = 0; i < 20; i++) {
+    const middle = (low + high) / 2;
+    if (cubic(segment[0][0], segment[1][0], segment[2][0], segment[3][0], middle) < x) low = middle;
+    else high = middle;
+  }
+  const t = (low + high) / 2;
+  return { x, y: cubic(segment[0][1], segment[1][1], segment[2][1], segment[3][1], t) };
+}
+
 export default function LandingPage({ workspaceHref }: LandingProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bid, setBid] = useState(310);
@@ -73,6 +96,9 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
     };
   }, []);
   const bidPosition = ((bid - 180) / 220) * 100;
+  const marker = demoCurvePoint(bidPosition);
+  const markerLabelX = Math.max(22, Math.min(460, marker.x - 40));
+  const markerLabelY = marker.y < 76 ? marker.y + 18 : marker.y - 51;
   return <div className="pb-landing" id="top">
     <header className={"pb-site-header" + (scrolled ? " pb-header-scrolled" : "")}>
       <div className="pb-header-inner">
@@ -131,7 +157,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
           <div className="pb-intro-top pb-reveal"><SectionTag>THE PHILOSOPHY / 设计理念</SectionTag><span className="pb-section-index">[ 001 — 005 ]</span></div>
           <div className="pb-intro-layout">
             <h2 className="pb-display-text pb-reveal">复杂的市场，<br/>值得一种<span>更清晰</span><br/>的理解方式。</h2>
-            <div className="pb-intro-aside pb-reveal"><div className="pb-intro-mark"><CircleDot size={35} strokeWidth={1.1}/></div><p>电力市场由无数相互影响的选择构成。我们把数据、模型与市场出清放在同一张画布上，让抽象的经济与物理关系变得可见、可探索、可验证。</p><div className="pb-intro-line"><span>RESEARCH. SIMULATE. UNDERSTAND.</span><MoveUpRight size={17}/></div></div>
+            <div className="pb-intro-aside pb-reveal"><div className="pb-intro-aside-top"><div className="pb-intro-mark"><CircleDot size={31} strokeWidth={1.25}/></div><span>01 / OUR APPROACH</span></div><p>电力市场由无数相互影响的选择构成。我们把数据、模型与市场出清放在同一张画布上，让抽象的经济与物理关系变得可见、可探索、可验证。</p><div className="pb-intro-keywords"><span>数据洞察</span><span>策略探索</span><span>结果验证</span></div><div className="pb-intro-line"><span>RESEARCH. SIMULATE. UNDERSTAND.</span><MoveUpRight size={17}/></div></div>
           </div>
           <div className="pb-micro-rule"><span>CLARITY IS AN ADVANTAGE</span><span>↓</span></div>
         </div>
@@ -167,14 +193,17 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
           <div className="pb-lab-panel pb-reveal">
             <div className="pb-lab-header"><div className="pb-lab-indicator"><span/><span/><span/></div><span>POWERBID / INTERACTIVE STUDY</span><span className="pb-lab-badge"><Sparkles size={12}/> INTERACTIVE DEMO</span></div>
             <div className="pb-lab-body">
-              <div className="pb-lab-controls"><div className="pb-lab-control-heading"><span>EXPERIMENT 001</span><span className="pb-lab-live"><i/>LIVE PREVIEW</span></div><h3>报价探索器<span>.</span></h3><p>拖动报价滑块，观察曲线如何变化。<br/>这是首页的交互示意，不是实际优化结果。</p><label htmlFor="pb-bid-slider">候选报价 <span>PRICE / MWh</span></label><div className="pb-lab-value">{bid}<small>元 / MWh</small></div><input id="pb-bid-slider" type="range" min="180" max="400" step="10" value={bid} onChange={e=>setBid(Number(e.target.value))} style={{"--pb-range-value":String(bidPosition)+"%"} as CSSProperties}/><div className="pb-slider-scale"><span>180</span><span>290</span><span>400</span></div><div className="pb-lab-hint"><MousePointer2 size={14}/> 拖动滑块，实时观察右侧示意图</div></div>
-              <div className="pb-lab-chart"><div className="pb-lab-chart-head"><div><span>ILLUSTRATIVE SIGNAL</span><strong>报价变化趋势</strong></div><span className="pb-lab-chart-type"><Activity size={15}/> TREND VIEW</span></div><svg viewBox="0 0 560 286" className="pb-interactive-chart" preserveAspectRatio="none" role="img" aria-label="示意图：随着候选报价改变，曲线上的选择点同步移动">
+              <div className="pb-lab-controls"><div className="pb-lab-control-heading"><span>EXPERIMENT 001</span><span className="pb-lab-live"><i/>LIVE PREVIEW</span></div><h3>报价探索器<span>.</span></h3><p>改变一个报价，观察曲线上选择点的变化。<br/>此处为教学交互示意，不代表真实出清结果。</p><div className="pb-lab-price-card"><div className="pb-lab-price-top"><label htmlFor="pb-bid-slider">候选报价 <span>PRICE / MWh</span></label><button type="button" className="pb-lab-reset" onClick={()=>setBid(310)} disabled={bid===310} aria-label="重置候选报价为310元每兆瓦时"><RotateCcw size={13}/> 重置</button></div><div className="pb-lab-value-row"><div className="pb-lab-value">{bid}<small>元 / MWh</small></div><div className="pb-lab-stepper" aria-label="调整候选报价"><button type="button" aria-label="报价减10元每兆瓦时" disabled={bid<=180} onClick={()=>setBid(v=>Math.max(180,v-10))}><Minus size={16}/></button><button type="button" aria-label="报价加10元每兆瓦时" disabled={bid>=400} onClick={()=>setBid(v=>Math.min(400,v+10))}><Plus size={16}/></button></div></div><input id="pb-bid-slider" type="range" min="180" max="400" step="10" value={bid} aria-valuetext={bid+" 元每兆瓦时"} onChange={e=>setBid(Number(e.target.value))} style={{"--pb-range-value":String(bidPosition)+"%"} as CSSProperties}/><div className="pb-slider-scale"><span>180</span><span>290</span><span>400</span></div></div><div className="pb-lab-hint"><MousePointer2 size={14}/> 拖动滑块，或使用 ±10 微调价格</div></div>
+              <div className="pb-lab-chart"><div className="pb-lab-chart-head"><div><span>ILLUSTRATIVE SIGNAL</span><strong>报价变化趋势</strong></div><span className="pb-lab-chart-type"><Activity size={15}/> TREND VIEW</span></div><div className="pb-lab-chart-meta"><span><i/> 当前选择点</span><strong>{bid} <small>元 / MWh</small></strong></div><svg viewBox="0 0 560 286" className="pb-interactive-chart" preserveAspectRatio="xMidYMid meet" role="img" aria-label={"报价交互示意图：当前候选报价"+bid+"元每兆瓦时，选择点位于曲线上"}>
                 <defs><linearGradient id="pb-demo-gradient" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#7f8efb" stopOpacity=".23"/><stop offset="1" stopColor="#7f8efb" stopOpacity="0"/></linearGradient></defs>
                 {[40,96,152,208,264].map(y=><line key={y} x1="20" x2="540" y1={y} y2={y} className="pb-chart-gridline"/>)}
                 <path d="M20 244 C80 232 118 180 174 174 S276 211 332 128 S438 86 540 38 L540 274 L20 274 Z" fill="url(#pb-demo-gradient)"/>
                 <path d="M20 244 C80 232 118 180 174 174 S276 211 332 128 S438 86 540 38" fill="none" stroke="#7b83f3" strokeWidth="3.2" strokeLinecap="round"/>
-                <line x1={20 + bidPosition * 5.2} x2={20 + bidPosition * 5.2} y1="26" y2="274" stroke="#5265ef" strokeDasharray="5 6" strokeWidth="1.2"/>
-                <circle cx={20 + bidPosition * 5.2} cy={244 - bidPosition * 1.88 + 20 * Math.sin(bidPosition / 8)} r="7" fill="#fff" stroke="#5265ef" strokeWidth="3"/>
+                <line x1={marker.x} x2={marker.x} y1="27" y2="274" className="pb-demo-crosshair"/>
+                <line x1="20" x2={marker.x} y1={marker.y} y2={marker.y} className="pb-demo-crosshair pb-demo-crosshair-horizontal"/>
+                <circle cx={marker.x} cy={marker.y} r="15" className="pb-demo-marker-halo"/>
+                <circle cx={marker.x} cy={marker.y} r="7" className="pb-demo-marker"/>
+                <g className="pb-demo-price-label" aria-hidden="true"><rect x={markerLabelX} y={markerLabelY} width="82" height="29" rx="9"/><text x={markerLabelX+41} y={markerLabelY+19} textAnchor="middle">{bid} <tspan>元</tspan></text></g>
               </svg><div className="pb-lab-chart-foot"><span>180</span><span>候选价格 / 示意</span><span>400</span></div></div>
             </div>
             <div className="pb-lab-footer"><span><CircleDot size={14}/> 教学与研究环境 · 示意图形不代表实时电力交易</span><a href={workspaceHref}>在真实工作台中试算 <ArrowUpRight size={17}/></a></div>
