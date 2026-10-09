@@ -34,7 +34,6 @@ class CandidateDispatchHour:
     maximum_accepted_mw: float
     default_lp_accepted_mw: float
     range_width_mw: float
-    target_original_lp_lmp: float
     primary_optimum_offer_cost: float
 
 
@@ -133,24 +132,9 @@ def assess_candidate_dispatch_uncertainty(
             maximum_accepted_mw=target.maximum_mw,
             default_lp_accepted_mw=target.baseline_mw,
             range_width_mw=target.width_mw,
-            target_original_lp_lmp=float("nan"),  # filled by primary LP separately
             primary_optimum_offer_cost=interval.minimum_offer_cost,
         ))
-    # Never return synthesized NaN values: API responses must be JSON-safe.
-    # The model price is intentionally omitted, because dispatch uncertainty
-    # does not establish the actual price-selection or settlement convention.
-    final_hours = tuple(
-        CandidateDispatchHour(
-            period=item.period,
-            minimum_accepted_mw=item.minimum_accepted_mw,
-            maximum_accepted_mw=item.maximum_accepted_mw,
-            default_lp_accepted_mw=item.default_lp_accepted_mw,
-            range_width_mw=item.range_width_mw,
-            target_original_lp_lmp=0.0,
-            primary_optimum_offer_cost=item.primary_optimum_offer_cost,
-        )
-        for item in hours
-    )
+    final_hours = tuple(hours)
     return CandidateDispatchUncertainty(
         target_unit_id=target_unit_id,
         hours=final_hours,
