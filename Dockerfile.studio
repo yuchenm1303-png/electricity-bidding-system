@@ -5,6 +5,7 @@ ENV VITE_BASE=${VITE_BASE}
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json frontend/tsconfig.json frontend/vite.config.ts frontend/index.html ./
 COPY frontend/src ./src
+COPY frontend/public ./public
 RUN npm ci --no-audit --no-fund
 RUN npm run build
 
