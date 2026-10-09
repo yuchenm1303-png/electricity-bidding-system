@@ -1,3 +1,4 @@
+import type { AccountUser } from "./AccountGate";
 import smirelLogo from "./assets/smirel-logo.png";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -121,7 +122,8 @@ function AnalysisTeaser({ report, onNavigate }: { report: Report | null; onNavig
     <ArrowRight size={16}/>
   </button>;
 }
-export default function App() {
+export default function App({account,onLogout,onOpenAdmin}:{account?:AccountUser|null;onLogout?:()=>void;onOpenAdmin?:()=>void}) {
+  const [accountMenu,setAccountMenu]=useState(false);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [config, setConfig] = useState<Settings | null>(null);
   const [view, setView] = useState<WorkspaceView>("workspace");
@@ -252,7 +254,14 @@ export default function App() {
           <span className="environment-pill"><span className="online-dot"/> 教学模拟环境</span>
           {view !== "pmss" && <button className="ta-header-icon" type="button" title="打开策略参数" aria-label="打开策略参数"
             onClick={openSettings}><SlidersHorizontal size={19}/></button>}
-          <span className="avatar-mark">PB</span>
+          {account ? <div className="pb-account-menu">
+            <button className="pb-account-trigger" type="button" onClick={()=>setAccountMenu(v=>!v)}
+              aria-expanded={accountMenu} aria-label="账号菜单"><ShieldCheck size={17}/><span>{account.username}</span></button>
+            {accountMenu&&<div className="pb-account-dropdown">
+              {onOpenAdmin&&<button type="button" onClick={()=>{setAccountMenu(false);onOpenAdmin();}}>账号管理</button>}
+              <button type="button" onClick={()=>{setAccountMenu(false);onLogout?.();}}>退出登录</button>
+            </div>}
+          </div> : <span className="avatar-mark">PB</span>}
         </div>
       </header>
       {error && <div className="error-banner" role="alert"><span>{error}</span><button type="button" onClick={() => setError("")} aria-label="关闭错误"><X size={16}/></button></div>}

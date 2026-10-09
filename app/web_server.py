@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.pmss_api import router as pmss_router
+from app.account_auth import router as auth_router, protect_api
 from powerbid.adapters.pypsa_engine import PyPSAClearingEngine
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine
 from powerbid.models import MarketScenario, Offer
@@ -34,6 +35,8 @@ app = FastAPI(
 
 
 app.include_router(pmss_router)
+app.include_router(auth_router)
+app.middleware("http")(protect_api)
 
 
 class OfferInput(BaseModel):
@@ -192,6 +195,19 @@ def listing_anime_license() -> FileResponse:
     return _cursor_asset("listing-anime-3.2.1-license.md")
 
 
+# FastAPI versions with nested included routers can otherwise route a GET
+# to the SPA fallback instead of returning 405 for POST-only PMSS APIs.
+@app.get("/api/pmss/{operation}", include_in_schema=False)
+def reject_wrong_pmss_method(operation: str) -> None:
+    target = "/api/pmss/" + operation
+    if any(
+        route.path == target and "POST" in (route.methods or set())
+        for route in pmss_router.routes
+    ):
+        raise HTTPException(status_code=405, detail="Method Not Allowed")
+    raise HTTPException(status_code=404, detail="API route not found")
+
+
 @app.get("/")
 def index() -> FileResponse:
     return _index()
@@ -209,5 +225,14 @@ if DIST.exists():
     @app.get("/{path:path}")
     def spa_fallback(path: str) -> FileResponse:
         if path.startswith("api/"):
+            # Catch-all frontend GET routes would otherwise mask a POST-only
+            # API route with 404. Preserve the correct HTTP 405 semantics.
+            target = "/" + path
+            if any(
+                getattr(route, "path", None) == target
+                and "GET" not in (getattr(route, "methods", None) or set())
+                for route in app.routes
+            ):
+                raise HTTPException(status_code=405, detail="Method Not Allowed")
             raise HTTPException(status_code=404, detail="API route not found")
         return _index()
