@@ -44,7 +44,7 @@ function Sidebar({ active, change, report, compact, toggle, source }: {
 }) {
   return <aside className={"sidebar " + (compact ? "collapsed" : "")}>
     <div className="brand">
-      <div className="brand-mark"><Activity size={22} strokeWidth={2.4}/><span/></div>
+      <div className="brand-mark brand-mark-smirel"><img src={import.meta.env.BASE_URL + "smirel-logo.png"} alt="Smirel" width={91} height={30} /></div>
       {!compact && <div className="brand-name"><strong>PowerBid</strong><small>STUDIO / MARKET LAB</small></div>}
       <button type="button" className="sidebar-collapse" title="折叠导航" aria-label="折叠导航" onClick={toggle}><Menu size={17}/></button>
     </div>
@@ -219,7 +219,7 @@ export default function App() {
   }, [run, view]);
   return <div className="app">
     <div className="mobile-topbar"><button type="button" className="icon-button" onClick={() => setMobileNav(true)} aria-label="打开菜单"><Menu size={20}/></button>
-      <strong><Activity size={17}/> PowerBid Studio</strong>
+      <strong><img className="mobile-smirel-logo" src={import.meta.env.BASE_URL + "smirel-logo.png"} alt="Smirel" width={55} height={19}/> PowerBid Studio</strong>
       {view==="pmss"
         ? <button type="button" className="icon-button" title="切换主题" aria-label="切换主题"
             onClick={()=>setTheme(value=>value==="light"?"dark":"light")}>
