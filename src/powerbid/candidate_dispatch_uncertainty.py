@@ -24,7 +24,7 @@ from powerbid.pmss_bid_rule_safety import (
     audit_saved_bid_price_limits,
     validate_new_curve,
 )
-from powerbid.pmss_integration import BidSegment, PMSSSnapshot, PeriodBid, curve_for_period
+from powerbid.pmss_integration import BidSegment, PeriodBid, PMSSSnapshot, curve_for_period
 
 
 @dataclass(frozen=True, slots=True)
