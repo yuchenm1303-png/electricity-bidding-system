@@ -7,6 +7,6 @@ import "./motion.css";
 import "./liquid-glass-cursor.css";
 import "./smirel-brand.css";
 
-export default function WorkspaceEntry({account,onLogout,onOpenAdmin}:{account?:AccountUser|null;onLogout?:()=>void;onOpenAdmin?:()=>void}) {
-  return <><App account={account} onLogout={onLogout} onOpenAdmin={onOpenAdmin}/><LiquidGlassCursor/></>;
+export default function WorkspaceEntry({account,onLogout,onOpenAdmin,onOpenProfile}:{account?:AccountUser|null;onLogout?:()=>void;onOpenAdmin?:()=>void;onOpenProfile?:()=>void}) {
+  return <><App account={account} onLogout={onLogout} onOpenAdmin={onOpenAdmin} onOpenProfile={onOpenProfile}/><LiquidGlassCursor/></>;
 }

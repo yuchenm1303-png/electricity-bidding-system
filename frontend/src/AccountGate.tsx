@@ -1,125 +1,366 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowRight, LockKeyhole, Mail, Shield, ShieldCheck, UserRound, Users, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  Activity, ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2,
+  ChevronRight, Eye, EyeOff, Fingerprint, LockKeyhole, Mail,
+  Search, Shield, ShieldCheck, UserRound, Users,
+  UserX, X,
+} from "lucide-react";
+import smirelLogo from "./assets/smirel-logo.png";
 import Workspace from "./WorkspaceEntry";
 import "./account.css";
 
-export type AccountUser={id:number;username:string;email:string;role:"admin"|"member";active:boolean;created_at?:number};
-type AuthConfig={enabled:boolean;registration_open:boolean};
-const base=import.meta.env.BASE_URL;
+export type AccountUser = {
+  id: number;
+  username: string;
+  email: string;
+  role: "admin" | "member";
+  active: boolean;
+  created_at?: number;
+};
+type AuthConfig = { enabled: boolean; registration_open: boolean };
+type AuthView = "login" | "register";
+type UserFilter = "all" | "active" | "disabled";
+const base = import.meta.env.BASE_URL;
 
-async function request<T>(path:string,method="GET",data?:unknown):Promise<T>{
-  const res=await fetch(base+"api/auth/"+path,{method,credentials:"same-origin",
-    headers:{"X-PowerBid-Request":"1",...(data===undefined?{}:{"Content-Type":"application/json"})},
-    body:data===undefined?undefined:JSON.stringify(data)});
-  const json=await res.json().catch(()=>({}));
-  if(!res.ok)throw new Error(typeof json.detail==="string"?json.detail:"请求失败，请稍后再试");
-  return json as T;
+async function request<T>(path: string, method = "GET", data?: unknown): Promise<T> {
+  const response = await fetch(base + "api/auth/" + path, {
+    method,
+    credentials: "same-origin",
+    headers: {
+      "X-PowerBid-Request": "1",
+      ...(data === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    body: data === undefined ? undefined : JSON.stringify(data),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(typeof result.detail === "string" ? result.detail : "网络出现问题，请稍后重试");
+  }
+  return result as T;
 }
-function AuthForm({config,onReady}:{config:AuthConfig;onReady:(user:AccountUser)=>void}){
-  const [register,setRegister]=useState(false);
-  const [name,setName]=useState("");
-  const [email,setEmail]=useState("");
-  const [password,setPassword]=useState("");
-  const [busy,setBusy]=useState(false);
-  const [error,setError]=useState("");
-  const submit=async(e:FormEvent<HTMLFormElement>)=>{
-    e.preventDefault();setBusy(true);setError("");
-    try{
-      const body=register?{username:name.trim(),email:email.trim(),password}:{username:name.trim(),password};
-      const user=await request<AccountUser>(register?"register":"login","POST",body);
-      setPassword("");
-      window.history.replaceState(null,"",base+"app");
-      onReady(user);
-    }catch(e){setError(e instanceof Error?e.message:"操作失败");}
-    finally{setBusy(false);}
+
+function Monogram({ name, size = "regular" }: { name: string; size?: "regular" | "large" }) {
+  return <span className={"pb-identity-avatar " + (size === "large" ? "is-large" : "")}
+    aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>;
+}
+
+function CloseButton({ close }: { close: () => void }) {
+  return <button className="pb-identity-close" type="button" onClick={close} aria-label="关闭">
+    <X size={19}/>
+  </button>;
+}
+
+function useDialogEscape(close: () => void) {
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("keydown", keydown);
+    return () => document.removeEventListener("keydown", keydown);
+  }, [close]);
+}
+
+function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: AccountUser) => void }) {
+  const [view, setView] = useState<AuthView>(() => window.location.pathname.endsWith("/register") ? "register" : "login");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [capsLock, setCapsLock] = useState(false);
+  const isRegister = view === "register";
+  const switchView = (next: AuthView) => {
+    setView(next);
+    window.history.replaceState(null, "", base + (next === "register" ? "register" : "login"));
+    setPassword("");
+    setShowPassword(false);
+    setError("");
   };
-  return <div className="pb-auth-screen">
-    <div className="pb-auth-background" aria-hidden="true"><span/><span/><span/></div>
-    <main className="pb-auth-frame">
-      <a href={base} className="pb-auth-back"><ArrowLeft size={16}/>返回 PowerBid 首页</a>
-      <section className="pb-auth-panel">
-        <div className="pb-auth-symbol"><ShieldCheck size={28} strokeWidth={1.6}/></div>
-        <div className="pb-auth-kicker">POWERBID / SECURE ACCESS</div>
-        <h1>{register?"创建研究账号":"欢迎回到 PowerBid"}</h1>
-        <p>{register?"注册后进入电力市场报价研究工作台。":"登录后继续电力市场报价与风险分析。"}</p>
-        <form onSubmit={submit} className="pb-auth-form">
-          <label htmlFor="auth-name"><UserRound size={16}/>用户名</label>
-          <input id="auth-name" autoComplete="username" minLength={3} maxLength={32} pattern="[A-Za-z][A-Za-z0-9_-]{2,31}"
-             value={name} onChange={e=>setName(e.target.value)} required placeholder="输入用户名"/>
-          {register&&<><label htmlFor="auth-email"><Mail size={16}/>邮箱</label>
-             <input id="auth-email" type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}
-               required placeholder="name@example.com"/></>}
-          <label htmlFor="auth-password"><LockKeyhole size={16}/>密码</label>
-          <input id="auth-password" type="password" autoComplete={register?"new-password":"current-password"}
-            minLength={12} maxLength={128} required value={password} onChange={e=>setPassword(e.target.value)}
-            placeholder="至少 12 位字符"/>
-          {error&&<div className="pb-auth-error" role="alert">{error}</div>}
-          <button className="pb-auth-submit" disabled={busy} type="submit">{busy?"请稍候…":register?"创建账号":"登录工作台"}<ArrowRight size={17}/></button>
-        </form>
-        {config.registration_open
-          ?<div className="pb-auth-switch">{register?"已有账号？":"还没有账号？"}
-             <button type="button" onClick={()=>{setRegister(!register);setPassword("");setError("");}}>{register?"返回登录":"立即注册"}</button></div>
-          :<div className="pb-auth-switch">当前为邀请使用阶段，如需账号请联系管理员。</div>}
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const body = isRegister ?
+        { username: username.trim(), email: email.trim(), password } :
+        { username: username.trim(), password };
+      const user = await request<AccountUser>(isRegister ? "register" : "login", "POST", body);
+      setPassword("");
+      window.history.replaceState(null, "", base + "app");
+      onReady(user);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "暂时无法连接到账号服务");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return <main className="pb-identity-screen">
+    <div className="pb-identity-grain" aria-hidden="true"/>
+    <div className="pb-identity-layout">
+      <aside className="pb-identity-story">
+        <a className="pb-identity-brand" href={base} aria-label="Smirel PowerBid 首页">
+          <img src={smirelLogo} alt="Smirel" width={94} height={31}/>
+          <span className="pb-identity-brand-divider"/>
+          <strong>PowerBid</strong>
+        </a>
+        <div className="pb-identity-story-content">
+          <span className="pb-identity-eyebrow"><span/> POWER MARKET INTELLIGENCE</span>
+          <h1>让每一次报价，<br/><em>都有迹可循。</em></h1>
+          <p>从电力市场仿真到策略分析，<br/>在同一个空间，连接数据与决策。</p>
+          <div className="pb-identity-network" aria-hidden="true">
+            <svg viewBox="0 0 510 210" fill="none" role="presentation">
+              <path d="M18 141L104 75L197 119L284 43L389 90L485 27M18 141L148 187L197 119L389 90L446 179M104 75L284 43L446 179L485 27" stroke="currentColor" strokeWidth="1.1" strokeOpacity=".42"/>
+              <path d="M18 141L104 75L197 119L284 43L389 90L485 27" stroke="#9BAAFF" strokeWidth="1.3" strokeDasharray="5 9" opacity=".7"/>
+              {[ [18,141],[104,75],[197,119],[284,43],[389,90],[485,27],[148,187],[446,179] ].map(([x,y],i)=>
+                <g key={i}><circle cx={x} cy={y} r={i===3?8:5} fill="#6678E9" opacity=".17"/><circle cx={x} cy={y} r={i===3?3.8:2.6} fill="#B5C3FF"/></g>)}
+            </svg>
+            <div className="pb-identity-network-caption"><Activity size={13}/> POWER FLOW / CONNECTED NODES</div>
+          </div>
+        </div>
+        <div className="pb-identity-story-footer"><span>电力报价系统 · 小组作业</span><span>EST. 2026 <span className="pb-identity-footer-dot"/> SYSTEM ONLINE</span></div>
+      </aside>
+
+      <section className="pb-identity-access" aria-label="账号访问">
+        <div className="pb-identity-access-top">
+          <a href={base} className="pb-identity-back"><ArrowLeft size={15}/> 返回首页</a>
+          <span className="pb-identity-access-tag"><span/> SECURE ACCESS</span>
+        </div>
+        <div className="pb-identity-access-center">
+          <div className="pb-identity-card">
+            <div className="pb-identity-emblem"><Fingerprint size={27} strokeWidth={1.5}/></div>
+            <span className="pb-identity-kicker">YOUR WORKSPACE</span>
+            <h2>{isRegister ? "创建 PowerBid 账号" : "欢迎回来"}</h2>
+            <p className="pb-identity-lead">{isRegister ? "只需简单几步，即可开始你的策略研究。" : "登录，继续你的电力市场探索。"}</p>
+            {config.registration_open &&
+              <div className="pb-identity-tabs" role="group" aria-label="登录或注册">
+                <button type="button" className={!isRegister ? "selected" : ""} aria-pressed={!isRegister} onClick={()=>switchView("login")}>登录账号</button>
+                <button type="button" className={isRegister ? "selected" : ""} aria-pressed={isRegister} onClick={()=>switchView("register")}>创建账号</button>
+              </div>}
+            <form className="pb-identity-form" onSubmit={submit}>
+              <div className="pb-identity-field">
+                <label htmlFor="auth-name">用户名</label>
+                <div className="pb-identity-input-wrap">
+                  <UserRound size={17}/>
+                  <input id="auth-name" required minLength={3} maxLength={32} pattern="[A-Za-z][A-Za-z0-9_-]{2,31}"
+                    autoComplete="username" placeholder="你的用户名" value={username} onChange={e=>setUsername(e.target.value)}/>
+                </div>
+              </div>
+              {isRegister && <div className="pb-identity-field">
+                <label htmlFor="auth-email">电子邮箱</label>
+                <div className="pb-identity-input-wrap">
+                  <Mail size={17}/>
+                  <input id="auth-email" type="email" autoComplete="email" required placeholder="name@example.com"
+                    value={email} onChange={e=>setEmail(e.target.value)}/>
+                </div>
+              </div>}
+              <div className="pb-identity-field">
+                <label htmlFor="auth-password">密码</label>
+                <div className="pb-identity-input-wrap">
+                  <LockKeyhole size={17}/>
+                  <input id="auth-password" type={showPassword?"text":"password"} required minLength={12} maxLength={128}
+                    autoComplete={isRegister?"new-password":"current-password"} placeholder="至少 12 位字符"
+                    value={password} onChange={e=>setPassword(e.target.value)}
+                    onKeyUp={e=>setCapsLock(e.getModifierState("CapsLock"))}/>
+                  <button type="button" className="pb-identity-eye" aria-label={showPassword?"隐藏密码":"显示密码"}
+                    onClick={()=>setShowPassword(v=>!v)}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button>
+                </div>
+                {capsLock&&<span className="pb-identity-field-note">Caps Lock 已开启</span>}
+                {isRegister&&<span className="pb-identity-field-note">为保护账号，请设置不少于 12 位的密码。</span>}
+              </div>
+              {error&&<div className="pb-identity-error" role="alert"><Shield size={16}/>{error}</div>}
+              <button className="pb-identity-primary" type="submit" disabled={busy}>
+                <span>{busy?"正在验证…":isRegister?"创建账号":"进入工作台"}</span>
+                {busy?<span className="pb-identity-spinner"/>:<ArrowRight size={18}/>}
+              </button>
+            </form>
+            <div className="pb-identity-card-bottom">
+              {config.registration_open ?
+                <span>{isRegister?"已经有账号了？":"第一次使用 PowerBid？"}
+                  <button type="button" onClick={()=>switchView(isRegister?"login":"register")}>{isRegister?"立即登录":"创建新账号"}<ChevronRight size={13}/></button>
+                </span>:
+                <span><ShieldCheck size={15}/> 当前为邀请使用阶段，请联系管理员开通账号。</span>}
+            </div>
+          </div>
+        </div>
+        <footer className="pb-identity-access-footer"><ShieldCheck size={14}/> 安全连接 · 仅用于教学与研究</footer>
       </section>
-      <p className="pb-auth-footer">教学仿真环境 · 研究用途 · 不进行真实市场交易</p>
-    </main>
+    </div>
+  </main>;
+}
+
+function ProfilePanel({ user, close }: { user: AccountUser; close: () => void }) {
+  useDialogEscape(close);
+  const date = user.created_at ? new Date(user.created_at * 1000).toLocaleDateString("zh-CN") : "暂无记录";
+  return <div className="pb-identity-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}>
+    <section className="pb-identity-modal pb-identity-profile" role="dialog" aria-modal="true" aria-labelledby="pb-profile-title">
+      <header className="pb-identity-modal-header">
+        <div><span className="pb-identity-kicker">ACCOUNT OVERVIEW</span><h2 id="pb-profile-title">个人资料</h2></div>
+        <CloseButton close={close}/>
+      </header>
+      <div className="pb-identity-profile-hero">
+        <Monogram name={user.username} size="large"/>
+        <div><h3>{user.username}</h3><p>{user.role==="admin"?"系统管理员":"普通用户"} <span>·</span> {user.active?"账号正常":"账号已禁用"}</p></div>
+        <span className="pb-identity-profile-verified"><CheckCircle2 size={15}/> 已登录</span>
+      </div>
+      <div className="pb-identity-section-caption">ACCOUNT DETAILS</div>
+      <div className="pb-identity-details">
+        <div><span><UserRound size={16}/> 用户名</span><strong>{user.username}</strong></div>
+        <div><span><Mail size={16}/> 电子邮箱</span><strong>{user.email}</strong></div>
+        <div><span><ShieldCheck size={16}/> 账号角色</span><strong>{user.role==="admin"?"管理员":"普通用户"}</strong></div>
+        <div><span><Activity size={16}/> 加入时间</span><strong>{date}</strong></div>
+      </div>
+      <p className="pb-identity-profile-note"><LockKeyhole size={15}/> 账号信息由服务器安全保存。资料修改功能将在后续版本开放。</p>
+      <button className="pb-identity-secondary-full" type="button" onClick={close}>返回工作台 <ArrowUpRight size={16}/></button>
+    </section>
   </div>;
 }
-function AdminPanel({close}:{close:()=>void}){
- const [users,setUsers]=useState<AccountUser[]>([]);
- const [error,setError]=useState("");
- const [saving,setSaving]=useState<number|null>(null);
- const load=useCallback(async()=>{try{setUsers(await request<AccountUser[]>("users"));setError("");}catch(e){setError(e instanceof Error?e.message:"无法读取用户");}},[]);
- useEffect(()=>{void load();},[load]);
- const update=async(user:AccountUser)=>{
-   setSaving(user.id);
-   try{await request("users/"+user.id+"/enabled","POST",{enabled:!user.active});await load();}
-   catch(e){setError(e instanceof Error?e.message:"操作失败");}finally{setSaving(null);}
- };
- return <div className="pb-admin-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)close();}}>
-   <section className="pb-admin-panel" role="dialog" aria-modal="true" aria-label="账号管理">
-     <header><div><span><Users size={18}/>ACCOUNT MANAGEMENT</span><h2>账号与权限管理</h2></div>
-       <button type="button" onClick={close} aria-label="关闭"><X size={20}/></button></header>
-     <p>禁用账号将立即撤销其全部会话。管理员不能禁用自己。</p>
-     {error&&<div className="pb-auth-error" role="alert">{error}</div>}
-     <div className="pb-admin-list">
-       {users.map(u=><div className="pb-admin-row" key={u.id}>
-         <span className="pb-admin-avatar">{u.username.charAt(0).toUpperCase()}</span>
-         <div><strong>{u.username}</strong><small>{u.email} · {u.role==="admin"?"管理员":"普通用户"}</small></div>
-         <span className={u.active?"pb-admin-state active":"pb-admin-state"}>{u.active?"正常":"已禁用"}</span>
-         <button type="button" disabled={saving!==null||u.role==="admin"} onClick={()=>update(u)}>
-           {saving===u.id?"处理中":u.active?"禁用":"启用"}
-         </button>
-       </div>)}
-     </div>
-   </section>
- </div>;
+
+function AdminPanel({ close, currentId }: { close: () => void; currentId: number }) {
+  useDialogEscape(close);
+  const [users, setUsers] = useState<AccountUser[]>([]);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<UserFilter>("all");
+  const [fetching, setFetching] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState<number | null>(null);
+  const [confirm, setConfirm] = useState<AccountUser | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const load = useCallback(async () => {
+    try {
+      const data = await request<AccountUser[]>("users");
+      setUsers(data);
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "无法读取账号信息");
+    } finally {
+      setFetching(false);
+    }
+  }, []);
+  useEffect(()=>{void load();},[load]);
+  const counts = useMemo(()=>({
+    total: users.length,
+    active: users.filter(item=>item.active).length,
+    disabled: users.filter(item=>!item.active).length,
+  }),[users]);
+  const filtered = useMemo(()=>users.filter(item=>{
+    const matchesText = (item.username+" "+item.email).toLowerCase().includes(search.trim().toLowerCase());
+    return matchesText && (filter==="all" || (filter==="active" && item.active) || (filter==="disabled" && !item.active));
+  }),[users,search,filter]);
+  const update = async (target: AccountUser) => {
+    setConfirm(null);
+    setSaving(target.id);
+    try {
+      await request("users/"+target.id+"/enabled","POST",{enabled:!target.active});
+      await load();
+    } catch(cause) {
+      setError(cause instanceof Error ? cause.message : "操作未完成");
+    } finally {
+      setSaving(null);
+    }
+  };
+  return <div className="pb-identity-overlay pb-identity-admin-overlay" onMouseDown={e=>{if(e.target===e.currentTarget&&!confirm)close();}}>
+    <section className="pb-identity-modal pb-identity-admin" role="dialog" aria-modal="true" aria-labelledby="pb-admin-title">
+      <header className="pb-identity-modal-header">
+        <div><span className="pb-identity-kicker">POWERBID / ADMINISTRATION</span><h2 id="pb-admin-title">用户与权限</h2>
+          <p>查看和管理工作空间的账号访问权限。</p></div>
+        <CloseButton close={close}/>
+      </header>
+      <div className="pb-identity-stats">
+        <div><span><Users size={16}/> 全部账号</span><strong>{counts.total}</strong><small>ACCOUNTS</small></div>
+        <div><span><ShieldCheck size={16}/> 正常使用</span><strong>{counts.active}</strong><small>ACTIVE</small></div>
+        <div><span><UserX size={16}/> 已禁用</span><strong>{counts.disabled}</strong><small>DISABLED</small></div>
+      </div>
+      <div className="pb-identity-admin-tools">
+        <div className="pb-identity-admin-search"><Search size={17}/><input ref={searchRef} value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="搜索用户名或邮箱…" aria-label="搜索账号"/>
+          {search&&<button type="button" onClick={()=>{setSearch("");searchRef.current?.focus();}} aria-label="清除搜索"><X size={15}/></button>}</div>
+        <div className="pb-identity-admin-filters" aria-label="按状态筛选">
+          {([["all","全部"],["active","正常"],["disabled","已禁用"]] as const).map(([key,label])=>
+            <button type="button" key={key} className={filter===key?"selected":""} onClick={()=>setFilter(key)} aria-pressed={filter===key}>{label}</button>)}
+        </div>
+      </div>
+      {error&&<div className="pb-identity-error" role="alert">{error}<button onClick={()=>void load()} type="button">重试</button></div>}
+      <div className="pb-identity-userlist">
+        <div className="pb-identity-userlist-head"><span>用户</span><span>角色</span><span>状态</span><span>操作</span></div>
+        {fetching ? <div className="pb-identity-empty"><span className="pb-identity-spinner"/> 正在加载账号…</div> :
+        filtered.length === 0 ? <div className="pb-identity-empty"><Search size={23}/><strong>没有找到匹配账号</strong><span>尝试更换关键词或筛选条件。</span></div> :
+        filtered.map(item=><div className="pb-identity-userrow" key={item.id}>
+          <div className="pb-identity-usercell"><Monogram name={item.username}/><div><strong>{item.username}</strong><small title={item.email}>{item.email}</small></div></div>
+          <span className="pb-identity-role">{item.role==="admin"?<ShieldCheck size={15}/>:<UserRound size={15}/>}
+            {item.role==="admin"?"管理员":"成员"}</span>
+          <span className={"pb-identity-status "+(item.active?"is-active":"is-disabled")}><span/>{item.active?"正常":"已禁用"}</span>
+          <button className="pb-identity-table-action" type="button" disabled={saving!==null||item.id===currentId||item.role==="admin"}
+            title={item.role==="admin"?"管理员账号不可在此修改":item.active?"禁用账号":"恢复账号"}
+            onClick={()=>setConfirm(item)}>{saving===item.id?"处理中…":item.role==="admin"?"受保护":item.active?"禁用":"启用"}</button>
+        </div>)}
+      </div>
+      <footer className="pb-identity-admin-footer"><span><ShieldCheck size={15}/> 禁用后将立即撤销该用户所有登录会话。</span>
+        <span>展示最近的 {users.length} 个账号</span></footer>
+    </section>
+    {confirm&&<div className="pb-identity-confirm-wrap">
+      <section role="alertdialog" aria-modal="true" aria-labelledby="pb-confirm-title" className="pb-identity-confirm">
+        <div className={"pb-identity-confirm-symbol "+(confirm.active?"danger":"success")}>{confirm.active?<UserX size={23}/>:<ShieldCheck size={23}/>}</div>
+        <h3 id="pb-confirm-title">{confirm.active?"确认禁用账号？":"恢复账号访问？"}</h3>
+        <p>{confirm.active?"禁用后，该用户将立即退出所有设备并无法继续登录。":"恢复后，该用户可以重新登录 PowerBid 工作台。"}</p>
+        <div className="pb-identity-confirm-user"><Monogram name={confirm.username}/><span>{confirm.username}<small>{confirm.email}</small></span></div>
+        <div className="pb-identity-confirm-actions">
+          <button type="button" onClick={()=>setConfirm(null)}>取消</button>
+          <button className={confirm.active?"danger":""} type="button" onClick={()=>void update(confirm)}>
+            {confirm.active?"确认禁用":"确认启用"} <Check size={16}/></button>
+        </div>
+      </section>
+    </div>}
+  </div>;
 }
-export default function AccountGate(){
- const [config,setConfig]=useState<AuthConfig|null>(null);
- const [user,setUser]=useState<AccountUser|null>(null);
- const [error,setError]=useState("");
- const [loading,setLoading]=useState(true);
- const [adminOpen,setAdminOpen]=useState(false);
- useEffect(()=>{
-   let live=true;
-   (async()=>{
-     try{
-       const cfg=await request<AuthConfig>("config");
-       if(!live)return;setConfig(cfg);
-       if(cfg.enabled){try{const me=await request<AccountUser>("me");if(live)setUser(me);}catch{/* unauthenticated */}}
-     }catch(e){if(live)setError(e instanceof Error?e.message:"无法连接账号服务");}
-     finally{if(live)setLoading(false);}
-   })();
-   return ()=>{live=false};
- },[]);
- const logout=async()=>{try{await request("logout","POST");setUser(null);setAdminOpen(false);}catch(e){setError(e instanceof Error?e.message:"退出失败");}};
- if(loading)return <div className="pb-auth-loading"><Shield size={30}/>正在验证账号状态…</div>;
- if(!config)return <div className="pb-auth-loading"><Shield size={30}/>{error||"账号服务暂时不可用"}<button onClick={()=>location.reload()}>重试</button></div>;
- if(config.enabled&&!user)return <AuthForm config={config} onReady={setUser}/>;
- return <>
-   <Workspace account={user} onLogout={config.enabled?logout:undefined}
-     onOpenAdmin={user?.role==="admin"?()=>setAdminOpen(true):undefined}/>
-   {config.enabled&&adminOpen&&<AdminPanel close={()=>setAdminOpen(false)}/>}
- </>;
+
+export default function AccountGate() {
+  const [config, setConfig] = useState<AuthConfig | null>(null);
+  const [user, setUser] = useState<AccountUser | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  useEffect(()=>{
+    let alive = true;
+    (async()=>{
+      try {
+        const settings = await request<AuthConfig>("config");
+        if (!alive) return;
+        setConfig(settings);
+        if (settings.enabled) {
+          try {
+            const account = await request<AccountUser>("me");
+            if (alive) setUser(account);
+          } catch { /* no active session */ }
+        }
+      } catch(cause) {
+        if (alive) setError(cause instanceof Error ? cause.message : "暂时无法连接账号服务");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return ()=>{alive=false;};
+  },[]);
+  const logout = async () => {
+    try {
+      await request("logout","POST");
+      setUser(null);
+      setProfileOpen(false);
+      setAdminOpen(false);
+    } catch(cause) {
+      setError(cause instanceof Error ? cause.message : "退出失败");
+    }
+  };
+  if (loading) return <div className="pb-identity-loading"><Fingerprint size={36}/><span>正在验证账号状态</span><span className="pb-identity-spinner"/></div>;
+  if (!config) return <div className="pb-identity-loading"><Shield size={33}/><span>{error||"账号服务暂时不可用"}</span><button type="button" onClick={()=>window.location.reload()}>重新连接 <ArrowRight size={15}/></button></div>;
+  if (config.enabled && !user) return <AuthScene config={config} onReady={setUser}/>;
+  return <>
+    <Workspace account={user} onLogout={config.enabled?logout:undefined}
+      onOpenProfile={user?()=>setProfileOpen(true):undefined}
+      onOpenAdmin={user?.role==="admin"?()=>setAdminOpen(true):undefined}/>
+    {user && profileOpen && <ProfilePanel user={user} close={()=>setProfileOpen(false)}/>}
+    {config.enabled && adminOpen && user && <AdminPanel currentId={user.id} close={()=>setAdminOpen(false)}/>}
+  </>;
 }

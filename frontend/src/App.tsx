@@ -1,10 +1,10 @@
 import type { AccountUser } from "./AccountGate";
 import smirelLogo from "./assets/smirel-logo.png";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity, ArrowRight, BarChart3, Boxes, ChevronRight, CircleHelp,
   ExternalLink, FileBarChart, LayoutDashboard, Menu, Moon, PanelRightClose, PanelRightOpen,
-  Network, Play, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Sun, TrendingUp, X, Zap
+  Network, Play, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, Sun, TrendingUp, X, Zap, ChevronDown, UserRound, LogOut, Settings2
 } from "lucide-react";
 import { loadScenario, runOptimization, fromScenario } from "./api";
 import { SettingsPanel } from "./SettingsPanel";
@@ -122,8 +122,53 @@ function AnalysisTeaser({ report, onNavigate }: { report: Report | null; onNavig
     <ArrowRight size={16}/>
   </button>;
 }
-export default function App({account,onLogout,onOpenAdmin}:{account?:AccountUser|null;onLogout?:()=>void;onOpenAdmin?:()=>void}) {
+function AccountControl({ account, onLogout, onOpenAdmin, onOpenProfile }: {
+  account: AccountUser;
+  onLogout?: () => void;
+  onOpenAdmin?: () => void;
+  onOpenProfile?: () => void;
+}) {
   const [accountMenu,setAccountMenu]=useState(false);
+  const accountMenuRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if (!accountMenu) return;
+    const outside=(event:PointerEvent)=>{
+      if (!accountMenuRef.current?.contains(event.target as Node)) setAccountMenu(false);
+    };
+    const escape=(event:KeyboardEvent)=>{
+      if (event.key==="Escape") setAccountMenu(false);
+    };
+    document.addEventListener("pointerdown",outside);
+    document.addEventListener("keydown",escape);
+    return ()=>{
+      document.removeEventListener("pointerdown",outside);
+      document.removeEventListener("keydown",escape);
+    };
+  },[accountMenu]);
+  return <div className="pb-account-menu" ref={accountMenuRef}>
+            <button className="pb-account-trigger" type="button" onClick={()=>setAccountMenu(v=>!v)}
+              aria-expanded={accountMenu} aria-haspopup="menu" aria-label="账号菜单">
+              <span className="pb-identity-avatar" aria-hidden="true">{account.username.slice(0,1).toUpperCase()}</span>
+              <span className="pb-account-name">{account.username}</span><ChevronDown size={14}/>
+            </button>
+            {accountMenu&&<div className="pb-account-dropdown" role="menu" aria-label="用户菜单">
+              <div className="pb-account-dropdown-head">
+                <span className="pb-identity-avatar" aria-hidden="true">{account.username.slice(0,1).toUpperCase()}</span>
+                <div><strong>{account.username}</strong><small>{account.email}</small></div>
+              </div>
+              {onOpenProfile&&<button type="button" role="menuitem" onClick={()=>{setAccountMenu(false);onOpenProfile();}}>
+                <UserRound size={16}/> 个人资料
+              </button>}
+              {onOpenAdmin&&<button type="button" role="menuitem" onClick={()=>{setAccountMenu(false);onOpenAdmin();}}>
+                <Settings2 size={16}/> 用户与权限
+              </button>}
+              <button className="pb-account-signout" type="button" role="menuitem"
+                onClick={()=>{setAccountMenu(false);onLogout?.();}}><LogOut size={16}/> 退出登录</button>
+            </div>}
+          </div>;
+}
+
+export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{account?:AccountUser|null;onLogout?:()=>void;onOpenAdmin?:()=>void;onOpenProfile?:()=>void}) {
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [config, setConfig] = useState<Settings | null>(null);
   const [view, setView] = useState<WorkspaceView>("workspace");
@@ -225,12 +270,16 @@ export default function App({account,onLogout,onOpenAdmin}:{account?:AccountUser
   return <div className="app">
     <div className="mobile-topbar"><button type="button" className="icon-button" onClick={() => setMobileNav(true)} aria-label="打开菜单"><Menu size={20}/></button>
       <a className="mobile-brand-home" href={import.meta.env.BASE_URL} aria-label="返回 PowerBid 首页"><strong><img className="mobile-smirel-logo" src={smirelLogo} alt="Smirel" width={55} height={19}/> PowerBid Studio</strong></a>
-      {view==="pmss"
-        ? <button type="button" className="icon-button" title="切换主题" aria-label="切换主题"
-            onClick={()=>setTheme(value=>value==="light"?"dark":"light")}>
-            {theme==="light"?<Moon size={19}/>:<Sun size={19}/>}
-          </button>
-        : <button type="button" className="icon-button" title="切换参数面板" onClick={toggleSettings}><SlidersHorizontal size={19}/></button>}</div>
+      <div className="pb-mobile-actions">
+        {view==="pmss"
+          ? <button type="button" className="icon-button" title="切换主题" aria-label="切换主题"
+              onClick={()=>setTheme(value=>value==="light"?"dark":"light")}>
+              {theme==="light"?<Moon size={19}/>:<Sun size={19}/>}
+            </button>
+          : <button type="button" className="icon-button" title="切换参数面板" aria-label="切换参数面板" onClick={toggleSettings}><SlidersHorizontal size={19}/></button>}
+        {account && <AccountControl account={account} onLogout={onLogout}
+          onOpenAdmin={onOpenAdmin} onOpenProfile={onOpenProfile}/>}
+      </div></div>
     {mobileNav && <button type="button" className="mobile-backdrop" aria-label="关闭菜单" onClick={() => setMobileNav(false)}/>}
     <div className={mobileNav ? "mobile-sidebar-visible" : ""}>
       <Sidebar active={view} change={changeView} report={report} compact={sidebarCompact}
@@ -254,14 +303,8 @@ export default function App({account,onLogout,onOpenAdmin}:{account?:AccountUser
           <span className="environment-pill"><span className="online-dot"/> 教学模拟环境</span>
           {view !== "pmss" && <button className="ta-header-icon" type="button" title="打开策略参数" aria-label="打开策略参数"
             onClick={openSettings}><SlidersHorizontal size={19}/></button>}
-          {account ? <div className="pb-account-menu">
-            <button className="pb-account-trigger" type="button" onClick={()=>setAccountMenu(v=>!v)}
-              aria-expanded={accountMenu} aria-label="账号菜单"><ShieldCheck size={17}/><span>{account.username}</span></button>
-            {accountMenu&&<div className="pb-account-dropdown">
-              {onOpenAdmin&&<button type="button" onClick={()=>{setAccountMenu(false);onOpenAdmin();}}>账号管理</button>}
-              <button type="button" onClick={()=>{setAccountMenu(false);onLogout?.();}}>退出登录</button>
-            </div>}
-          </div> : <span className="avatar-mark">PB</span>}
+          {account ? <AccountControl account={account} onLogout={onLogout}
+            onOpenAdmin={onOpenAdmin} onOpenProfile={onOpenProfile}/> : <span className="avatar-mark">PB</span>}
         </div>
       </header>
       {error && <div className="error-banner" role="alert"><span>{error}</span><button type="button" onClick={() => setError("")} aria-label="关闭错误"><X size={16}/></button></div>}
