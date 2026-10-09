@@ -1,7 +1,6 @@
 """Comparative counterfactual diagnostics never invent missing hours or claim causality."""
-from test_historical_validation import _fixture
-
 import pytest
+from test_historical_validation import _fixture
 
 from powerbid.flow_error_attribution import compare_dispatch_and_network_sources
 
