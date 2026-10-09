@@ -1,12 +1,3 @@
-html.powerbid-liquid-cursor-active.powerbid-liquid-cursor-active body .app.app,
-html.powerbid-liquid-cursor-active.powerbid-liquid-cursor-active body .app.app *,
-html.powerbid-liquid-cursor-active body #root .app,
-html.powerbid-liquid-cursor-active body #root .app *,
-html.powerbid-liquid-cursor-active body #root .app *::before,
-html.powerbid-liquid-cursor-active body #root .app *::after {
-  cursor: none !important;
-}
-
 .powerbid-liquid-cursor-canvas {
   position: fixed;
   left: 0;
@@ -43,3 +34,8 @@ html.powerbid-liquid-cursor-active body #root .app *::after {
     display: none !important;
   }
 }
+
+/* Exactly as the download site's liquid-cursor-v1.css: use the separate
+   white circular pointer + follower ABOVE the WebGL lens, not Loom's inner dot. */
+#cursorDot, #cursorFollow { z-index: 2147483002 !important; }
+.powerbid-liquid-cursor-dot { display: none !important; }
