@@ -173,6 +173,14 @@ class TeacherPlatformAdapter:
                         "PMSS response redirected; login/SSO status unverified. "
                         "Refusing to forward authentication cookies."
                     )
+                if 400 <= status < 500:
+                    # Repeating access denied / invalid credentials does not
+                    # refresh a PMSS session. Preserve only numeric status,
+                    # never the response body, Location or session headers.
+                    raise TeacherPlatformError(
+                        f"PMSS API denied read (HTTP {status}); "
+                        "no automatic retry and no private error payload."
+                    )
                 response.raise_for_status()
                 break
             except requests.RequestException as exc:
