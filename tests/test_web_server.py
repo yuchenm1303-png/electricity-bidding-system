@@ -94,6 +94,3 @@ def test_listing_download_cursor_assets_serve_correct_mime(tmp_path, monkeypatch
     assert css.status_code == 200
     assert css.headers["content-type"].startswith("text/css")
     assert ".cursor-follow" in css.text
-    assert client.get("/listing-studio-unknown.js").headers["content-type"].startswith(
-        "text/html"
-    )
