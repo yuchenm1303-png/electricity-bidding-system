@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from math import isfinite, sqrt
 from typing import Any
 
 from powerbid.network_dispatch import DcNetwork
@@ -31,7 +30,7 @@ class GridAuditHour:
     observed_line_over_nameplate_count: int
     observed_line_count: int
     complete_observation: bool
-    modeled_unit_mae_mw: float | None
+    modeled_target_dispatch_error_mw: float | None
     modeled_nodal_price_mae: float | None
     modeled_abs_flow_mae_mw: float | None
 
@@ -55,7 +54,7 @@ class PMSSHistoricalGridAudit:
     generation_load_mae_mw: float | None
     bus_balance_mae_mw: float | None
     reverse_flow_bus_balance_mae_mw: float | None
-    modeled_unit_mae_mw: float | None
+    modeled_target_dispatch_mae_mw: float | None
     modeled_nodal_price_mae: float | None
     modeled_abs_flow_mae_mw: float | None
     observed_line_over_nameplate_hours: int
@@ -121,6 +120,7 @@ def audit_pmss_historical_grid(
     *,
     case_date: str,
     modeled_hours: Sequence[Any] | None = None,
+    target_unit_id: str | None = None,
 ) -> PMSSHistoricalGridAudit:
     """Compare observed generator MW, bus MW and line MW per hour.
 
@@ -132,6 +132,8 @@ def audit_pmss_historical_grid(
         raise ValueError("Expected the matching 24h PMSS day-ahead historical result")
     if not isinstance(case_date, str) or not case_date.strip():
         raise ValueError("Historical case date is required")
+    if modeled_hours is not None and target_unit_id not in network.unit_bus:
+        raise ValueError("Modeled target must have a verified unit ID")
     if modeled_hours is not None and (
         len(modeled_hours) != 24
         or any(getattr(hour, "period", None) != idx for idx, hour in enumerate(modeled_hours, 1))
@@ -205,16 +207,11 @@ def audit_pmss_historical_grid(
         unit_errors, node_errors, line_errors = [], [], []
         if modeled_hours is not None:
             modeled = modeled_hours[idx]
-            for unit, values in power.items():
-                actual = values[idx]
-                if actual is not None:
-                    change = abs(modeled.dispatched_mw - actual) if False else None
-                    # NetworkHour only contains the TARGET dispatch MW, not
-                    # all-unit awards. Compute all-unit MAE only when a
-                    # full dispatch mapping is explicitly supplied.
-                    if change is not None:
-                        unit_errors.append(change)
-                        modeled_units.append(change)
+            actual = power[target_unit_id][idx]
+            if actual is not None:
+                e = abs(modeled.dispatched_mw - actual)
+                unit_errors.append(e)
+                modeled_units.append(e)
             for bus, values in lmp.items():
                 actual = values[idx]
                 if actual is not None:
@@ -240,7 +237,7 @@ def audit_pmss_historical_grid(
             observed_line_over_nameplate_count=over,
             observed_line_count=sum(series[idx] is not None for series in flow.values()),
             complete_observation=complete,
-            modeled_unit_mae_mw=_mean_abs(unit_errors),
+            modeled_target_dispatch_error_mw=_mean_abs(unit_errors),
             modeled_nodal_price_mae=_mean_abs(node_errors),
             modeled_abs_flow_mae_mw=_mean_abs(line_errors),
         ))
@@ -255,7 +252,7 @@ def audit_pmss_historical_grid(
         generation_load_mae_mw=_mean_abs(all_system),
         bus_balance_mae_mw=_mean_abs(all_balance),
         reverse_flow_bus_balance_mae_mw=_mean_abs(all_reverse),
-        modeled_unit_mae_mw=_mean_abs(modeled_units),
+        modeled_target_dispatch_mae_mw=_mean_abs(modeled_units),
         modeled_nodal_price_mae=_mean_abs(modeled_nodes),
         modeled_abs_flow_mae_mw=_mean_abs(modeled_flows),
         observed_line_over_nameplate_hours=observed_over_limit,
