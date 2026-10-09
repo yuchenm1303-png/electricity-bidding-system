@@ -341,3 +341,18 @@ html:has(.pb-landing) { scroll-behavior: smooth; }
   .pb-landing *, .pb-landing *::before, .pb-landing *::after { scroll-behavior: auto !important; animation: none !important; transition-duration: .01ms !important; }
   .pb-reveal { opacity: 1 !important; transform: none !important; }
 }
+
+/* Account entry points deliberately remain visible before auth activation. */
+.pb-header-auth-link,.pb-header-auth-register{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;font-size:12px;font-weight:680;color:#465277;text-decoration:none;transition:color .2s,background .2s}
+.pb-header-auth-link:hover{color:#6579e9}
+.pb-header-auth-register{border:1px solid rgba(110,129,186,.36);border-radius:8px;padding:10px 14px}
+.pb-header-auth-register:hover{border-color:#6478ec;background:rgba(99,114,217,.08)}
+.pb-header-links .pb-mobile-auth-entry,.pb-mobile-auth-quick{display:none}
+@media(max-width:1080px){
+  .pb-header-auth-link,.pb-header-auth-register{display:none}
+  .pb-header-links .pb-mobile-auth-entry{display:flex;align-items:center;justify-content:space-between}
+}
+@media(max-width:600px){
+  .pb-mobile-auth-quick{display:inline-flex;margin-left:auto;color:#6578e5;text-decoration:none;font-size:13px;font-weight:760}
+  .pb-header-actions{display:none}
+}

@@ -167,3 +167,10 @@
     background: radial-gradient(ellipse at 50% 62%,#202f50 0%,#10192d 53%,#0c1222 100%);
   }
 }
+
+:root[data-theme="dark"] .pb-header-auth-link{color:#d2daf3}
+:root[data-theme="dark"] .pb-header-auth-link:hover{color:#a5b5ff}
+:root[data-theme="dark"] .pb-header-auth-register{color:#dce5ff;border-color:#4b5c87;background:rgba(92,110,168,.12)}
+:root[data-theme="dark"] .pb-header-auth-register:hover{background:#31416b;border-color:#8495ff}
+:root[data-theme="dark"] .pb-mobile-auth-quick{color:#b6c4ff}
+:root[data-theme="dark"] .pb-header-links .pb-mobile-auth-entry{color:#c2cff2}

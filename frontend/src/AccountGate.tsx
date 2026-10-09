@@ -70,6 +70,7 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
   const [error, setError] = useState("");
   const [capsLock, setCapsLock] = useState(false);
   const isRegister = view === "register";
+  const authAvailable = config.enabled && (!isRegister || config.registration_open);
   const switchView = (next: AuthView) => {
     setView(next);
     window.history.replaceState(null, "", base + (next === "register" ? "register" : "login"));
@@ -80,6 +81,10 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busy) return;
+    if (!authAvailable) {
+      setError(config.enabled ? "注册暂未开放，请联系管理员。" : "账号系统尚未启用，暂时无法注册或登录。");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -133,10 +138,17 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
             <span className="pb-identity-kicker">YOUR WORKSPACE</span>
             <h2>{isRegister ? "创建 PowerBid 账号" : "欢迎回来"}</h2>
             <p className="pb-identity-lead">{isRegister ? "只需简单几步，即可开始你的策略研究。" : "登录，继续你的电力市场探索。"}</p>
-            {config.registration_open &&
-              <div className="pb-identity-tabs" role="group" aria-label="登录或注册">
+            <div className="pb-identity-tabs" role="group" aria-label="登录或注册">
                 <button type="button" className={!isRegister ? "selected" : ""} aria-pressed={!isRegister} onClick={()=>switchView("login")}>登录账号</button>
                 <button type="button" className={isRegister ? "selected" : ""} aria-pressed={isRegister} onClick={()=>switchView("register")}>创建账号</button>
+              </div>
+            {!config.enabled &&
+              <div className="pb-identity-unavailable" role="status">
+                <ShieldCheck size={17}/> 账号系统正在配置中。你可以预览登录和注册页面，暂时还不能提交账号信息。
+              </div>}
+            {config.enabled && !config.registration_open && isRegister &&
+              <div className="pb-identity-unavailable" role="status">
+                <ShieldCheck size={17}/> 注册暂未开放。如需账号，请联系管理员。
               </div>}
             <form className="pb-identity-form" onSubmit={submit}>
               <div className="pb-identity-field">
@@ -170,17 +182,17 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
                 {isRegister&&<span className="pb-identity-field-note">为保护账号，请设置不少于 12 位的密码。</span>}
               </div>
               {error&&<div className="pb-identity-error" role="alert"><Shield size={16}/>{error}</div>}
-              <button className="pb-identity-primary" type="submit" disabled={busy}>
-                <span>{busy?"正在验证…":isRegister?"创建账号":"进入工作台"}</span>
+              <button className="pb-identity-primary" type="submit" disabled={busy || !authAvailable}>
+                <span>{!authAvailable?"暂未开放":busy?"正在验证…":isRegister?"创建账号":"进入工作台"}</span>
                 {busy?<span className="pb-identity-spinner"/>:<ArrowRight size={18}/>}
               </button>
             </form>
             <div className="pb-identity-card-bottom">
-              {config.registration_open ?
-                <span>{isRegister?"已经有账号了？":"第一次使用 PowerBid？"}
-                  <button type="button" onClick={()=>switchView(isRegister?"login":"register")}>{isRegister?"立即登录":"创建新账号"}<ChevronRight size={13}/></button>
-                </span>:
-                <span><ShieldCheck size={15}/> 当前为邀请使用阶段，请联系管理员开通账号。</span>}
+              {!config.enabled
+                ? <a className="pb-identity-demo-link" href={base+"app"}>先进入演示工作台 <ArrowUpRight size={15}/></a>
+                : <span>{isRegister?"已有账号？":config.registration_open?"还没有账号？":"当前仅支持已开通的账号登录。"}
+                    <button type="button" onClick={()=>switchView(isRegister?"login":"register")}>{isRegister?"返回登录":"查看注册"}<ChevronRight size={13}/></button>
+                  </span>}
             </div>
           </div>
         </div>
@@ -355,7 +367,8 @@ export default function AccountGate() {
   };
   if (loading) return <div className="pb-identity-loading"><Fingerprint size={36}/><span>正在验证账号状态</span><span className="pb-identity-spinner"/></div>;
   if (!config) return <div className="pb-identity-loading"><Shield size={33}/><span>{error||"账号服务暂时不可用"}</span><button type="button" onClick={()=>window.location.reload()}>重新连接 <ArrowRight size={15}/></button></div>;
-  if (config.enabled && !user) return <AuthScene config={config} onReady={setUser}/>;
+  const authPath = window.location.pathname.endsWith("/login") || window.location.pathname.endsWith("/register");
+  if (!user && (config.enabled || authPath)) return <AuthScene config={config} onReady={setUser}/>;
   return <>
     <Workspace account={user} onLogout={config.enabled?logout:undefined}
       onOpenProfile={user?()=>setProfileOpen(true):undefined}
