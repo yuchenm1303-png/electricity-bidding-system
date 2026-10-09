@@ -144,7 +144,7 @@ def test_cli_json_output_and_missing_technical_gate():
         "--target-unit", "G1",
     ]
     absent = subprocess.run(
-        args + ["--inspect"], capture_output=True,
+        args + ["--inspect", "--technical-source", "synthetic"], capture_output=True,
         text=True, timeout=30, check=False,
     )
     assert absent.returncode == 2
