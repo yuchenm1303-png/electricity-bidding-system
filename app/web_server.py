@@ -154,6 +154,8 @@ def optimize(payload: OptimizationInput) -> dict[str, object]:
 _CURSOR_ASSETS = {
     "listing-studio-download-cursor-v2.js": "text/javascript",
     "listing-studio-cursor-reference-v1.css": "text/css",
+    "listing-anime-3.2.1.min.js": "text/javascript",
+    "listing-anime-3.2.1-license.md": "text/markdown",
 }
 
 
@@ -178,6 +180,16 @@ def listing_cursor_script() -> FileResponse:
 @app.get("/listing-studio-cursor-reference-v1.css", include_in_schema=False)
 def listing_cursor_css() -> FileResponse:
     return _cursor_asset("listing-studio-cursor-reference-v1.css")
+
+
+@app.get("/listing-anime-3.2.1.min.js", include_in_schema=False)
+def listing_anime_script() -> FileResponse:
+    return _cursor_asset("listing-anime-3.2.1.min.js")
+
+
+@app.get("/listing-anime-3.2.1-license.md", include_in_schema=False)
+def listing_anime_license() -> FileResponse:
+    return _cursor_asset("listing-anime-3.2.1-license.md")
 
 
 @app.get("/")
