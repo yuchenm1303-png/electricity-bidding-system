@@ -9,9 +9,9 @@ from datetime import date
 from statistics import mean
 from typing import Any
 
+from powerbid.pmss_bid_rule_safety import validate_new_curve
 from powerbid.pmss_diagnostics import series24
 from powerbid.pmss_integration import BidSegment, PMSSSnapshot
-from powerbid.pmss_bid_rule_safety import validate_new_curve
 from powerbid.pmss_strategy import evaluate_curve
 
 
@@ -37,13 +37,16 @@ def review_manual_result(
         raise ValueError("Invalid study case date") from exc
     if uploaded_date != case_date:
         raise ValueError("Different study and observed result dates")
-    if results.get("marketTypeAtom") != "DA" or type(results.get("periodNum")) is not int or results["periodNum"] != 24:
+    if (results.get("marketTypeAtom") != "DA"
+            or type(results.get("periodNum")) is not int
+            or results["periodNum"] != 24):
         raise ValueError("Expected a 24-hour DA result")
     if original_results is not None and results == original_results:
         raise ValueError("Result file repeats the original historical baseline")
     validate_new_curve(snapshot, target_unit_id, recommended_segments)
     units = results.get("unitResults")
-    if not isinstance(units, list) or not 1 <= len(units) <= 30 or any(not isinstance(x, dict) for x in units):
+    if (not isinstance(units, list) or not 1 <= len(units) <= 30
+            or any(not isinstance(x, dict) for x in units)):
         raise ValueError("Invalid unit-result list")
     ids = [str(x.get("unit_id", x.get("elementId", ""))) for x in units]
     if len(set(ids)) != len(ids) or set(ids) - set(snapshot.bids) or ids.count(target_unit_id) != 1:
@@ -55,11 +58,14 @@ def review_manual_result(
     capacity = snapshot.unit(target_unit_id).capacity_mw
     if any(x is None or x < 0 or x > capacity + 1e-5 for x in accepted):
         raise ValueError("24 complete in-range observed MW values required")
-    prices = series24(unit, "clearing_prices", "price") if ("clearing_prices" in unit or "price" in unit) else (None,) * 24
+    prices = (series24(unit, "clearing_prices", "price")
+              if ("clearing_prices" in unit or "price" in unit) else (None,) * 24)
     incomes = series24(unit, "income") if "income" in unit else (None,) * 24
     predicted = evaluate_curve(snapshot, target_unit_id, recommended_segments)
     rows = []
-    for period, (actual, simulated, price, income) in enumerate(zip(accepted, predicted.hours, prices, incomes, strict=True), 1):
+    for period, (actual, simulated, price, income) in enumerate(
+        zip(accepted, predicted.hours, prices, incomes, strict=True), 1
+    ):
         if simulated.period != period:
             raise ValueError("Local hours must be 1..24")
         rows.append({
@@ -73,7 +79,10 @@ def review_manual_result(
         "periods": 24, "shared_curve_24h": True,
         "observed_accepted_mwh": observed_mwh,
         "local_surrogate_accepted_mwh": predicted.total_accepted_mwh,
-        "hourly_dispatch_mae_mw": mean(abs(x["observed_accepted_mw"]-x["local_surrogate_accepted_mw"]) for x in rows),
+        "hourly_dispatch_mae_mw": mean(
+            abs(x["observed_accepted_mw"] - x["local_surrogate_accepted_mw"])
+            for x in rows
+        ),
         "reported_income_sum": sum(incomes) if all(x is not None for x in incomes) else None,
         "income_coverage": sum(x is not None for x in incomes),
         "price_coverage": sum(x is not None for x in prices),
