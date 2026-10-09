@@ -173,12 +173,12 @@ def _config(tmp_path, *, cookie_mode=0o600):
 
 def test_doctor_missing_configuration_returns_safe_json_not_network():
     status, report = doctor.check_session(
-        "selected", case_date="2025-09-01", environ={},
+        "SECRET_PROJECT_123", case_date="2025-09-01", environ={},
     )
     assert status == 2
     assert report["state"] == "NOT_CONFIGURED"
     assert report["no_pmss_bid_write"]
-    assert "selected" not in json.dumps(report)
+    assert "SECRET_PROJECT_123" not in json.dumps(report)
 
 
 @pytest.mark.parametrize("bad_configuration", [
