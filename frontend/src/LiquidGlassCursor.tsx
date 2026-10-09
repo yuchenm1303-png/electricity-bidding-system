@@ -11,29 +11,68 @@ const RELEASE_DISTANCE = 17;
 const SNAP_PADDING = 10;
 const FREE_ROI_PADDING = 64;
 const ROI_DEADZONE = 35;
-// Product-only selector mapping. All optical, ROI and spring logic below is Loom's original.
+// PowerBid-only magnetic mapping: keep Loom Shader / refraction / spring physics.
+const BRAND_TARGET_SELECTOR = ".brand-mark-smirel, .brand-name strong, .brand-name small";
 const SNAP_SELECTOR = [
-  ".brand", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
-  ".primary-button:not(:disabled)", ".outline-button:not(:disabled)",
-  ".secondary-button:not(:disabled)", ".subtle-button:not(:disabled)",
-  ".ghost-cta:not(:disabled)", ".guide-action:not(:disabled)",
-  ".ta-report-link:not(:disabled)", ".pmss-import-button:not(:disabled)",
-  ".pmss-run-button:not(:disabled)", ".pmss-review-export:not(:disabled)",
-  ".pmss-hour-buttons button:not(:disabled)",
-  ".pmss-hour-track button:not(:disabled)",
-  ".pmss-review-tabs button:not(:disabled)",
-  ".mode-switch button:not(:disabled)", ".target-radio:not(:disabled)",
+  BRAND_TARGET_SELECTOR,
+  ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
+  ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
+  ".app a[href]",
+  ".ta-global-search", ".table-search",
+  ".ta-stat-icon", ".ta-stat-bottom strong", ".ta-stat-badge",
+  ".ta-gauge-reading strong", ".ta-card-icon", ".ta-card-tag",
+  ".ta-report-complete strong", ".ta-chart-card .ta-card-title h3",
+  ".ta-bars .recharts-bar-rectangle", ".ta-capacity-footer strong",
+  ".recommendation-price > span", ".recommendation-facts strong",
+  ".result-metric strong", ".result-metric-top span", ".chart-tag",
+  ".pmss-metric strong", ".pmss-state-label", ".pmss-unit-avatar",
+  ".pmss-hour-facts strong", ".pmss-review-facts strong",
+  ".pmss-unit-identity strong", ".pmss-review-slider-title span",
+  ".pmss-table tbody .pmss-unit-identity",
+  ".recharts-legend-item", ".recharts-active-dot",
+  ".table-foot-note", ".unit-symbol",
   "[data-liquid-snap='true']",
 ].join(",");
 
+// Move only interactive targets and a few small anchors: not cards, chart
+// bars, axes, inputs or tooltips (translating those breaks visual alignment).
 const MAGNETIC_SELECTOR = [
-  ".brand", ".primary-button:not(:disabled)",
-  ".secondary-button:not(:disabled)", ".outline-button:not(:disabled)",
-  ".ghost-cta:not(:disabled)", ".guide-action:not(:disabled)",
-  ".ta-report-link:not(:disabled)", ".pmss-import-button:not(:disabled)",
-  ".pmss-run-button:not(:disabled)", ".pmss-review-export:not(:disabled)",
+  ".brand-mark-smirel", ".brand-name", ".sidebar-collapse", ".nav-entry",
+  ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
+  ".app a[href]", ".ta-stat-icon", ".ta-card-icon",
+  ".pmss-unit-avatar", ".unit-symbol",
   "[data-magnetic-hover='true']",
 ].join(",");
+
+const BRAND_LENS_MAX_WIDTH = 132;
+const BRAND_LENS_MAX_HEIGHT = 52;
+const GENERAL_LENS_MAX_WIDTH = 208;
+const GENERAL_LENS_MAX_HEIGHT = 82;
+const MIN_LENS_WIDTH = 44;
+const MIN_LENS_HEIGHT = 36;
+
+function isBrandSurface(element: HTMLElement) {
+  return element.matches(BRAND_TARGET_SELECTOR);
+}
+
+function getLensBounds(element: HTMLElement, pointerX: number, pointerY: number) {
+  const rect = element.getBoundingClientRect();
+  const brand = isBrandSurface(element);
+  const padding = brand ? 5 : SNAP_PADDING;
+  const maxWidth = brand ? BRAND_LENS_MAX_WIDTH : GENERAL_LENS_MAX_WIDTH;
+  const maxHeight = brand ? BRAND_LENS_MAX_HEIGHT : GENERAL_LENS_MAX_HEIGHT;
+  const width = Math.min(Math.max(MIN_LENS_WIDTH, window.innerWidth - 20), Math.max(MIN_LENS_WIDTH, Math.min(rect.width + 2 * padding, maxWidth)));
+  const height = Math.min(Math.max(MIN_LENS_HEIGHT, window.innerHeight - 20), Math.max(MIN_LENS_HEIGHT, Math.min(rect.height + 2 * padding, maxHeight)));
+  // Large interactive surfaces get a local lens near the cursor, not an
+  // oversized lens anchored to the center of an entire card or long button.
+  const centerX = rect.width > width + 24
+    ? Math.max(rect.left + width / 2, Math.min(rect.right - width / 2, pointerX))
+    : rect.left + rect.width / 2;
+  const centerY = rect.height > height + 24
+    ? Math.max(rect.top + height / 2, Math.min(rect.bottom - height / 2, pointerY))
+    : rect.top + rect.height / 2;
+  return { width, height, centerX, centerY };
+}
 
 type SpringValue = { value: number; velocity: number; target: number };
 
