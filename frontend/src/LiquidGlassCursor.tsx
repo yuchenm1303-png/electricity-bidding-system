@@ -753,17 +753,18 @@ export function LiquidGlassCursor() {
         if (!state || !element.isConnected) continue;
 
         const rect = element.getBoundingClientRect();
+        // Pointer hit testing uses the actual, transformed visual bounds.
+        // The untransformed center is retained below only to calculate a
+        // stable magnetic spring target (avoids translation feedback).
         const baseLeft = rect.left - state.appliedX;
         const baseTop = rect.top - state.appliedY;
-        const baseRight = baseLeft + rect.width;
-        const baseBottom = baseTop + rect.height;
         const hoverArea = element.matches(".nav-entry") ? 9 : 11;
         const inside =
           pointerInside &&
-          pointerX >= baseLeft - hoverArea &&
-          pointerX <= baseRight + hoverArea &&
-          pointerY >= baseTop - hoverArea &&
-          pointerY <= baseBottom + hoverArea;
+          pointerX >= rect.left - hoverArea &&
+          pointerX <= rect.right + hoverArea &&
+          pointerY >= rect.top - hoverArea &&
+          pointerY <= rect.bottom + hoverArea;
 
         if (inside) {
           const centerX = baseLeft + rect.width / 2;
@@ -922,17 +923,19 @@ export function LiquidGlassCursor() {
       const maxTop = Math.max(0, window.innerHeight - roiHeight);
 
       if (target) {
-        const state = magneticStates.get(target);
-        // Lock near the non-magnetic position but RECENTER after scrolling,
-        // layout shifts or moving along a long button. A permanent ROI lock
-        // used to sample pixels from the wrong part of the interface.
+        // Geometry, hit testing and the DOM raster use viewport coordinates.
+        // getLensBounds already includes CSS translate via getBoundingClientRect;
+        // subtracting magnetic appliedX/Y again shifted the ROI away from the
+        // actual button while the lens kept drawing in its visual position.
         const bounds = getLensBounds(target, pointerX, pointerY);
-        const baseCenterX = bounds.centerX - (state?.appliedX ?? 0);
-        const baseCenterY = bounds.centerY - (state?.appliedY ?? 0);
-        const nextLeft = Math.round(Math.max(0, Math.min(maxLeft, baseCenterX - roiWidth / 2)));
-        const nextTop = Math.round(Math.max(0, Math.min(maxTop, baseCenterY - roiHeight / 2)));
+        const nextLeft = Math.round(Math.max(0, Math.min(maxLeft, bounds.centerX - roiWidth / 2)));
+        const nextTop = Math.round(Math.max(0, Math.min(maxTop, bounds.centerY - roiHeight / 2)));
+        // Small hysteresis absorbs half-pixel CSS translation rounding, but
+        // never permits an old 28px offset between capture and visible lens.
+        const recenterThreshold = 2;
         if (roiLockedTarget !== target || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop) ||
-            Math.abs(nextLeft - roiLeft) > 28 || Math.abs(nextTop - roiTop) > 28) {
+            Math.abs(nextLeft - roiLeft) > recenterThreshold ||
+            Math.abs(nextTop - roiTop) > recenterThreshold) {
           roiLeft = nextLeft;
           roiTop = nextTop;
           roiLockedTarget = target;
