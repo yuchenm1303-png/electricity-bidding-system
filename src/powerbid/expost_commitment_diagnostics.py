@@ -210,7 +210,7 @@ def replay_zero_output_restriction(
             ]
             price_error = [
                 abs(dispatch.nodal_prices[bus] - observed[hour_idx])
-                for bus, observed in prices.items() if observed[t] is not None
+                for bus, observed in prices.items() if observed[hour_idx] is not None
             ]
             return unit_error, line_error, price_error
 
