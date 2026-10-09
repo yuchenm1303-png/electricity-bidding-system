@@ -152,7 +152,7 @@ def anonymized_error_profile(
         "exPostCommonShiftIsNotProspectivePriceCorrection": True,
         "jointUnitCommitmentVerified": False,
         "warning": (
-            "Hourly errors and anonymized cohort maxima from local DC 
+            "Hourly errors and anonymized cohort maxima from local DC "
             "replay of original PMSS historical bids. No real PMSS re-clearing "
             "or candidate-bid profit assessment. A small error under an "
             "illustrative research threshold is not permission to trade. "
