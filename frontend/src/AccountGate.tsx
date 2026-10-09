@@ -23,6 +23,7 @@ export type AccountUser = {
 type AuthConfig = {
   enabled: boolean;
   registration_open: boolean;
+  email_verification_enabled?: boolean;
   turnstile_site_key?: string;
   social?: { google: boolean; github: boolean };
 };
@@ -72,6 +73,10 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
   const [view, setView] = useState<AuthView>(() => window.location.pathname.endsWith("/register") ? "register" : "login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
+  const [codeCooldown, setCodeCooldown] = useState(0);
+  const [codeNotice, setCodeNotice] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -79,6 +84,34 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
   const [capsLock, setCapsLock] = useState(false);
   const [captcha, setCaptcha] = useState("");
   const [resetCaptcha, setResetCaptcha] = useState(0);
+  useEffect(() => {
+    if (codeCooldown <= 0) return;
+    const timer = window.setTimeout(() => setCodeCooldown(value => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [codeCooldown]);
+  const sendEmailCode = async () => {
+    if (sendingCode || codeCooldown || !email.trim()) return;
+    if (config.turnstile_site_key && !captcha) {
+      setError("请先完成人机验证，然后获取邮箱验证码。");
+      return;
+    }
+    setSendingCode(true);
+    setError("");
+    setCodeNotice("");
+    try {
+      const result = await request<{ message: string }>("email/send-code", "POST", {
+        email: email.trim(), turnstile_token: captcha || undefined,
+      });
+      setCodeNotice(result.message + "，10 分钟内有效。");
+      setCodeCooldown(60);
+      setCaptcha("");
+      setResetCaptcha(value => value + 1);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "验证码发送失败，请稍后重试");
+    } finally {
+      setSendingCode(false);
+    }
+  };
   const oauthError = new URLSearchParams(window.location.search).get("auth_error");
   const oauthMessage = oauthError === "existing_email"
     ? "这个邮箱已有 PowerBid 账号。为保护账号安全，请先使用原来的登录方式，暂不自动合并账号。"
@@ -88,6 +121,8 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
   const authAvailable = config.enabled && (!isRegister || config.registration_open);
   const switchView = (next: AuthView) => {
     setView(next);
+    setEmailCode("");
+    setCodeNotice("");
     setCaptcha("");
     setResetCaptcha(v => v + 1);
     window.history.replaceState(null, "", base + (next === "register" ? "register" : "login"));
@@ -110,7 +145,9 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
     setError("");
     try {
       const body = isRegister ?
-        { username: username.trim(), email: email.trim(), password, turnstile_token: captcha || undefined } :
+        { username: username.trim(), email: email.trim(), password,
+          email_code: config.email_verification_enabled ? emailCode : undefined,
+          turnstile_token: captcha || undefined } :
         { username: username.trim(), password, turnstile_token: captcha || undefined };
       const user = await request<AccountUser>(isRegister ? "register" : "login", "POST", body);
       setPassword("");
@@ -191,8 +228,26 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
                 <div className="pb-identity-input-wrap">
                   <Mail size={17}/>
                   <input id="auth-email" type="email" autoComplete="email" required placeholder="name@example.com"
-                    value={email} onChange={e=>setEmail(e.target.value)}/>
+                    value={email} onChange={e=>{setEmail(e.target.value);setEmailCode("");setCodeNotice("");}}/>
                 </div>
+              </div>}
+              {isRegister && config.email_verification_enabled && <div className="pb-identity-field">
+                <label htmlFor="auth-email-code">邮箱验证码</label>
+                <div className="pb-email-code-row">
+                  <div className="pb-identity-input-wrap">
+                    <Mail size={17}/>
+                    <input id="auth-email-code" type="text" inputMode="numeric" pattern="[0-9]{6}"
+                      autoComplete="one-time-code" required maxLength={6} placeholder="六位数字验证码"
+                      value={emailCode} onChange={e=>setEmailCode(e.target.value.replace(/\D/g,"").slice(0,6))}/>
+                  </div>
+                  <button type="button" className="pb-email-send" disabled={
+                    sendingCode || codeCooldown > 0 || !email.includes("@") || !authAvailable
+                  } onClick={()=>void sendEmailCode()}>
+                    {sendingCode ? "发送中…" : codeCooldown > 0 ? `${codeCooldown}s 后重发` : "发送验证码"}
+                  </button>
+                </div>
+                {codeNotice && <span className="pb-email-code-status" role="status">{codeNotice}</span>}
+                <span className="pb-identity-field-note">验证码有效期为 10 分钟，请检查垃圾邮件文件夹。</span>
               </div>}
               <div className="pb-identity-field">
                 <label htmlFor="auth-password">密码</label>
