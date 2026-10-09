@@ -3,8 +3,8 @@ import { Activity, ArrowRight, Database, Download, FileJson2, ShieldCheck, Uploa
 import {
   CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { evaluatePMSSNetwork, inspectPMSS, optimizePMSS } from "./api";
-import { numeric, type PMSSInspection, type PMSSNetworkComparison, type PMSSOptimization } from "./types";
+import { evaluatePMSSNetwork, inspectPMSS, optimizePMSS, rankPMSSNetwork } from "./api";
+import { numeric, type PMSSInspection, type PMSSNetworkComparison, type PMSSNetworkRank, type PMSSOptimization } from "./types";
 import "./pmss-studio.css";
 import { MarketExplorer, OptimizationHourReview } from "./PMSSInsights";
 
@@ -38,6 +38,25 @@ function saveReview(result: PMSSOptimization) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 }
 
+function saveTechnicalTemplate(inspection: PMSSInspection) {
+  // Deliberately leave every unknown physical parameter null.
+  // The offline joint MILP refuses these placeholders until independently supplied.
+  const data = Object.fromEntries(inspection.units.map(unit => [
+    unit.unit_id,
+    Object.fromEntries(inspection.joint_required_technical_fields.map(field => [
+      field, field === "unit_id" ? unit.unit_id : null,
+    ])),
+  ]));
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(data, null, 2)], {type:"application/json"})
+  );
+  const link = window.document.createElement("a");
+  link.href = url;
+  link.download = "powerbid_24h_unit_technical_BLANK_TEMPLATE.json";
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function PMSSWorkspace() {
   const picker = useRef<HTMLInputElement | null>(null);
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null);
@@ -45,6 +64,9 @@ export function PMSSWorkspace() {
   const [analysis, setAnalysis] = useState<PMSSOptimization | null>(null);
   const [networkResult, setNetworkResult] = useState<PMSSNetworkComparison | null>(null);
   const [networkBusy, setNetworkBusy] = useState(false);
+  const [rankBusy, setRankBusy] = useState(false);
+  const [rankResult, setRankResult] = useState<PMSSNetworkRank | null>(null);
+  const [riskAversion, setRiskAversion] = useState(0.5);
   const [target, setTarget] = useState("");
   const [minimum, setMinimum] = useState(0);
   const [maximum, setMaximum] = useState(1000);
@@ -56,9 +78,9 @@ export function PMSSWorkspace() {
   const [error, setError] = useState("");
 
   const importFile = async (file: File) => {
-    if (busy || networkBusy) return;
+    if (busy || networkBusy || rankBusy) return;
     setInspection(null); setSnapshot(null); setAnalysis(null);
-    setNetworkResult(null); setFileName(""); setError("");
+    setNetworkResult(null); setRankResult(null); setFileName(""); setError("");
     if (file.size > 700_000) {
       setError("文件超过 700 KB，使用只读导出器生成的精简脱敏 JSON。");
       return;
@@ -144,6 +166,21 @@ export function PMSSWorkspace() {
     }
   };
 
+  const runRank = async () => {
+    if (!snapshot || !target || !inspection?.dc_grid_available ||
+        busy || networkBusy || rankBusy) return;
+    setRankBusy(true);
+    setRankResult(null);
+    setError("");
+    try {
+      setRankResult(await rankPMSSNetwork(snapshot, target, riskAversion, 0.05));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "网络优先策略排序失败");
+    } finally {
+      setRankBusy(false);
+    }
+  };
+
   const network = inspection?.network;
   const series = network?.hourly.map(item => ({
     period: item.hour, spread: item.lmp_spread,
@@ -221,7 +258,161 @@ export function PMSSWorkspace() {
           历史最高申报价为 {numeric(inspection.historical_bid_rule_audit.largest_original_price, 2)}。
           不能仅凭当前规则断定历史提交违规，也不能用历史报价为新报价越界提供依据。
         </div>}
+      <div className="pmss-panel">
+        <div className="pmss-panel-head">
+          <div>
+            <small>05 / INTEGRATED 24H MODEL</small>
+            <h3>24小时联合机组约束 · 数据准入</h3>
+            <p>联合 DC 网络 + 机组启停 + 爬坡 + 最短开停机已有独立 MILP 研究引擎；
+              没有逐机组可靠参数时，不允许用猜测值计算。</p>
+          </div>
+          <span className="pmss-state-label">真实参数未齐全</span>
+        </div>
+        <div className="pmss-summary">
+          <Metric label="需要独立运行参数的机组"
+            value={inspection.joint_readiness.total_units + " 台"}
+            detail="必须与 PMSS 机组 ID 完全一致"/>
+          <Metric label="已完整提供的机组"
+            value={inspection.joint_readiness.supplied_units + " 台"}
+            detail="当前快照不包含联合模型技术参数"/>
+          <Metric label="实际联合 MILP 准入"
+            value={inspection.joint_readiness.ready ? "可试算" : "已阻止"}
+            detail="禁止推断爬坡、启停与初始状态"/>
+        </div>
+        {inspection.technical_evidence && <>
+          <div className="pmss-result-toolbar">
+            <h4>老师平台原始机组字段 · 取值证据</h4>
+            <span className="pmss-state-label">含义及单位待核验</span>
+          </div>
+          <p className="pmss-footnote">
+            当前导入的脱敏快照声明：{inspection.technical_evidence.unit_count}台机组
+            与原始机组表逐ID匹配，容量字段一致
+            {inspection.technical_evidence.capacity_match_count}台；
+            以下只是原始字段统计，不证明其单位、课程规则或物理约束含义。
+            不会自动用于联合 MILP。
+          </p>
+          <div className="pmss-table-scroll"><table className="pmss-table">
+            <thead><tr><th>原始字段</th><th>覆盖机组</th><th>零值</th>
+              <th>取值区间</th><th>待核验含义</th></tr></thead>
+            <tbody>{Object.entries(inspection.technical_evidence.observed_fields).map(
+              ([field, stat]) => <tr key={field}>
+                <td>{field}</td><td>{stat.present}/{inspection.technical_evidence!.unit_count}</td>
+                <td>{stat.zero}</td>
+                <td>{stat.min === null ? "无数据" :
+                  numeric(stat.min,2) + " ～ " + numeric(stat.max ?? stat.min,2)}</td>
+                <td>{stat.meaning}</td>
+              </tr>,
+            )}</tbody>
+          </table></div>
+          <p className="pmss-footnote">
+            注意：10台机组若均出现相同20的爬坡相关字段或0的开停机字段，
+            也不能直接把它们解释成 MW/h、0小时或零启停成本。
+            参数来源由上传文件声明，公开网页不具备独立核真能力。
+          </p>
+        </>}
+        {!inspection.technical_evidence && <p className="pmss-footnote">
+          这份快照尚未加入原始机组技术字段的脱敏取值证据。
+          可在可信服务器用带 --include-technical-evidence 的网架合并脚本重新导出；
+          真实联合求解仍保持锁定。
+        </p>}
+        <div className="pmss-toolbar">
+          <p>可生成无默认值的参数模板，再使用课程或可信来源逐台补齐。
+            在完成之前，继续使用上方独立 DC 网络报价研究，不冒充联合优化。</p>
+          <button className="pmss-run-button" type="button"
+            onClick={() => saveTechnicalTemplate(inspection)}>
+            <Download size={16}/> 下载空白参数模板
+          </button>
+        </div>
+        <p className="pmss-footnote">
+          模板内尚未知晓的字段统一为 null，**不是默认值**；
+          需要补齐全部机组初始开停机状态、出力、持续时间、爬坡、启停成本和最短开停机时间。
+          目前联合策略研究仅通过合成教学数据测试；真实 PMSS 机组参数尚未验证。
+          在受控本地环境中可使用 scripts/study_pmss_joint.py 离线检查及求解，
+          不会自动向老师平台提交。
+        </p>
+      </div>
       <MarketExplorer inspection={inspection}/>
+      <div className="pmss-panel">
+        <div className="pmss-panel-head">
+          <div>
+            <small>04 / NETWORK-FIRST BID RESEARCH</small>
+            <h3>网络优先 · 五段报价风险排序</h3>
+            <p>在真实线路限额和节点负荷约束下，比较多个符合当前价格规则的候选方案。
+              每个方案均重新求解24小时 DC 网络；三种竞争者报价情景只是敏感性测试。</p>
+          </div>
+          <span className="pmss-state-label">离线策略研究</span>
+        </div>
+        <div className="pmss-toolbar">
+          <label className="pmss-rank-control">
+            风险厌恶程度
+            <select value={riskAversion}
+              onChange={e => {setRiskAversion(Number(e.target.value));setRankResult(null);}}>
+              <option value={0}>0 · 关注平均模拟利润</option>
+              <option value={0.5}>0.5 · 平衡收益与下行</option>
+              <option value={1}>1 · 关注下行情景</option>
+            </select>
+          </label>
+          <button className="pmss-run-button" type="button"
+            disabled={!inspection.dc_grid_available || busy || networkBusy || rankBusy || !target}
+            onClick={() => void runRank()}>
+            {rankBusy ? "正在复算多组网络方案..." : "运行网络优先策略排序"}
+            <ArrowRight size={16}/>
+          </button>
+        </div>
+        {!inspection.dc_grid_available && <p className="pmss-footnote">
+          请先导入由可信服务器核实线路电抗、热额定 MW、39节点负荷的 dcNetwork 快照。
+          没有真实拓扑时不会退化成单区域搜索后假称网络优化。
+        </p>}
+        {rankResult && <>
+          <p className="pmss-footnote">
+            证据状态：<strong>仅供研究，尚无独立留出日期的验证</strong>。
+            此处是最多四个合法候选的模型内排序，并非 PMSS 真实出清、
+            全局最优或可实际提交的报价。当前仅使用历史竞争报价，
+            对其进行 ±5% 的人为价格扰动。
+          </p>
+          {rankResult.historical_units_outside_current_rule > 0 &&
+            <div className="pmss-error" role="status">
+              这份历史快照有 {rankResult.historical_units_outside_current_rule} 台机组
+              的已保存报价超出当前价格规则，因此不能直接把历史原报价的模拟得分
+              与合法新候选的分数当作公平的改进证据。
+            </div>}
+          <div className="pmss-summary">
+            <Metric label="已评估的合法候选" value={String(rankResult.eligible_candidates.length)}
+              detail="原始历史报价不计作新候选"/>
+            <Metric label="最高风险加权模型得分" value={numeric(rankResult.best_candidate.score,2)}
+              detail="合成情景下的本地利润代理"/>
+            <Metric label="最优候选下行利润代理"
+              value={numeric(rankResult.best_candidate.downside_margin,2)}
+              detail="不是PMSS结算收入"/>
+          </div>
+          <div className="pmss-table-scroll"><table className="pmss-table">
+            <thead><tr><th>候选策略</th><th>风险加权得分</th><th>期望利润代理</th>
+              <th>下行利润代理</th><th>模拟中标电量</th></tr></thead>
+            <tbody>{rankResult.eligible_candidates.map(item =>
+              <tr key={item.name}>
+                <td>{item.name}</td>
+                <td>{numeric(item.score,2)}</td>
+                <td>{numeric(item.expected_margin,2)}</td>
+                <td>{numeric(item.downside_margin,2)}</td>
+                <td>{numeric(item.expected_accepted_mwh,2)} MWh</td>
+              </tr>)}</tbody>
+          </table></div>
+          <div className="pmss-result-toolbar"><h4>模型得分最高的合法五段曲线</h4>
+            <span className="pmss-state-label">不可直接提交</span></div>
+          <div className="pmss-table-scroll"><table className="pmss-table">
+            <thead><tr><th>段号</th><th>起始出力 MW</th><th>结束出力 MW</th><th>申报价格</th></tr></thead>
+            <tbody>{rankResult.best_candidate.price_blocks.map((block,index) =>
+              <tr key={index}><td>{index+1}</td><td>{numeric(block[0],2)}</td>
+                <td>{numeric(block[1],2)}</td><td>{numeric(block[2],2)}</td></tr>)}</tbody>
+          </table></div>
+          <p className="pmss-footnote">
+            尚未将机组启停、跨时段爬坡、网损和 PMSS 特殊结算价纳入上述排序；
+            目前已有独立联合24小时 MILP 研究模块，但不能假称本次排序已使用它。
+            不提供真实报价提交或直接导出 PMSS 保存报文。
+          </p>
+        </>}
+      </div>
+
       {network && <div className="pmss-panel">
         <div className="pmss-panel-head"><div><small>02 / OBSERVED NETWORK</small><h3>节点价格分化与历史线路影子价格</h3>
           <p>这里展示 PMSS 历史出清，不推断新报价对潮流和节点电价的影响。</p></div>

@@ -13,9 +13,17 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from powerbid.expost_commitment_diagnostics import (  # noqa: E402
+    replay_zero_output_restriction,
+)
 from powerbid.flow_error_attribution import (  # noqa: E402
     compare_dispatch_and_network_sources,
 )
+from powerbid.historical_ambiguity import audit_historical_optimal_ambiguity  # noqa: E402
+from powerbid.historical_price_hypotheses import (  # noqa: E402
+    audit_historical_price_caps,
+)
+from powerbid.historical_tiebreak_audit import audit_historical_tiebreaks  # noqa: E402
 from powerbid.historical_validation import (  # noqa: E402
     ValidationPolicy,
     judge_historical_model,
@@ -254,6 +262,198 @@ if not fixed_lines.empty:
         hide_index=True, use_container_width=True,
     )
 
+st.subheader("同成本多解诊断 · PMSS 历史中标能否构成本地最优解？")
+st.caption(
+    "采用同一天已提交的原始报价、固定网架和全部机组历史中标量。"
+    "每小时额外求解机组独立最优范围及整组中标量的网络可行性、"
+    "报价成本最优性；不预测新报价结果。"
+)
+with st.spinner("正在计算每小时同成本最优解空间（额外线性规划）"):
+    ambiguity = audit_historical_optimal_ambiguity(
+        raw_by_date[selected_day.case_date]
+    )
+    zero_stress = replay_zero_output_restriction(
+        raw_by_date[selected_day.case_date]
+    )
+z1, z2, z3 = st.columns(3)
+z1.metric(
+    "存在多组近似等成本最优解的小时",
+    f"{ambiguity.multiple_optima_hours}/{ambiguity.examined_hours}",
+)
+z2.metric(
+    "老师实际全机组组合在本地最优成本面的小时",
+    f"{ambiguity.observed_joint_model_optimal_hours}/"
+    f"{ambiguity.observed_complete_hours}",
+)
+z3.metric(
+    "各机组历史出力落在独立可行区间",
+    f"{ambiguity.observed_individual_in_range}/"
+    f"{ambiguity.observed_individual_evaluated}",
+)
+st.warning(
+    "即使全部小时落在同一优化成本面，也只能说明原始报价数据在我们"
+    "简化DC模型中存在一种等成本配置，不能证明两套市场出清规则相同，"
+    "更不能证明节点电价或新报价利润预测准确。"
+)
+st.dataframe(
+    pd.DataFrame([
+        {
+            "时段": hour.period,
+            "出清出力唯一": "是" if hour.model_unique_allocation else "否",
+            "最大单机组最优出力范围 MW": hour.max_individual_range_width_mw,
+            "该小时实测出力齐全": hour.observed_unit_mw_count
+            == ambiguity.distinct_units,
+            "整组历史出力满足DC网架": hour.observed_jointly_feasible,
+            "历史组合保持成本最优": hour.observed_on_model_optimal_face,
+            "历史组合申报成本差额": hour.observed_bid_cost_gap,
+        }
+        for hour in ambiguity.hours
+    ]),
+    hide_index=True, use_container_width=True,
+)
+st.subheader("零出力状态敏感性：仅用于历史归因")
+z4, z5, z6 = st.columns(3)
+z4.metric(
+    "历史零出力的机组×小时", str(zero_stress.observed_zero_unit_hours)
+)
+z5.metric(
+    "原模型仍给零出力机组发电次数",
+    str(zero_stress.baseline_positive_on_observed_zero_unit_hours),
+)
+z6.metric(
+    "事后零出力约束可求解的小时",
+    f"{zero_stress.paired_hours}/24",
+)
+st.caption(
+    "施加事后零出力约束可能触发LP求解器选择另一组等成本最优出力。"
+    "如果原始模型已经让这些机组发电量为零，改进并不能归因于机组启停规则。"
+)
+if zero_stress.paired_hours:
+    st.write(
+        "在相同可比小时中，机组中标 MAE："
+        f"原模型 {zero_stress.baseline_paired_dispatch_mae_mw:.3f} MW；"
+        f"事后约束 {zero_stress.masked_paired_dispatch_mae_mw:.3f} MW。"
+        "后者使用了事后真实信息，禁止作为未来预测性能对外展示。"
+    )
+
+st.subheader("历史节点价格上限假设 · 原模型对偶电价 vs 报告价格")
+st.caption(
+    "此检查仅对历史原始报价的本地DC模型输出节点价作事后假设变换。"
+    "不修改原始报价、实际电价、出清求解器或策略评分。"
+    "假设1000对应当前申报上限；1001只来自这个历史数据的异常表现，"
+    "不代表已证实PMSS存在1001的结算价格上限。"
+)
+with st.spinner("正在逐节点比较原始DC价格与两种假设上限"):
+    price_study = audit_historical_price_caps(
+        raw_by_date[selected_day.case_date],
+        hypothetical_ceilings=(1000.0, 1001.0),
+    )
+st.dataframe(
+    pd.DataFrame([
+        {
+            "对照方式": hypothesis.label,
+            "观测节点×小时": hypothesis.observed_points,
+            "节点价格MAE": hypothesis.mae,
+            "RMSE": hypothesis.rmse,
+            "完全匹配点数": hypothesis.matching_points,
+            "相对原模型改善点数": hypothesis.improved_points_vs_uncapped,
+            "相对原模型变差点数": hypothesis.worsened_points_vs_uncapped,
+        }
+        for hypothesis in price_study.hypotheses
+    ]),
+    hide_index=True, use_container_width=True,
+)
+st.dataframe(
+    pd.DataFrame([
+        {
+            "小时": hour.period,
+            "有效节点": hour.observed_points,
+            "未处理DC价格MAE": hour.raw_mae,
+            "未处理价格不吻合节点": hour.raw_mismatching_points,
+            "未处理DC最大节点电价": hour.raw_peak_price,
+            "PMSS历史最大节点电价": hour.observed_peak_price,
+            "假设1000上限后MAE": hour.capped_mae_by_hypothesis[0],
+            "假设1001上限后MAE": hour.capped_mae_by_hypothesis[1],
+        }
+        for hour in price_study.hours
+    ]),
+    hide_index=True, use_container_width=True,
+)
+if price_study.historically_exact_price_fit_for_any_hypothesis:
+    st.warning(
+        "至少一项输出变换完全拟合本日历史价格，但这仍是事后匹配！"
+        "尤其在目前只有单个真实日期、且老师的报价上限与结算规则"
+        "尚未独立核实的情况下，不允许自动套用到未来报价或收益计算。"
+    )
+st.info(
+    "历史保存的最大原报价 "
+    f"{price_study.maximum_price_in_saved_original_offers:g}；"
+    "当前快照申报价格上限 "
+    f"{price_study.price_ceiling_in_current_market_rule}。"
+    "历史保存价格超当前规则不意味着当时违规，"
+    "也不表示新报价可以突破当前申报上限。"
+)
+
+st.subheader("确定性并列最优分配 · 出清结果对机组排序是否敏感？")
+st.caption(
+    "以相同历史原始报价、相同DC网架与不变的最低报价成本为前提，"
+    "依次比较：原始申报文件顺序、规范化机组与报价段顺序、"
+    "机组ID正序优先和机组ID倒序优先。"
+    "历史中标量仅用于事后测评，绝不用于选择预测规则。"
+)
+with st.spinner("正在验证多组相同主目标成本下的确定性次级分配"):
+    tiebreak_study = audit_historical_tiebreaks(
+        raw_by_date[selected_day.case_date]
+    )
+st.dataframe(
+    pd.DataFrame([
+        {"同成本出力方案": "原始报价输入顺序的标准LP解",
+         "该日事后中标量MAE (MW)": tiebreak_study.source_order_baseline_mae_mw},
+        {"同成本出力方案": "规范化报价段顺序的标准LP解",
+         "该日事后中标量MAE (MW)": tiebreak_study.canonical_order_baseline_mae_mw},
+        {"同成本出力方案": "机组ID正序优先",
+         "该日事后中标量MAE (MW)": tiebreak_study.ascending_dispatch_mae_mw},
+        {"同成本出力方案": "机组ID倒序优先",
+         "该日事后中标量MAE (MW)": tiebreak_study.descending_dispatch_mae_mw},
+    ]),
+    hide_index=True, use_container_width=True,
+)
+tie_cols = st.columns(3)
+tie_cols[0].metric(
+    "不同顺序产生不同出力分配的小时",
+    f"{tiebreak_study.hours_with_different_deterministic_allocations}/24",
+)
+tie_cols[1].metric(
+    "最大全机组出力重新分配量",
+    f"{tiebreak_study.maximum_total_allocation_difference_mw:,.2f} MW",
+)
+tie_cols[2].metric(
+    "最大主目标申报成本偏差",
+    f"{tiebreak_study.maximum_primary_bid_cost_increase:,.6f}",
+)
+st.dataframe(
+    pd.DataFrame([
+        {
+            "小时": h.period,
+            "原始顺序 LP MAE(MW)": h.source_order_baseline_mae_mw,
+            "规范顺序 LP MAE(MW)": h.canonical_order_baseline_mae_mw,
+            "正序优先 MAE(MW)": h.ascending_mae_mw,
+            "倒序优先 MAE(MW)": h.descending_mae_mw,
+            "正序/倒序出力绝对位移(MW)": h.ascending_vs_descending_total_mw_shift,
+            "申报成本偏差": h.max_primary_cost_increase,
+        }
+        for h in tiebreak_study.hours
+    ]),
+    hide_index=True, use_container_width=True,
+)
+st.warning(
+    "这里的排序规则完全是PowerBid为测试设计的固定假设，"
+    "并未识别老师PMSS实际采用什么顺序。"
+    "即使有规则在单日历史MAE更小，也不表示新报价回测通过。"
+    "同时，无论如何更换原始LP最优出力，都不能直接把1001价格假设"
+    "当作真实结算规则写入利润模型。"
+)
+
 report = {
     "notice": (
         "Historical original PMSS bids vs offline DC baseline ONLY. "
@@ -263,6 +463,10 @@ report = {
     "verdict": asdict(verdict),
     "days": [asdict(day) for day in sorted(days, key=lambda item: item.case_date)],
     "selected_day_attribution": asdict(diagnostic.comparison),
+    "selected_day_optimal_face": asdict(ambiguity),
+    "selected_day_price_hypotheses": asdict(price_study),
+    "selected_day_deterministic_tiebreak": asdict(tiebreak_study),
+    "selected_day_expost_zero_sensitivity": asdict(zero_stress),
     "selected_day_fixed_dispatch_lines": [
         asdict(line) for line in diagnostic.observed_dispatch.per_line
     ],

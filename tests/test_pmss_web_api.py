@@ -284,3 +284,82 @@ def test_network_counterfactual_rejects_above_ceiling_without_modifying_history(
     assert reply.status_code == 422
     assert "market rule" in reply.text
     assert raw["unitBids"]["G30"]["datas"][0]["segmentDatas"][0]["price"] == 7000
+
+
+def test_network_first_rank_uses_legal_curves_and_three_synthetic_peer_scenarios():
+    pytest.importorskip("scipy")
+    case = _synthetic_network_case()
+    result = client.post("/api/pmss/network-rank", json={
+        "snapshot": case, "target_unit_id": "G30",
+        "risk_aversion": 0.6, "peer_price_deviation": 0.05,
+    })
+    assert result.status_code == 200, result.text
+    payload = result.json()
+    assert payload["confidence_status"] == "RESEARCH_ONLY_NOT_OUT_OF_SAMPLE_VALIDATED"
+    assert payload["validated_for_real_bidding"] is False
+    assert payload["safe_for_live_submission"] is False
+    assert payload["pmss_write_performed"] is False
+    assert payload["pmss_clearing_executed"] is False
+    assert len(payload["synthetic_scenarios"]) == 3
+    assert payload["baseline_rule_compatible"] is True
+    assert 1 <= len(payload["eligible_candidates"]) <= 4
+    best = payload["best_candidate"]
+    assert best["score"] == max(p["score"] for p in payload["eligible_candidates"])
+    assert len(best["price_blocks"]) == 5
+    assert all(0 <= p[2] <= 1000 for p in best["price_blocks"])
+
+
+def test_network_first_rank_never_recommends_historical_above_cap_bid():
+    pytest.importorskip("scipy")
+    case = _synthetic_network_case()
+    case["unitBids"]["G30"]["datas"][0]["segmentDatas"][0]["price"] = 7000
+    result = client.post("/api/pmss/network-rank", json={
+        "snapshot": case, "target_unit_id": "G30",
+    })
+    assert result.status_code == 200, result.text
+    payload = result.json()
+    assert payload["baseline_rule_compatible"] is False
+    assert payload["historical_units_outside_current_rule"] == 1
+    assert payload["modeled_better_than_baseline"] is None
+    assert all(0 <= p[2] <= 1000 for row in payload["eligible_candidates"]
+               for p in row["price_blocks"])
+    assert payload["safe_for_live_submission"] is False
+
+
+def test_network_first_rank_rejects_no_grid_and_resource_abuse():
+    case = safe_snapshot()
+    response = client.post("/api/pmss/network-rank", json={
+        "snapshot": case, "target_unit_id": "G30",
+    })
+    assert response.status_code == 422
+    case = _synthetic_network_case()
+    case["historicalBacktestOnly"] = False
+    assert client.post("/api/pmss/network-rank", json={
+        "snapshot": case, "target_unit_id": "G30",
+    }).status_code == 422
+    case["historicalBacktestOnly"] = True
+    assert client.post("/api/pmss/network-rank", json={
+        "snapshot": case, "target_unit_id": "G30",
+        "risk_aversion": 1.1,
+    }).status_code == 422
+    assert client.get("/api/pmss/network-rank").status_code == 405
+
+
+def test_pmss_inspect_joint_readiness_reports_missing_physical_parameters():
+    raw = safe_snapshot()
+    response = client.post("/api/pmss/inspect", json={"snapshot": raw})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    gate = body["joint_readiness"]
+    assert gate["ready"] is False
+    assert gate["total_units"] == len(body["units"])
+    assert gate["supplied_units"] == 0
+    assert set(gate["missing_unit_ids"]) == {
+        unit["unit_id"] for unit in body["units"]
+    }
+    assert gate["independently_verified"] is False
+    fields = body["joint_required_technical_fields"]
+    for required in ("initial_on", "initial_mw", "initial_state_hours",
+                     "ramp_up_mw", "min_up_hours", "startup_cost"):
+        assert required in fields
+    assert "runningCost" not in fields

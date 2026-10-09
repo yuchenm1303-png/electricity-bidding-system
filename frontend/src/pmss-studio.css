@@ -86,3 +86,9 @@
   .pmss-run-button,.pmss-import-button{justify-content:center;width:100%}.pmss-chart{height:220px}}
 @media(prefers-reduced-motion:reduce){.pmss-import-button,.pmss-run-button{transition:none}
   .pmss-import-button:hover,.pmss-run-button:hover{transform:none}}
+
+.pmss-rank-control{display:flex;flex-direction:column;gap:7px;color:var(--ta-muted);font-size:11px;font-weight:650;min-width:195px}
+.pmss-rank-control select{height:40px;border-radius:9px;border:1px solid var(--ta-border);
+  padding:0 11px;background:var(--ta-field);color:var(--ta-ink);font-size:12px}
+.pmss-rank-control select:focus-visible{outline:2px solid var(--ta-primary)}
+@media(max-width:600px){.pmss-rank-control{width:100%}.pmss-rank-control select{width:100%}}

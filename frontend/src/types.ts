@@ -114,6 +114,36 @@ export type PMSSInspection = {
   historical_only: boolean;
   load_source_kind: string;
   max_segments: number;
+  technical_evidence: {
+    unit_count: number;
+    capacity_match_count: number;
+    minimum_match_count: number;
+    source_claim_only: true;
+    technical_inputs_verified: false;
+    joint_milp_ready: false;
+    observed_fields: Record<string, {
+      present: number;
+      zero: number;
+      distinct: number;
+      min: number | null;
+      max: number | null;
+      meaning: string;
+      validated_for_joint_milp: false;
+    }>;
+    note: string;
+  } | null;
+  joint_readiness: {
+    ready: boolean;
+    total_units: number;
+    supplied_units: number;
+    missing_unit_ids: string[];
+    unexpected_unit_ids: string[];
+    invalid: Record<string, string>;
+    source: string;
+    independently_verified: boolean;
+    message: string;
+  };
+  joint_required_technical_fields: string[];
   historical_bid_rule_audit: {
     price_floor: number | null;
     price_ceiling: number | null;
@@ -241,4 +271,35 @@ export type PMSSNetworkComparison = {
   pmss_write_performed: false;
   pmss_clearing_executed: false;
   pmss_counterfactual_verified: false;
+};
+
+export type PMSSRankedCurve = {
+  name: string;
+  score: number;
+  expected_margin: number;
+  downside_margin: number;
+  worst_margin: number;
+  expected_accepted_mwh: number;
+  price_blocks: [number, number, number][];
+};
+export type PMSSNetworkRank = {
+  target_unit_id: string;
+  baseline_score: number;
+  baseline_expected_margin: number;
+  baseline_rule_compatible: boolean;
+  eligible_candidates: PMSSRankedCurve[];
+  best_candidate: PMSSRankedCurve;
+  modeled_better_than_baseline: boolean | null;
+  price_floor: number | null;
+  price_ceiling: number | null;
+  historical_units_outside_current_rule: number;
+  synthetic_scenarios: string[];
+  historical_evidence_days: number;
+  validated_for_real_bidding: false;
+  confidence_status: string;
+  assumption: string;
+  pmss_write_performed: false;
+  pmss_clearing_executed: false;
+  pmss_counterfactual_verified: false;
+  safe_for_live_submission: false;
 };

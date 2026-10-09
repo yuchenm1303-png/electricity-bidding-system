@@ -17,6 +17,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from powerbid.pmss_grid_bridge import sanitize_pmss_network  # noqa: E402
 from powerbid.pmss_integration import snapshot_from_pmss  # noqa: E402
+from powerbid.pmss_technical_evidence import (  # noqa: E402
+    sanitize_pmss_technical_evidence,
+)
 
 
 def main() -> int:
@@ -24,6 +27,7 @@ def main() -> int:
     parser.add_argument("--snapshot", type=Path, required=True)
     parser.add_argument("--grid", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--include-technical-evidence", action="store_true")
     args = parser.parse_args()
     if args.output.exists() or args.output.resolve() in {
         args.snapshot.resolve(), args.grid.resolve()
@@ -40,6 +44,10 @@ def main() -> int:
     )
     network = sanitize_pmss_network(raw_grid, snapshot=snapshot)
     original["dcNetwork"] = network
+    if args.include_technical_evidence:
+        original["technicalEvidence"] = sanitize_pmss_technical_evidence(
+            raw_grid, snapshot=snapshot
+        )
     fd, temporary = tempfile.mkstemp(
         prefix=".powerbid-dc-", suffix=".tmp", dir=args.output.parent
     )
