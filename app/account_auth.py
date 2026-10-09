@@ -142,6 +142,7 @@ class Credentials(BaseModel):
     model_config = ConfigDict(extra="forbid")
     username: str = Field(min_length=3, max_length=32)
     password: str = Field(min_length=12, max_length=128)
+    turnstile_token: str | None = Field(default=None, max_length=2048)
 
 
 class SignUp(Credentials):
@@ -171,16 +172,26 @@ def _set_session(response: Response, user_id: int) -> None:
 
 @router.get("/config")
 def config() -> dict:
+    from app import social_auth, turnstile_auth
+
     return {
         "enabled": auth_enabled(),
         "registration_open": auth_enabled() and registration_open(),
+        "turnstile_site_key": turnstile_auth.site_key(),
+        "social": {
+            "google": social_auth.configured("google"),
+            "github": social_auth.configured("github"),
+        },
     }
 
 
 @router.post("/register", status_code=201)
-def register(data: SignUp, response: Response) -> dict:
+async def register(data: SignUp, response: Response) -> dict:
     if not auth_enabled() or not registration_open():
         raise HTTPException(403, detail="管理员尚未开放注册")
+    from app.turnstile_auth import verify
+
+    await verify(data.turnstile_token)
     username = data.username.strip()
     email = str(data.email).lower()
     if not USERNAME.fullmatch(username):
@@ -203,9 +214,12 @@ def register(data: SignUp, response: Response) -> dict:
 
 
 @router.post("/login")
-def login(data: Credentials, response: Response) -> dict:
+async def login(data: Credentials, response: Response) -> dict:
     if not auth_enabled():
         raise HTTPException(503, detail="账号系统尚未启用")
+    from app.turnstile_auth import verify
+
+    await verify(data.turnstile_token)
     name = data.username.strip()
     timestamp = int(time.time())
     with connection() as db:
@@ -311,6 +325,8 @@ async def protect_api(request: Request, call_next):
             "/api/auth/register",
             "/api/auth/logout",
         }
+        if path.startswith("/api/auth/oauth/"):
+            publicly_accessible = True
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             origin = request.headers.get("origin")
             if (

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Activity, ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2,
-  ChevronRight, Eye, EyeOff, Fingerprint, LockKeyhole, Mail,
+  ChevronRight, Eye, EyeOff, Fingerprint, Github, LockKeyhole, Mail,
   Search, Shield, ShieldCheck, UserRound, Users,
   UserX, X,
 } from "lucide-react";
 import smirelLogo from "./assets/smirel-logo.png";
 import AdminActivation from "./AdminActivation";
+import TurnstileWidget from "./TurnstileWidget";
 import Workspace from "./WorkspaceEntry";
 import "./account.css";
 
@@ -18,7 +19,12 @@ export type AccountUser = {
   active: boolean;
   created_at?: number;
 };
-type AuthConfig = { enabled: boolean; registration_open: boolean };
+type AuthConfig = {
+  enabled: boolean;
+  registration_open: boolean;
+  turnstile_site_key?: string;
+  social?: { google: boolean; github: boolean };
+};
 type AuthView = "login" | "register";
 type UserFilter = "all" | "active" | "disabled";
 const base = import.meta.env.BASE_URL;
@@ -70,10 +76,19 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [capsLock, setCapsLock] = useState(false);
+  const [captcha, setCaptcha] = useState("");
+  const [resetCaptcha, setResetCaptcha] = useState(0);
+  const oauthError = new URLSearchParams(window.location.search).get("auth_error");
+  const oauthMessage = oauthError === "existing_email"
+    ? "这个邮箱已有 PowerBid 账号。为保护账号安全，请先使用原来的登录方式，暂不自动合并账号。"
+    : oauthError === "forbidden" ? "当前账号无法通过此方式登录，或管理员尚未开放注册。"
+    : oauthError ? "第三方登录未完成，请重新尝试或使用密码登录。" : "";
   const isRegister = view === "register";
   const authAvailable = config.enabled && (!isRegister || config.registration_open);
   const switchView = (next: AuthView) => {
     setView(next);
+    setCaptcha("");
+    setResetCaptcha(v => v + 1);
     window.history.replaceState(null, "", base + (next === "register" ? "register" : "login"));
     setPassword("");
     setShowPassword(false);
@@ -86,18 +101,24 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
       setError(config.enabled ? "注册暂未开放，请联系管理员。" : "账号系统尚未启用，暂时无法注册或登录。");
       return;
     }
+    if (config.turnstile_site_key && !captcha) {
+      setError("请先完成人机验证。");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       const body = isRegister ?
-        { username: username.trim(), email: email.trim(), password } :
-        { username: username.trim(), password };
+        { username: username.trim(), email: email.trim(), password, turnstile_token: captcha || undefined } :
+        { username: username.trim(), password, turnstile_token: captcha || undefined };
       const user = await request<AccountUser>(isRegister ? "register" : "login", "POST", body);
       setPassword("");
       window.history.replaceState(null, "", base + "app");
       onReady(user);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "暂时无法连接到账号服务");
+      setCaptcha("");
+      setResetCaptcha(v => v + 1);
     } finally {
       setBusy(false);
     }
@@ -151,6 +172,7 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
               <div className="pb-identity-unavailable" role="status">
                 <ShieldCheck size={17}/> 注册暂未开放。如需账号，请联系管理员。
               </div>}
+            {oauthMessage && <div className="pb-identity-error" role="alert"><Shield size={16}/>{oauthMessage}</div>}
             <form className="pb-identity-form" onSubmit={submit}>
               <div className="pb-identity-field">
                 <label htmlFor="auth-name">用户名</label>
@@ -182,12 +204,34 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
                 {capsLock&&<span className="pb-identity-field-note">Caps Lock 已开启</span>}
                 {isRegister&&<span className="pb-identity-field-note">为保护账号，请设置不少于 12 位的密码。</span>}
               </div>
+              {config.turnstile_site_key && <TurnstileWidget
+                siteKey={config.turnstile_site_key} onChange={setCaptcha} resetKey={resetCaptcha}/>}
               {error&&<div className="pb-identity-error" role="alert"><Shield size={16}/>{error}</div>}
               <button className="pb-identity-primary" type="submit" disabled={busy || !authAvailable}>
                 <span>{!authAvailable?"暂未开放":busy?"正在验证…":isRegister?"创建账号":"进入工作台"}</span>
                 {busy?<span className="pb-identity-spinner"/>:<ArrowRight size={18}/>}
               </button>
             </form>
+            {config.enabled && <div className="pb-social-auth">
+              <div className="pb-social-divider"><span/>或者使用以下方式继续<span/></div>
+              <div className="pb-social-options">
+                <a className={"pb-social-button"+(!config.social?.google?" is-disabled":"")}
+                  aria-disabled={!config.social?.google}
+                  href={config.social?.google ? base+"api/auth/oauth/google/start" : undefined}
+                  title={config.social?.google?"使用 Google 登录":"Google 登录尚未配置"}>
+                  <span className="pb-google-mark" aria-hidden="true">G</span> Google
+                  {!config.social?.google && <small>待配置</small>}
+                </a>
+                <a className={"pb-social-button"+(!config.social?.github?" is-disabled":"")}
+                  aria-disabled={!config.social?.github}
+                  href={config.social?.github ? base+"api/auth/oauth/github/start" : undefined}
+                  title={config.social?.github?"使用 GitHub 登录":"GitHub 登录尚未配置"}>
+                  <Github size={19} aria-hidden="true"/> GitHub
+                  {!config.social?.github && <small>待配置</small>}
+                </a>
+              </div>
+              <div className="pb-social-note">使用第三方账号登录不会自动关联已有同邮箱账号。</div>
+            </div>}
             <div className="pb-identity-card-bottom">
               {!config.enabled
                 ? <a className="pb-identity-demo-link" href={base+"app"}>先进入演示工作台 <ArrowUpRight size={15}/></a>

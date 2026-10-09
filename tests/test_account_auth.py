@@ -40,6 +40,8 @@ def test_register_login_me_and_logout(client, tmp_path):
     assert client.get("/api/auth/config").json() == {
         "enabled": True,
         "registration_open": True,
+        "turnstile_site_key": "",
+        "social": {"google": False, "github": False},
     }
     assert client.get("/api/scenario").status_code == 401
     assert client.post("/api/optimize", json={}).status_code == 403
