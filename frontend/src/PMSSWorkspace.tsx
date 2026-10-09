@@ -325,6 +325,68 @@ export function PMSSWorkspace() {
                   ? numeric(networkResult.recommended.total_profit, 2) : "不可行"}
                 detail="不是 PMSS 结算收入"/>
             </div>
+            {networkResult.historical_grid_audit && <>
+              <div className="pmss-result-toolbar">
+                <h4>PMSS 已出清历史数据一致性 · {networkResult.historical_grid_audit.case_date}</h4>
+                <span className="pmss-state-label">仅单日基准回测</span>
+              </div>
+              <div className="pmss-summary">
+                <Metric label="真实节点有功平衡残差 MAE"
+                  value={networkResult.historical_grid_audit.bus_balance_mae_mw == null
+                    ? "无完整数据"
+                    : numeric(networkResult.historical_grid_audit.bus_balance_mae_mw, 2) + " MW"}
+                  detail={networkResult.historical_grid_audit.balanced_hour_count + "/24 个完整时段"}/>
+                <Metric label="模型 vs PMSS 节点电价 MAE"
+                  value={networkResult.historical_grid_audit.modeled_nodal_price_mae == null
+                    ? "无数据"
+                    : numeric(networkResult.historical_grid_audit.modeled_nodal_price_mae, 2)}
+                  detail="价格计费口径仍需校准"/>
+                <Metric label="模型 vs PMSS 线路绝对潮流 MAE"
+                  value={networkResult.historical_grid_audit.modeled_abs_flow_mae_mw == null
+                    ? "无数据"
+                    : numeric(networkResult.historical_grid_audit.modeled_abs_flow_mae_mw, 2) + " MW"}
+                  detail="仅比较潮流幅值"/>
+              </div>
+              <div className="pmss-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={networkResult.historical_grid_audit.hours}
+                    margin={{top:16,right:20,bottom:4,left:-9}}>
+                    <CartesianGrid stroke="var(--ta-border)" vertical={false}/>
+                    <XAxis dataKey="period" tick={axisStyle} axisLine={false} tickLine={false}/>
+                    <YAxis yAxisId="mw" tick={axisStyle} axisLine={false} tickLine={false}/>
+                    <YAxis yAxisId="price" orientation="right" tick={axisStyle}
+                      axisLine={false} tickLine={false}/>
+                    <Tooltip contentStyle={tooltipStyle}/>
+                    <Legend verticalAlign="top" height={32}/>
+                    <Line yAxisId="mw" type="monotone" dataKey="observed_bus_balance_mae_mw"
+                      name="PMSS节点平衡残差 MW" stroke="#f59e0b"
+                      strokeWidth={2.4} dot={false} isAnimationActive={false}/>
+                    <Line yAxisId="price" type="monotone" dataKey="modeled_nodal_price_mae"
+                      name="DC模型 vs PMSS 价差 MAE" stroke="#465fff"
+                      strokeWidth={2.4} dot={false} isAnimationActive={false}/>
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="pmss-footnote">
+                本报告只对已提交的原始报价做同一天的事后核验，
+                不用历史价格替代未来预测。线路方向按读取的两端节点和原始潮流符号计算，
+                并额外核对反向符号；节点有功平衡残差不等同于违规或线路过载。
+                这还不是跨日期留出验证。
+              </p>
+              <div className="pmss-table-scroll">
+                <table className="pmss-table">
+                  <thead><tr><th>历史残差较大节点</th><th>逐时段平均平衡残差</th><th>覆盖时段</th></tr></thead>
+                  <tbody>{networkResult.historical_grid_audit.worst_bus_balance.slice(0, 5).map(item =>
+                    <tr key={item.element_id}><td>{item.element_id}</td>
+                      <td>{numeric(item.mae, 2)} MW</td><td>{item.points}/24</td></tr>
+                  )}</tbody>
+                </table>
+              </div>
+            </>}
+            {!networkResult.historical_grid_audit && <p className="pmss-footnote">
+              尚不能给出严格对应的历史网络回测。
+              {networkResult.historical_unavailable_reason || "缺少完整 PMSS 历史节点/线路结果"}
+            </p>}
             <p className="pmss-footnote">
               原报价约束活跃时段：{networkResult.baseline.hours_with_binding_lines}/24；
               线路峰值负载比：{numeric(networkResult.baseline.max_line_utilization * 100, 2)}%。
@@ -353,7 +415,7 @@ export function PMSSWorkspace() {
               但不能证明策略在老师 PMSS 或真实电力市场中安全、最优或可执行。</p>
           </>}
         </> : <p className="pmss-footnote">
-          当前快照没有 `grid` 网络参数。请从可信服务器使用
+          当前快照没有 `dcNetwork` 网络参数。请从可信服务器使用
           `scripts/merge_pmss_grid.py` 将只读节点、线路和机组接入数据合入脱敏快照，
           缺少经核实的电抗或额定 MW 时禁止猜测。
         </p>}

@@ -196,3 +196,51 @@ def test_network_endpoint_refuses_missing_or_inconsistent_nodal_load():
         "snapshot": case, "target_unit_id": "G30",
     }).status_code == 422
     assert client.get("/api/pmss/network-evaluate").status_code == 405
+
+def test_real_historical_network_audit_appears_only_for_complete_original_day():
+    pytest.importorskip("scipy")
+    case = _synthetic_network_case()
+
+    def series(ident, name, metric, value):
+        return {
+            "elementId": ident,
+            "elementName": name,
+            "marketTypeAtom": "DA",
+            metric: {"datas": [value] * 24},
+        }
+
+    case["results"] = {
+        "marketTypeAtom": "DA",
+        "periodNum": 24,
+        "unitResults": [
+            series("G30", "G30", "power", 50),
+            series("G31", "G31", "power", 130),
+        ],
+        "nodalPrices": [
+            series("A", "BusA", "powerFlow", 60),
+            series("B", "BusB", "powerFlow", 80),
+        ],
+        "branchFlows": [series("L1", "Line AB", "powerFlow", 50)],
+    }
+    case["results"]["unitResults"][0]["price"] = {"datas": [60] * 24}
+    case["results"]["unitResults"][1]["price"] = {"datas": [80] * 24}
+    response = client.post("/api/pmss/network-evaluate", json={
+        "snapshot": case, "target_unit_id": "G30",
+    })
+    assert response.status_code == 200, response.text
+    data = response.json()
+    report = data["historical_grid_audit"]
+    assert report["case_date"] == "2025-09-01"
+    assert report["balanced_hour_count"] == 24
+    assert report["bus_balance_mae_mw"] == pytest.approx(0)
+    assert report["modeled_nodal_price_mae"] == pytest.approx(0)
+    assert data["historical_unavailable_reason"] is None
+
+    case["results"]["nodalPrices"].pop()
+    response = client.post("/api/pmss/network-evaluate", json={
+        "snapshot": case, "target_unit_id": "G30",
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["historical_grid_audit"] is None
+    assert data["historical_unavailable_reason"]

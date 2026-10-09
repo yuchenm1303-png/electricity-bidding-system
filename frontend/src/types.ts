@@ -180,7 +180,44 @@ export type DCNetworkStudy = {
     binding_lines: string[];
   }[];
 };
+export type PMSSHistoricalGridAudit = {
+  case_date: string;
+  market_type: "DA";
+  node_count: number;
+  line_count: number;
+  unit_count: number;
+  balanced_hour_count: number;
+  observed_missing_hours: number;
+  total_day_ahead_energy_mwh: number;
+  generation_load_mae_mw: number | null;
+  bus_balance_mae_mw: number | null;
+  reverse_flow_bus_balance_mae_mw: number | null;
+  modeled_target_dispatch_mae_mw: number | null;
+  modeled_nodal_price_mae: number | null;
+  modeled_abs_flow_mae_mw: number | null;
+  observed_line_over_nameplate_hours: number;
+  hours: {
+    period: number;
+    observed_generation_mw: number | null;
+    day_ahead_load_mw: number;
+    system_generation_minus_load_mw: number | null;
+    observed_bus_balance_mae_mw: number | null;
+    observed_bus_balance_reverse_mae_mw: number | null;
+    max_observed_bus_balance_error_mw: number | null;
+    observed_line_over_nameplate_count: number;
+    complete_observation: boolean;
+    modeled_target_dispatch_error_mw: number | null;
+    modeled_nodal_price_mae: number | null;
+    modeled_abs_flow_mae_mw: number | null;
+  }[];
+  worst_bus_balance: {element_id: string; mae: number; points: number}[];
+  worst_nodal_model_prices: {element_id: string; mae: number; points: number}[];
+  worst_line_model_flows: {element_id: string; mae: number; points: number}[];
+  disclaimer: string;
+};
 export type PMSSNetworkComparison = {
+  historical_grid_audit: PMSSHistoricalGridAudit | null;
+  historical_unavailable_reason: string | null;
   baseline: DCNetworkStudy;
   recommended: DCNetworkStudy | null;
   recommended_error: string | null;
