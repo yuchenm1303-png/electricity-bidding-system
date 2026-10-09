@@ -187,8 +187,9 @@ class TeacherPlatformAdapter:
                 last_error = exc
                 if attempt == max_attempts - 1:
                     raise TeacherPlatformError(
-                        f"Network request failed after {max_attempts} attempt(s): "
-                        f"{method} {path}: {exc}"
+                        f"PMSS transport failed after {max_attempts} attempt(s) "
+                        f"({type(exc).__name__}); no private URL, response, "
+                        "or connection details disclosed."
                     ) from exc
 
         if response is None:
