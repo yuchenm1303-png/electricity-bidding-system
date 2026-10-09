@@ -54,10 +54,13 @@ export function PMSSCandidateDispatchPanel({
   const fiveCurve = analysis?.recommended.segments ?? null;
   // Fallback if only one type of proposal is available. Both must have
   // passed the server-side new-bid legality gate before a result is returned.
-  const plan = choice === "ranked"
+  const effectiveChoice: Selection =
+    choice === "ranked" && !networkCurve && fiveCurve ? "five-segment" :
+    choice === "five-segment" && !fiveCurve && networkCurve ? "ranked" : choice;
+  const plan = effectiveChoice === "ranked"
     ? networkCurve ?? fiveCurve
     : fiveCurve ?? networkCurve;
-  const label = choice === "ranked" && networkCurve
+  const label = effectiveChoice === "ranked" && networkCurve
     ? "网络优先风险排序的本地候选"
     : "五段搜索的本地候选";
   const key = JSON.stringify({target, curve: plan, caseDate: inspection.case_date});
@@ -100,7 +103,7 @@ export function PMSSCandidateDispatchPanel({
     <div className="pmss-toolbar">
       <label className="pmss-rank-control">
         选择已生成的候选曲线
-        <select aria-label="选择候选报价方案" value={choice}
+        <select aria-label="选择候选报价方案" value={effectiveChoice}
           onChange={event => {setChoice(event.target.value as Selection);setError("");}}
           disabled={busy || otherBusy}>
           <option value="ranked" disabled={!networkCurve}>网络优先风险排序最高候选</option>
