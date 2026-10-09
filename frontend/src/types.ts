@@ -195,6 +195,11 @@ export type PMSSHistoricalGridAudit = {
   modeled_target_dispatch_mae_mw: number | null;
   modeled_nodal_price_mae: number | null;
   modeled_abs_flow_mae_mw: number | null;
+  modeled_price_matching_hours: number;
+  modeled_price_mismatch_periods: number[];
+  modeled_price_mismatch_points: number;
+  modeled_peak_node_price: number | null;
+  observed_peak_node_price: number | null;
   observed_line_over_nameplate_hours: number;
   hours: {
     period: number;
