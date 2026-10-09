@@ -1,5 +1,4 @@
 """Multi-day historical DC validation: prevent one-day overconfidence."""
-import copy
 import json
 from dataclasses import replace
 from pathlib import Path
