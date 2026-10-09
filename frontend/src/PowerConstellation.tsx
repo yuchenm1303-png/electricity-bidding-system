@@ -79,9 +79,10 @@ export default function PowerConstellation() {
       const angle = yaw + (reduced.matches ? 0 : Math.sin(frame * .003) * .018);
       const elevation = pitch;
       projected = NODES.map(n => position(n,angle,elevation,scale));
+      const dark = document.documentElement.dataset.theme === "dark";
       const aura = ctx.createRadialGradient(w*.50,h*.50, 0, w*.50,h*.50,w*.46);
-      aura.addColorStop(0,"rgba(137,154,255,.095)");
-      aura.addColorStop(.58,"rgba(173,190,255,.038)");
+      aura.addColorStop(0,dark?"rgba(78,105,232,.19)":"rgba(137,154,255,.095)");
+      aura.addColorStop(.58,dark?"rgba(84,118,221,.065)":"rgba(173,190,255,.038)");
       aura.addColorStop(1,"rgba(201,216,255,0)");
       ctx.fillStyle = aura;
       ctx.fillRect(0,0,w,h);
@@ -91,11 +92,11 @@ export default function PowerConstellation() {
       ordered.forEach(({a,b,depth}) => {
         const p=projected[a],q=projected[b];
         const adjacent = a===highlight || b===highlight;
-        const alpha=Math.max(.16,Math.min(.61,.31-depth*.13+(adjacent?.19:0)));
+        const alpha=Math.max(dark ? .30 : .16,Math.min(dark ? .79 : .61,(dark ? .52 : .31)-depth*.13+(adjacent?.16:.19)));
         const line=ctx.createLinearGradient(p.x,p.y,q.x,q.y);
-        line.addColorStop(0,"rgba(101,126,218,"+(alpha*.55).toFixed(3)+")");
-        line.addColorStop(.5,"rgba(95,127,226,"+(alpha).toFixed(3)+")");
-        line.addColorStop(1,"rgba(141,151,225,"+(alpha*.7).toFixed(3)+")");
+        line.addColorStop(0,(dark?"rgba(104,151,252,":"rgba(101,126,218,")+(alpha*.65).toFixed(3)+")");
+        line.addColorStop(.5,(dark?"rgba(130,163,254,":"rgba(95,127,226,")+(alpha).toFixed(3)+")");
+        line.addColorStop(1,(dark?"rgba(140,150,249,":"rgba(141,151,225,")+(alpha*.7).toFixed(3)+")");
         ctx.beginPath();
         ctx.moveTo(p.x,p.y);
         ctx.lineTo(q.x,q.y);
@@ -114,7 +115,7 @@ export default function PowerConstellation() {
         const y=p.y+(q.y-p.y)*t;
         ctx.beginPath();
         ctx.arc(x,y,adjacent?1.9:1.2,0,Math.PI*2);
-        ctx.fillStyle=adjacent?"rgba(73,94,235,.74)":"rgba(90,118,238,.40)";
+        ctx.fillStyle=adjacent?(dark?"rgba(147,184,255,.95)":"rgba(73,94,235,.74)"):(dark?"rgba(130,172,253,.65)":"rgba(90,118,238,.40)");
         ctx.fill();
       });
 
@@ -125,25 +126,25 @@ export default function PowerConstellation() {
         const visibility = Math.max(.55, Math.min(.95,.76-p.depth*.14));
         if (isActive) {
           ctx.beginPath();ctx.arc(p.x,p.y,21,0,Math.PI*2);
-          ctx.fillStyle="rgba(110,125,240,.055)";ctx.fill();
+          ctx.fillStyle=dark?"rgba(135,164,255,.12)":"rgba(110,125,240,.055)";ctx.fill();
           ctx.beginPath();ctx.arc(p.x,p.y,12,0,Math.PI*2);
-          ctx.strokeStyle="rgba(95,109,230,.30)";ctx.lineWidth=1;ctx.stroke();
+          ctx.strokeStyle=dark?"rgba(145,172,255,.54)":"rgba(95,109,230,.30)";ctx.lineWidth=1;ctx.stroke();
         }
         ctx.beginPath();
         ctx.arc(p.x,p.y,radius + 3.5,0,Math.PI*2);
-        ctx.fillStyle="rgba(95,110,226,.09)";
+        ctx.fillStyle=dark?"rgba(125,155,255,.20)":"rgba(95,110,226,.09)";
         ctx.fill();
         ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);
-        ctx.fillStyle = NODES[i].kind==="发电节点" ? "rgba(77,93,221,"+visibility+")"
-          : NODES[i].kind==="负荷节点" ? "rgba(150,160,215,"+visibility+")"
-          : "rgba(94,137,230,"+visibility+")";
+        ctx.fillStyle = NODES[i].kind==="发电节点" ? (dark?"rgba(127,146,254,":"rgba(77,93,221,")+visibility+")"
+          : NODES[i].kind==="负荷节点" ? (dark?"rgba(180,193,255,":"rgba(150,160,215,")+visibility+")"
+          : (dark?"rgba(105,192,246,":"rgba(94,137,230,")+visibility+")";
         ctx.fill();
         ctx.beginPath();ctx.arc(p.x,p.y,1.1,0,Math.PI*2);
         ctx.fillStyle="#fff";ctx.fill();
         if ((isActive || i===0 || i===14 || i===19) && p.x > 38 && p.x < w - 55) {
           ctx.font="600 10px Inter,system-ui,sans-serif";
           ctx.letterSpacing="1px";
-          ctx.fillStyle=isActive?"rgba(67,82,156,.86)":"rgba(117,131,174,.64)";
+          ctx.fillStyle=dark?(isActive?"rgba(203,216,255,.95)":"rgba(162,184,235,.83)"):(isActive?"rgba(67,82,156,.86)":"rgba(117,131,174,.64)");
           ctx.fillText(NODES[i].id,p.x+11,p.y-12);
         }
       });
@@ -223,6 +224,8 @@ export default function PowerConstellation() {
     const observer=new IntersectionObserver(items=>{shown=items[0]?.isIntersecting??false;},{threshold:.01});
     observer.observe(canvas);
     const refresh=()=>paint();
+    const themeObserver = new MutationObserver(refresh);
+    themeObserver.observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
     reduced.addEventListener("change",refresh);
     canvas.addEventListener("pointermove",move);
     canvas.addEventListener("pointerdown",down);
@@ -234,7 +237,7 @@ export default function PowerConstellation() {
     resize();
     raf=requestAnimationFrame(tick);
     return ()=>{
-      cancelAnimationFrame(raf);observer.disconnect();
+      cancelAnimationFrame(raf);observer.disconnect();themeObserver.disconnect();
       reduced.removeEventListener("change",refresh);
       canvas.removeEventListener("pointermove",move);
       canvas.removeEventListener("pointerdown",down);
