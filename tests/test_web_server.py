@@ -94,3 +94,25 @@ def test_listing_download_cursor_assets_serve_correct_mime(tmp_path, monkeypatch
     assert css.status_code == 200
     assert css.headers["content-type"].startswith("text/css")
     assert ".cursor-follow" in css.text
+
+
+def test_listing_anime_local_asset_and_license(tmp_path, monkeypatch):
+    """Original download-page click fireworks can load without a third-party CDN."""
+    from app import web_server
+
+    monkeypatch.setattr(web_server, "DIST", tmp_path)
+    (tmp_path / "listing-anime-3.2.1.min.js").write_text(
+        "window.anime = {version: '3.2.1'};", encoding="utf-8"
+    )
+    (tmp_path / "listing-anime-3.2.1-license.md").write_text(
+        "The MIT License", encoding="utf-8"
+    )
+    script = client.get("/listing-anime-3.2.1.min.js")
+    assert script.status_code == 200
+    assert script.headers["content-type"].startswith("text/javascript")
+    assert "3.2.1" in script.text
+
+    notice = client.get("/listing-anime-3.2.1-license.md")
+    assert notice.status_code == 200
+    assert notice.headers["content-type"].startswith("text/markdown")
+    assert "MIT" in notice.text
