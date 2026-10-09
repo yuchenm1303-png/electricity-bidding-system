@@ -262,6 +262,10 @@ report = {
     "user_defined_thresholds": asdict(policy),
     "verdict": asdict(verdict),
     "days": [asdict(day) for day in sorted(days, key=lambda item: item.case_date)],
+    "selected_day_attribution": asdict(diagnostic.comparison),
+    "selected_day_fixed_dispatch_lines": [
+        asdict(line) for line in diagnostic.observed_dispatch.per_line
+    ],
 }
 st.download_button(
     "下载不含平台凭证的回测指标报告",
