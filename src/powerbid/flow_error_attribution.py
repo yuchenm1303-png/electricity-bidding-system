@@ -12,7 +12,6 @@ identify the exact source of A's greater error.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import isfinite
 from typing import Any
 
 from powerbid.fixed_injection_diagnostics import (
