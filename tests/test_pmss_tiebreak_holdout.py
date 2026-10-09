@@ -27,7 +27,7 @@ def _switch_to_tied_market(case, *, favor: str):
     case["dcNetwork"]["slackBus"] = "B"
     case["unitBids"]["G2"]["datas"][0]["segmentDatas"][0]["price"] = 60
     generation = (100.0, 60.0) if favor == "ascending" else (10.0, 150.0)
-    for row, mw in zip(case["results"]["unitResults"], generation):
+    for row, mw in zip(case["results"]["unitResults"], generation, strict=True):
         row["accepted_mw"] = [mw]*24
     # No line results are required by the tie-break allocation experiment.
 
@@ -53,7 +53,7 @@ def test_three_days_keeps_holdout_rule_choice_independent_of_future_labels():
     assert a["profitPredictionVerified"] is False
     assert a["identicalOriginalBidPairsAcrossDates"] == 3
     # Change ONLY held-out observations. The selected rule must not change.
-    for row, mw in zip(cases[2]["results"]["unitResults"], (10.0, 150.0)):
+    for row, mw in zip(cases[2]["results"]["unitResults"], (10.0, 150.0), strict=True):
         row["accepted_mw"] = [mw]*24
     changed = evaluate_heldout_tiebreak_rules(cases)
     assert changed["policyLockedUsingTrainingOnly"] == a["policyLockedUsingTrainingOnly"]
