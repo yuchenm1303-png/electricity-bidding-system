@@ -219,6 +219,13 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
     return () => { mounted = false; };
   }, []);
   const signature = useMemo(() => config ? JSON.stringify(config) : "", [config]);
+  // Keep the exact parameter snapshot used for the finished run. Edited
+  // controls must never silently rewrite the contents of an exported report.
+  const analyzedSettings = useMemo<Settings | null>(() => {
+    if (!reportSignature) return null;
+    try { return JSON.parse(reportSignature) as Settings; }
+    catch { return null; }
+  }, [reportSignature]);
   const stale = !!report && reportSignature !== signature;
   const validationError = config ? validate(config) : null;
   const update = (next: Settings) => { setConfig(next); setError(""); };
@@ -281,7 +288,7 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
           onOpenAdmin={onOpenAdmin} onOpenProfile={onOpenProfile}/>}
       </div></div>
     {mobileNav && <button type="button" className="mobile-backdrop" aria-label="关闭菜单" onClick={() => setMobileNav(false)}/>}
-    <div className={mobileNav ? "mobile-sidebar-visible" : ""}>
+    <div className={"mobile-sidebar-shell" + (mobileNav ? " mobile-sidebar-visible" : "")}>
       <Sidebar active={view} change={changeView} report={report} compact={sidebarCompact}
         toggle={() => setSidebarCompact(v => !v)} source={view === "pmss" ? "PMSS / 脱敏快照" : sourceMap[scenario?.data_source ?? "unknown"] ?? "来源未标记"}/>
       {mobileNav && <button type="button" className="mobile-close" onClick={() => setMobileNav(false)} aria-label="关闭菜单"><X size={21}/></button>}
@@ -332,7 +339,7 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
           </div>
           {!report && <GettingStarted running={running} onRun={() => void run()}/>}
           {report && <><AnalysisTeaser report={report} onNavigate={changeView}/>
-            <ResultsContent report={report} stale={stale} running={running} onRun={() => void run()} compact/>
+            <ResultsContent report={report} stale={stale} running={running} onRun={() => void run()} compact analyzedSettings={analyzedSettings}/>
           </>}
         </>}
         {view === "units" && <>
@@ -341,12 +348,12 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
             onChange={offers => setConfig(previous => previous ? { ...previous, offers } : previous)}
             onTarget={target_unit_id => setConfig(previous => previous ? { ...previous, target_unit_id } : previous)}/>
         </>}
-        {view === "analysis" && <ResultsContent report={report} stale={stale} running={running} onRun={() => void run()}/>}
+        {view === "analysis" && <ResultsContent report={report} stale={stale} running={running} onRun={() => void run()} analyzedSettings={analyzedSettings}/>}
         {view === "risk" && <>
           {config.mode !== "risk" && <div className="section-note"><InfoIcon/> 点击右侧参数中的风险模式，运行压力情景分析。</div>}
-          <ResultsContent report={report?.mode === "risk" ? report : null} stale={stale} running={running} onRun={() => void run()}/>
+          <ResultsContent report={report?.mode === "risk" ? report : null} stale={stale} running={running} onRun={() => void run()} analyzedSettings={analyzedSettings}/>
         </>}
-        {view === "trials" && <TrialDetails report={report}/>}
+        {view === "trials" && <TrialDetails report={report} analyzedSettings={analyzedSettings}/>}
         </div>
         {pmssVisited && <div className="pmss-persistent-stage" style={{display:view === "pmss" ? "block" : "none"}}>
           <PMSSWorkspace/>

@@ -1,6 +1,7 @@
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 import { ArrowRight, BarChart3, CircleCheck, ClipboardList, Download, Info, Layers, TrendingUp, Zap } from "lucide-react";
-import { asSingle, asRisk, numeric, csvExport, type Report, type SingleTrial, type RiskTrial } from "./types";
+import { asSingle, asRisk, numeric, csvExport, type Report, type SingleTrial, type RiskTrial, type Settings } from "./types";
+import { downloadStandaloneReport } from "./reportExport";
 
 type Props = {
   report: Report | null;
@@ -8,6 +9,7 @@ type Props = {
   running: boolean;
   onRun: () => void;
   compact?: boolean;
+  analyzedSettings?: Settings | null;
 };
 const fmt = (val: unknown) => typeof val === "number" ? numeric(val, 2) : String(val ?? "—");
 const tooltipStyle = {
@@ -63,7 +65,7 @@ function EmptyReport({ running, onRun }: Pick<Props, "running" | "onRun">) {
     <button className="primary-button" onClick={onRun} disabled={running}><Zap size={16}/>{running ? "正在计算..." : "运行报价分析"}<ArrowRight size={15}/></button>
   </section>;
 }
-export function ResultsContent({ report, stale, running, onRun, compact = false }: Props) {
+export function ResultsContent({ report, stale, running, onRun, compact = false, analyzedSettings }: Props) {
   if (!report) return <EmptyReport running={running} onRun={onRun}/>;
   const risk = report.mode === "risk";
   const best = report.best;
@@ -129,10 +131,10 @@ export function ResultsContent({ report, stale, running, onRun, compact = false 
         <div className="chart-axis-label">候选报价 / MWh</div>
       </div>
     </div>
-    {!compact && <TrialDetails report={report}/>}
+    {!compact && <TrialDetails report={report} analyzedSettings={analyzedSettings}/>}
   </div>;
 }
-export function TrialDetails({ report }: { report: Report | null }) {
+export function TrialDetails({ report, analyzedSettings }: { report: Report | null; analyzedSettings?: Settings | null }) {
   if (!report) return <div className="trial-placeholder"><ClipboardList size={24}/><h3>暂无试算明细</h3><p>运行报价分析后即可查看完整结果。</p></div>;
   const risk = report.mode === "risk";
   const rows = risk
@@ -144,9 +146,14 @@ export function TrialDetails({ report }: { report: Report | null }) {
   const exportRows = rows.map(r => r.map(v => v == null ? "" : typeof v === "boolean" ? (v ? "是" : "否") : v));
   return <section className="trials-panel">
     <div className="panel-head"><div><span className="panel-kicker">ANALYSIS RECORDS</span><h2>完整试算明细</h2><p>{report.count} 个候选报价 · 支持导出 CSV</p></div>
-      <button type="button" className="secondary-button" onClick={() => csvExport(
-        risk ? "powerbid_risk_analysis.csv" : "powerbid_single_analysis.csv", labels, exportRows
-      )}><Download size={15}/> 导出结果</button></div>
+      <div className="report-export-actions">
+        <button type="button" className="secondary-button" onClick={() => csvExport(
+          risk ? "powerbid_risk_analysis.csv" : "powerbid_single_analysis.csv", labels, exportRows
+        )}><Download size={15}/> 导出 CSV</button>
+        <button type="button" className="secondary-button" onClick={() => downloadStandaloneReport(report, analyzedSettings)}>
+          <Download size={15}/> 下载完整报告
+        </button>
+      </div></div>
     <div className="table-scroll trial-scroll"><table className="trials-table"><thead><tr>{labels.map(l => <th key={l}>{l}</th>)}</tr></thead>
       <tbody>{rows.map((row, i) => <tr key={i} className={row[0] === report.best.bid_price ? "is-best" : ""}>
         {row.map((value, j) => <td key={j}>{typeof value === "boolean" ? (value ? "是" : "否") :

@@ -360,7 +360,7 @@ tr:hover .row-action,.row-action:focus-visible {opacity:1}
   .mobile-topbar strong svg {color:#9de0c4}
   .app-main {height:calc(100dvh - 54px)}
   .global-header {display:none}
-  .app > div:nth-child(2) {position:fixed;z-index:60;inset:0 auto 0 0;width:248px;height:100dvh;transform:translateX(-110%);transition:transform .2s;box-shadow:10px 0 48px #0008}
+  .app > .mobile-sidebar-shell {position:fixed;z-index:60;inset:0 auto 0 0;width:248px;height:100dvh;transform:translateX(-110%);transition:transform .2s;box-shadow:10px 0 48px #0008}
   .mobile-sidebar-visible {transform:translateX(0)!important}
   .sidebar,.sidebar.collapsed {width:248px}
   .sidebar .brand {justify-content:flex-start;padding-left:22px}
@@ -410,4 +410,13 @@ tr:hover .row-action,.row-action:focus-visible {opacity:1}
 }
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after {animation-duration:.01ms!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
+}
+
+
+/* Course handoff: keep CSV and printable full-report exports together. */
+.report-export-actions { display:flex;align-items:center;gap:9px;flex-wrap:wrap; }
+.report-export-actions .secondary-button { white-space:nowrap; }
+@media(max-width:720px) {
+  .report-export-actions { width:100%; }
+  .report-export-actions .secondary-button { flex:1;justify-content:center; }
 }
