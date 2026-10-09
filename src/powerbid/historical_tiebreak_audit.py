@@ -13,7 +13,7 @@ from math import isfinite
 from typing import Any
 
 from powerbid.deterministic_dc_tiebreak import select_dc_optimal_tiebreak
-from powerbid.network_dispatch import DcOffer, network_from_dict
+from powerbid.network_dispatch import DcOffer, dc_clear_hour, network_from_dict
 from powerbid.network_strategy import verify_network_inputs
 from powerbid.pmss_diagnostics import series24
 from powerbid.pmss_integration import curve_for_period, snapshot_from_pmss
@@ -23,7 +23,8 @@ from powerbid.pmss_integration import curve_for_period, snapshot_from_pmss
 class TieBreakHour:
     period: int
     complete_observation: bool
-    baseline_mae_mw: float | None
+    source_order_baseline_mae_mw: float | None
+    canonical_order_baseline_mae_mw: float | None
     ascending_mae_mw: float | None
     descending_mae_mw: float | None
     ascending_vs_descending_total_mw_shift: float
@@ -36,7 +37,8 @@ class HistoricalTieBreakStudy:
     generator_count: int
     examined_hours: int
     compared_hours: int
-    baseline_dispatch_mae_mw: float | None
+    source_order_baseline_mae_mw: float | None
+    canonical_order_baseline_mae_mw: float | None
     ascending_dispatch_mae_mw: float | None
     descending_dispatch_mae_mw: float | None
     hours_with_different_deterministic_allocations: int
@@ -94,6 +96,7 @@ def audit_historical_tiebreaks(raw: Mapping[str, Any]) -> HistoricalTieBreakStud
     ):
         raise ValueError("Observed generation must be finite nonnegative")
 
+    original_source_error: list[float] = []
     raw_error: list[float] = []
     asc_error: list[float] = []
     desc_error: list[float] = []
@@ -117,6 +120,7 @@ def audit_historical_tiebreaks(raw: Mapping[str, Any]) -> HistoricalTieBreakStud
                 supply.append(DcOffer(generator.unit_id, i, block.quantity_mw, block.price))
             if start > generator.capacity_mw + 1e-6:
                 raise ValueError("Original bid exceeds unit capacity")
+        source_order_lp = dc_clear_hour(network, supply, hour)
         increasing = select_dc_optimal_tiebreak(
             network, supply, hour, unit_priority=identifiers
         )
@@ -135,8 +139,12 @@ def audit_historical_tiebreaks(raw: Mapping[str, Any]) -> HistoricalTieBreakStud
         )
         largest_cost_increase = max(largest_cost_increase, cost_change)
         complete = all(observations[uid][hour-1] is not None for uid in identifiers)
-        baseline_hour = ascending_hour = descending_hour = None
+        source_hour = baseline_hour = ascending_hour = descending_hour = None
         if complete:
+            source_errors = [
+                abs(source_order_lp.accepted_by_unit[uid]-observations[uid][hour-1])
+                for uid in identifiers
+            ]
             original_errors = [
                 abs(increasing.original_lp_selected_mw[uid]-observations[uid][hour-1])
                 for uid in identifiers
@@ -149,9 +157,11 @@ def audit_historical_tiebreaks(raw: Mapping[str, Any]) -> HistoricalTieBreakStud
                 abs(decreasing.selected_mw[uid]-observations[uid][hour-1])
                 for uid in identifiers
             ]
+            original_source_error.extend(source_errors)
             raw_error.extend(original_errors)
             asc_error.extend(positive_errors)
             desc_error.extend(negative_errors)
+            source_hour = sum(source_errors)/len(identifiers)
             baseline_hour = sum(original_errors)/len(identifiers)
             ascending_hour = sum(positive_errors)/len(identifiers)
             descending_hour = sum(negative_errors)/len(identifiers)
@@ -159,7 +169,8 @@ def audit_historical_tiebreaks(raw: Mapping[str, Any]) -> HistoricalTieBreakStud
             TieBreakHour(
                 period=hour,
                 complete_observation=complete,
-                baseline_mae_mw=baseline_hour,
+                source_order_baseline_mae_mw=source_hour,
+                canonical_order_baseline_mae_mw=baseline_hour,
                 ascending_mae_mw=ascending_hour,
                 descending_mae_mw=descending_hour,
                 ascending_vs_descending_total_mw_shift=shift,
@@ -175,7 +186,8 @@ def audit_historical_tiebreaks(raw: Mapping[str, Any]) -> HistoricalTieBreakStud
         generator_count=len(identifiers),
         examined_hours=24,
         compared_hours=sum(int(item.complete_observation) for item in reported),
-        baseline_dispatch_mae_mw=mean(raw_error),
+        source_order_baseline_mae_mw=mean(original_source_error),
+        canonical_order_baseline_mae_mw=mean(raw_error),
         ascending_dispatch_mae_mw=mean(asc_error),
         descending_dispatch_mae_mw=mean(desc_error),
         hours_with_different_deterministic_allocations=differing_hours,
