@@ -138,6 +138,7 @@ export default function App() {
     window.localStorage.setItem("powerbid-theme", theme);
   }, [theme]);
   const [mobileNav, setMobileNav] = useState(false);
+  const [pmssVisited, setPmssVisited] = useState(false);
   useEffect(() => {
     if (!settingsHidden) {
       const frame = window.requestAnimationFrame(() => setDrawerVisible(true));
@@ -172,6 +173,7 @@ export default function App() {
     if (config) update({ ...config, mode });
   };
   const changeView = (next: WorkspaceView) => {
+    if (next === "pmss") setPmssVisited(true);
     setView(next);
     setMobileNav(false);
     document.querySelector(".app-main")?.scrollTo({ top: 0, behavior: "auto" });
@@ -204,17 +206,23 @@ export default function App() {
   }, [config, running]);
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      if (view !== "pmss" && (e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
         void run();
       }
     };
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
-  }, [run]);
+  }, [run, view]);
   return <div className="app">
     <div className="mobile-topbar"><button type="button" className="icon-button" onClick={() => setMobileNav(true)} aria-label="打开菜单"><Menu size={20}/></button>
-      <strong><Activity size={17}/> PowerBid Studio</strong><button type="button" className="icon-button" title="切换参数面板" onClick={() => toggleSettings}><SlidersHorizontal size={19}/></button></div>
+      <strong><Activity size={17}/> PowerBid Studio</strong>
+      {view==="pmss"
+        ? <button type="button" className="icon-button" title="切换主题" aria-label="切换主题"
+            onClick={()=>setTheme(value=>value==="light"?"dark":"light")}>
+            {theme==="light"?<Moon size={19}/>:<Sun size={19}/>}
+          </button>
+        : <button type="button" className="icon-button" title="切换参数面板" onClick={toggleSettings}><SlidersHorizontal size={19}/></button>}</div>
     {mobileNav && <button type="button" className="mobile-backdrop" aria-label="关闭菜单" onClick={() => setMobileNav(false)}/>}
     <div className={mobileNav ? "mobile-sidebar-visible" : ""}>
       <Sidebar active={view} change={changeView} report={report} compact={sidebarCompact}
@@ -236,8 +244,8 @@ export default function App() {
             <span key={theme} className="theme-glyph">{theme === "light" ? <Moon size={19}/> : <Sun size={19}/>}</span>
           </button>
           <span className="environment-pill"><span className="online-dot"/> 教学模拟环境</span>
-          <button className="ta-header-icon" type="button" title="打开策略参数" aria-label="打开策略参数"
-            onClick={openSettings}><SlidersHorizontal size={19}/></button>
+          {view !== "pmss" && <button className="ta-header-icon" type="button" title="打开策略参数" aria-label="打开策略参数"
+            onClick={openSettings}><SlidersHorizontal size={19}/></button>}
           <span className="avatar-mark">PB</span>
         </div>
       </header>
@@ -281,8 +289,10 @@ export default function App() {
           <ResultsContent report={report?.mode === "risk" ? report : null} stale={stale} running={running} onRun={() => void run()}/>
         </>}
         {view === "trials" && <TrialDetails report={report}/>}
-        {view === "pmss" && <PMSSWorkspace/>}
         </div>
+        {pmssVisited && <div className="pmss-persistent-stage" style={{display:view === "pmss" ? "block" : "none"}}>
+          <PMSSWorkspace/>
+        </div>}
         <footer className="app-footer"><span>POWERBID STUDIO · 市场策略研究</span><span>Simulation only · Not for live trading</span></footer>
       </div>}
     </div>

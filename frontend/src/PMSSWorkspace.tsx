@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { Activity, ArrowRight, Database, Download, FileJson2, ShieldCheck, UploadCloud } from "lucide-react";
 import {
   CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -6,6 +6,7 @@ import {
 import { evaluatePMSSNetwork, inspectPMSS, optimizePMSS } from "./api";
 import { numeric, type PMSSInspection, type PMSSNetworkComparison, type PMSSOptimization } from "./types";
 import "./pmss-studio.css";
+import { MarketExplorer, OptimizationHourReview } from "./PMSSInsights";
 
 const tooltipStyle = {
   background: "var(--ta-panel)", color: "var(--ta-ink)",
@@ -50,18 +51,19 @@ export function PMSSWorkspace() {
   const [step, setStep] = useState(200);
   const [iterations, setIterations] = useState(2);
   const [busy, setBusy] = useState(false);
+  const [activeTask, setActiveTask] = useState<"import"|"optimize"|null>(null);
+  const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
 
-  const onFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setInspection(null); setSnapshot(null); setAnalysis(null);setNetworkResult(null); setNetworkResult(null); setError("");
+  const importFile = async (file: File) => {
+    if (busy || networkBusy) return;
+    setInspection(null); setSnapshot(null); setAnalysis(null);
+    setNetworkResult(null); setFileName(""); setError("");
     if (file.size > 700_000) {
       setError("文件超过 700 KB，使用只读导出器生成的精简脱敏 JSON。");
       return;
     }
-    setBusy(true);
+    setBusy(true); setActiveTask("import");
     try {
       const data: unknown = JSON.parse(await file.text());
       if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -71,16 +73,27 @@ export function PMSSWorkspace() {
       const inspected = await inspectPMSS(raw);
       setSnapshot(raw);
       setInspection(inspected);
+      setFileName(file.name);
       setTarget(inspected.units[0]?.unit_id || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "无法读取快照");
     } finally {
-      setBusy(false);
+      setBusy(false); setActiveTask(null);
     }
+  };
+  const onFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) void importFile(file);
+  };
+  const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    if (file) void importFile(file);
   };
 
   const run = async () => {
-    if (!snapshot || !target || busy) return;
+    if (!snapshot || !target || busy || networkBusy) return;
     if (![minimum, maximum, step].every(Number.isFinite) ||
         minimum < 0 || maximum > 10000 || maximum < minimum || step <= 0) {
       setError("报价范围必须为 0–10000，且步长应大于零");
@@ -97,14 +110,15 @@ export function PMSSWorkspace() {
       prices.push(maximum);
     }
     setAnalysis(null);
+    setNetworkResult(null);
     setError("");
-    setBusy(true);
+    setBusy(true); setActiveTask("optimize");
     try {
       setAnalysis(await optimizePMSS(snapshot, target, prices, iterations));
     } catch (err) {
       setError(err instanceof Error ? err.message : "本地优化失败");
     } finally {
-      setBusy(false);
+      setBusy(false); setActiveTask(null);
     }
   };
 
@@ -156,19 +170,25 @@ export function PMSSWorkspace() {
           <span>本地策略搜索</span>
         </div>
       </div>
-      <button className="pmss-import-button" type="button" disabled={busy} onClick={() => picker.current?.click()}>
-        <UploadCloud size={19}/>{inspection ? "更换快照" : "导入快照"}
+      <button className="pmss-import-button" type="button" disabled={busy || networkBusy} onClick={() => picker.current?.click()}>
+        <UploadCloud size={19}/>{activeTask==="import" ? "正在校验..." : inspection ? "更换快照" : "导入快照"}
       </button>
       <input ref={picker} type="file" accept=".json,application/json" hidden
         aria-label="导入 PMSS 脱敏 JSON" onChange={onFile}/>
     </div>
+    <div className="pmss-process-steps" aria-label="PMSS 研究工作流程">
+      <span className={inspection ? "complete" : "current"}><b>01</b> 导入脱敏快照</span>
+      <span className={inspection ? "complete" : ""}><b>02</b> 市场与机组检查</span>
+      <span className={analysis ? "complete" : inspection ? "current" : ""}><b>03</b> 本地优化与复核</span>
+      {fileName && <span className="pmss-file-label" title={fileName}>{fileName}</span>}
+    </div>
     <p className="pmss-privacy"><ShieldCheck size={17}/>快照仅传至本站同源后端进行当前请求的内存计算，不会自动存盘；
       不要上传 Cookie、Token 或账户信息。本页不能向 PMSS 提交报价或启动出清。</p>
     {error && <div className="pmss-error" role="alert">{error}</div>}
-    {!inspection && <div className="pmss-empty">
+    {!inspection && <div className="pmss-empty" onDragOver={event => event.preventDefault()} onDrop={onDrop}>
       <FileJson2 size={42} strokeWidth={1.3}/>
       <h3>尚未导入 PMSS 数据</h3>
-      <p>在可信服务器执行只读快照导出，然后导入不含认证信息的 JSON。无需在网页端登录老师平台。</p>
+      <p>在可信服务器执行只读快照导出，再将不含认证信息的 JSON 拖放至此或手动选择。无需在网页端登录老师平台。</p>
       <button type="button" onClick={() => picker.current?.click()}>选择 JSON 文件 <ArrowRight size={15}/></button>
     </div>}
     {inspection && <>
@@ -181,6 +201,7 @@ export function PMSSWorkspace() {
         <Metric label="节点电价" value={network ? String(network.node_count) + " 个" : "未包含"} detail="24小时历史 LMP"/>
         <Metric label="线路潮流" value={network ? String(network.branch_count) + " 条" : "未包含"} detail="已出清支路数据"/>
       </div>
+      <MarketExplorer inspection={inspection}/>
       {network && <div className="pmss-panel">
         <div className="pmss-panel-head"><div><small>02 / OBSERVED NETWORK</small><h3>节点价格分化与历史线路影子价格</h3>
           <p>这里展示 PMSS 历史出清，不推断新报价对潮流和节点电价的影响。</p></div>
@@ -216,20 +237,20 @@ export function PMSSWorkspace() {
           <span className="pmss-state-label">本地模拟</span>
         </div>
         <div className="pmss-controls">
-          <label>目标机组<select value={target} onChange={e => {setTarget(e.target.value);setAnalysis(null);}}>
+          <label>目标机组<select disabled={busy || networkBusy} value={target} onChange={e => {setTarget(e.target.value);setAnalysis(null);setNetworkResult(null);}}>
             {inspection.units.map(item => <option key={item.unit_id} value={item.unit_id}>{item.name}</option>)}
           </select></label>
-          <label>最低报价<input type="number" min="0" max="10000" value={minimum} onChange={e => {setMinimum(Number(e.target.value));setAnalysis(null);}}/></label>
-          <label>最高报价<input type="number" min="0" max="10000" value={maximum} onChange={e => {setMaximum(Number(e.target.value));setAnalysis(null);}}/></label>
-          <label>报价步长<input type="number" min="1" value={step} onChange={e => {setStep(Number(e.target.value));setAnalysis(null);}}/></label>
-          <label>局部迭代<select value={iterations} onChange={e => {setIterations(Number(e.target.value));setAnalysis(null);}}>
+          <label>最低报价<input type="number" disabled={busy || networkBusy} min="0" max="10000" value={minimum} onChange={e => {setMinimum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);}}/></label>
+          <label>最高报价<input type="number" disabled={busy || networkBusy} min="0" max="10000" value={maximum} onChange={e => {setMaximum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);}}/></label>
+          <label>报价步长<input type="number" disabled={busy || networkBusy} min="1" value={step} onChange={e => {setStep(Number(e.target.value));setAnalysis(null);setNetworkResult(null);}}/></label>
+          <label>局部迭代<select disabled={busy || networkBusy} value={iterations} onChange={e => {setIterations(Number(e.target.value));setAnalysis(null);setNetworkResult(null);}}>
             <option value={1}>1轮</option><option value={2}>2轮</option><option value={3}>3轮</option>
           </select></label>
         </div>
         <div className="pmss-toolbar">
           <p>最多 {inspection.max_segments} 段 · 24时段同一曲线 · 报价范围需服从课程规则</p>
-          <button className="pmss-run-button" type="button" disabled={busy} onClick={() => void run()}>
-            {busy ? "正在计算..." : "生成分段报价"} <ArrowRight size={16}/>
+          <button className="pmss-run-button" type="button" disabled={busy || networkBusy} onClick={() => void run()}>
+            {activeTask==="optimize" ? "正在计算..." : "生成分段报价"} <ArrowRight size={16}/>
           </button>
         </div>
         {analysis && <>
@@ -264,6 +285,7 @@ export function PMSSWorkspace() {
               </LineChart>
             </ResponsiveContainer>
           </div>}
+          <OptimizationHourReview analysis={analysis}/>
           <p className="pmss-footnote">新推荐没有在 PMSS 中提交或出清。历史 MAE 只评价原报价的模型拟合，不是新报价的真实收益保证。</p>
         </>}
       </div>
