@@ -9,6 +9,7 @@ import "./pmss-studio.css";
 import { MarketExplorer, OptimizationHourReview } from "./PMSSInsights";
 import { PMSSCandidateDispatchPanel } from "./PMSSCandidateDispatchPanel";
 import { PMSSHoldoutGatePanel } from "./PMSSHoldoutGatePanel";
+import { PMSSManualClearingPanel } from "./PMSSManualClearingPanel";
 
 const tooltipStyle = {
   background: "var(--ta-panel)", color: "var(--ta-ink)",
@@ -546,6 +547,12 @@ export function PMSSWorkspace() {
             </ResponsiveContainer>
           </div>}
           <OptimizationHourReview analysis={analysis}/>
+          <PMSSManualClearingPanel
+            key={target + ":" + inspection.case_date + ":" + JSON.stringify(analysis.recommended.segments)}
+            snapshot={snapshot!}
+            caseDate={inspection.case_date}
+            analysis={analysis}
+          />
           <p className="pmss-footnote">新推荐没有在 PMSS 中提交或出清。历史 MAE 只评价原报价的模型拟合，不是新报价的真实收益保证。</p>
         </>}
       </div>
