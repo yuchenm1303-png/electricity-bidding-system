@@ -62,6 +62,11 @@ def test_historical_kcl_and_model_alignment_are_explicit():
     assert report.bus_balance_mae_mw == pytest.approx(0.0)
     assert report.reverse_flow_bus_balance_mae_mw == pytest.approx(100.0)
     assert report.modeled_nodal_price_mae == 0
+    assert report.modeled_price_matching_hours == 24
+    assert report.modeled_price_mismatch_periods == ()
+    assert report.modeled_price_mismatch_points == 0
+    assert report.modeled_peak_node_price == 50
+    assert report.observed_peak_node_price == 50
     assert report.modeled_abs_flow_mae_mw == 0
     assert report.modeled_target_dispatch_mae_mw == 0
     assert report.observed_line_over_nameplate_hours == 0
@@ -122,3 +127,18 @@ def test_model_comparison_never_accepts_disordered_hour_data():
             _network(), _results(), case_date="synthetic",
             modeled_hours=wrong, target_unit_id="G1",
         )
+
+
+def test_one_price_hour_exception_is_reported_without_fitting_cap():
+    result = _results()
+    result["nodalPrices"][1]["powerFlow"]["datas"][10] = 1001
+    report = audit_pmss_historical_grid(
+        _network(), result, case_date="synthetic",
+        modeled_hours=_modeled(), target_unit_id="G1",
+    )
+    assert report.modeled_price_matching_hours == 23
+    assert report.modeled_price_mismatch_periods == (11,)
+    assert report.modeled_price_mismatch_points == 1
+    assert report.modeled_peak_node_price == 50.0
+    assert report.observed_peak_node_price == 1001.0
+    assert report.modeled_nodal_price_mae == pytest.approx(951/48)
