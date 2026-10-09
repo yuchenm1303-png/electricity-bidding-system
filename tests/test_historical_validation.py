@@ -190,3 +190,59 @@ def test_user_tolerances_are_explicit():
         ValidationPolicy(10, 10, min_distinct_dates=2)
     with pytest.raises(ValueError):
         ValidationPolicy(10, 10, min_coverage=1.2)
+
+
+
+def test_max_error_profile_checks_every_hour_and_element_without_publishing_ids():
+    from powerbid.historical_error_profile import anonymized_error_profile
+
+    days = []
+    for num in range(1, 4):
+        case = _fixture(f"2025-09-{num:02d}")
+        if num == 3:
+            case["results"]["unitResults"][0]["accepted_mw"][1] += 15
+            case["results"]["nodalPrices"][0]["lmp"][1] += 100
+            case["results"]["branchFlows"][0]["flow_mw"][1] = 40
+        days.append(validate_historical_day(case))
+    last = days[-1]
+    assert len(last.hourly_profile) == 24
+    assert last.hourly_profile[1].hour == 2
+    assert last.hourly_profile[1].max_unit_abs_error_mw == pytest.approx(15)
+    assert last.hourly_profile[1].max_nodal_price_abs_error == pytest.approx(100)
+    assert last.hourly_profile[1].max_line_flow_abs_error_mw == pytest.approx(10)
+    assert max(row.max_abs_error_mw or 0 for row in last.per_unit) == pytest.approx(15)
+    assert max(row.max_abs_error or 0 for row in last.per_node) == pytest.approx(100)
+    assert max(row.max_abs_error or 0 for row in last.per_branch) == pytest.approx(10)
+    policy = ValidationPolicy(20, 50)
+    report = anonymized_error_profile(days, judge_historical_model(days, policy), policy)
+    last_report = report["dates"][-1]
+    assert last_report["worstHourlyMae"]["unit"]["hour"] == 2
+    assert last_report["worstHourlyMae"]["node"]["hour"] == 2
+    assert last_report["worstHourlyMae"]["line"]["hour"] == 2
+    assert last_report["worstElementAnyHourAbsoluteError"]["nodePrice"] == pytest.approx(100)
+    assert report["untouchedHoldoutDates"] == ["2025-09-03"]
+    assert report["validatedNewBids"] is False
+    serialized = json.dumps(report)
+    assert '"G1"' not in serialized
+    assert '"LINE-AB"' not in serialized
+    assert '"element_id"' not in serialized
+    assert '"unit_id"' not in serialized
+
+
+def test_missing_pointwise_observations_are_unknown_not_zero():
+    case = _fixture()
+    case["results"]["branchFlows"][0]["flow_mw"] = [None] * 24
+    day = validate_historical_day(case)
+    assert day.per_branch[0].max_abs_error is None
+    assert all(hour.max_line_flow_abs_error_mw is None for hour in day.hourly_profile)
+
+
+def test_anonymized_hourly_report_rejects_incomplete_or_fabricated_hourly_data():
+    from powerbid.historical_error_profile import anonymized_error_profile
+
+    cases = [validate_historical_day(_fixture(f"2025-09-{i:02d}")) for i in range(1, 4)]
+    policy = ValidationPolicy(20, 50)
+    verdict = judge_historical_model(cases, policy)
+    with pytest.raises(ValueError, match="hourly"):
+        anonymized_error_profile([replace(cases[0], hourly_profile=()), *cases[1:]],
+                                 verdict, policy)
