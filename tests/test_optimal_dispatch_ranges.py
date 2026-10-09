@@ -73,3 +73,40 @@ def test_invalid_tolerance_rejected_and_baseline_immutable():
             _network(), offers, 1, cost_tolerance_rel=float("nan")
         )
     assert offers[0].price == 50
+
+
+def test_historical_joint_dispatch_can_be_feasible_and_equally_optimal():
+    offers = (DcOffer("G1", 1, 100, 50), DcOffer("G2", 1, 100, 50))
+    result = optimal_unit_dispatch_ranges(
+        _network(), offers, 1, observed_unit_mw={"G1": 40, "G2": 60}
+    )
+    assert result.observed_jointly_network_feasible is True
+    assert result.observed_on_optimal_cost_face is True
+    assert result.observed_bid_cost_gap == pytest.approx(0, abs=1e-6)
+
+
+def test_historical_joint_dispatch_may_be_feasible_but_more_expensive():
+    offers = (DcOffer("G1", 1, 100, 10), DcOffer("G2", 1, 100, 100))
+    result = optimal_unit_dispatch_ranges(
+        _network(), offers, 1, observed_unit_mw={"G1": 40, "G2": 60}
+    )
+    assert result.observed_jointly_network_feasible is True
+    assert result.observed_on_optimal_cost_face is False
+    assert result.observed_bid_cost_gap == pytest.approx(5400, abs=1e-4)
+
+
+def test_historical_joint_dispatch_can_be_structurally_infeasible():
+    offers = (DcOffer("G1", 1, 100, 10), DcOffer("G2", 1, 100, 100))
+    with pytest.raises(ValueError, match="finite nonnegative"):
+        optimal_unit_dispatch_ranges(
+            _network(), offers, 1, observed_unit_mw={"G1": 110, "G2": -10}
+        )
+    with pytest.raises(ValueError, match="every mapped"):
+        optimal_unit_dispatch_ranges(
+            _network(), offers, 1, observed_unit_mw={"G1": 100}
+        )
+    result = optimal_unit_dispatch_ranges(
+        _network(), offers, 1, observed_unit_mw={"G1": 110, "G2": 0}
+    )
+    assert result.observed_jointly_network_feasible is False
+    assert result.observed_bid_cost_gap is None
