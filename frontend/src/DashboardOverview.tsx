@@ -16,11 +16,11 @@ type Props = {
 
 const axis = { fill: "#98a2b3", fontSize: 11 };
 const tooltip = {
-  background: "#ffffff",
-  color: "#344054",
-  border: "1px solid #e4e7ec",
+  background: "var(--ta-panel)",
+  color: "var(--ta-ink)",
+  border: "1px solid var(--ta-border)",
   borderRadius: 12,
-  boxShadow: "0 10px 36px rgba(16,24,40,.10)",
+  boxShadow: "0 12px 30px rgba(0,0,0,.18)",
   fontSize: 12,
 };
 
@@ -100,7 +100,8 @@ export function DashboardOverview({ offers, demand, targetId, report, onNavigate
                 <CartesianGrid stroke="#edf0f5" vertical={false}/>
                 <XAxis dataKey="unit_id" tick={axis} axisLine={false} tickLine={false} tickMargin={12}/>
                 <YAxis tick={axis} axisLine={false} tickLine={false} width={50}/>
-                <Tooltip cursor={{fill:"#f2f4ff"}} contentStyle={tooltip}
+                <Tooltip cursor={{fill:"var(--ta-chart-hover)"}} contentStyle={tooltip}
+                  labelStyle={{color:"var(--ta-ink)"}} itemStyle={{color:"var(--ta-ink-2)"}}
                   formatter={(v, name) => [typeof v==="number"?numeric(v,2):v, name]}/>
                 <Bar isAnimationActive={false} dataKey="bid_price" name="机组报价" radius={[5,5,0,0]}>
                   {offers.map(o => <Cell key={o.unit_id} fill={o.unit_id===targetId ? "#465fff" : "#a6b4ff"}/>)}
@@ -135,7 +136,8 @@ export function DashboardOverview({ offers, demand, targetId, report, onNavigate
             <YAxis tick={axis} axisLine={false} tickLine={false} width={55}/>
             <ReferenceLine y={demand} stroke="#e2a25a" strokeDasharray="5 5"
               label={{value:"市场负荷", position:"insideTopRight",fill:"#ba874b",fontSize:11}}/>
-            <Tooltip contentStyle={tooltip} formatter={v => typeof v==="number" ? numeric(v,2) + " MW" : v}/>
+            <Tooltip contentStyle={tooltip} labelStyle={{color:"var(--ta-ink)"}} itemStyle={{color:"var(--ta-ink-2)"}}
+              formatter={v => typeof v==="number" ? numeric(v,2) + " MW" : v}/>
             <Area isAnimationActive={false} dataKey="capacity" name="累积供给容量" stroke="#465fff" strokeWidth={2.7} fill="url(#taSupply)"
               type="stepAfter" dot={{fill:"#465fff",r:3}} activeDot={{r:5}}/>
           </AreaChart>
