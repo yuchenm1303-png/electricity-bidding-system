@@ -31,6 +31,7 @@ from powerbid.pmss_evidence_attachment import verify_pmss_evidence_binding
 from powerbid.pmss_holdout_gate import review_holdout_report
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_joint_research import FIELDS, assess_joint_readiness
+from powerbid.pmss_manual_result_review import review_manual_result
 from powerbid.pmss_network_rank import rank_network_bid_strategies
 from powerbid.pmss_physical_lineage import validate_technical_lineage
 from powerbid.pmss_scene_constraint_evidence import validate_scene_constraint_evidence
@@ -605,5 +606,48 @@ async def inspect_holdout_gate(request: Request) -> dict[str, Any]:
             422, detail=(
                 "匿名历史留出报告缺字段、数值不一致或安全声明不符合要求；"
                 "请用最新只读导出工具重新生成"
+            ),
+        ) from exc
+
+
+class ManualClearingInput(SnapshotInput):
+    """Manual handoff only: does not connect to, write or clear on PMSS."""
+    target_unit_id: str = Field(min_length=1, max_length=120)
+    recommended_segments: list[SegmentInput] = Field(min_length=1, max_length=5)
+    result_case_date: str = Field(min_length=10, max_length=10)
+    observed_results: dict[str, Any]
+    operator_confirmed: bool
+
+
+@router.post("/manual-clearing-review")
+async def manual_clearing_review(request: Request) -> dict[str, Any]:
+    """Validate one dated human-associated result against a recomputed local model."""
+    try:
+        params = ManualClearingInput.model_validate(await _read_payload(request))
+        snapshot = _parse_snapshot(params.snapshot)
+        if params.snapshot.get("historicalBacktestOnly") is not True:
+            raise ValueError("Study case must explicitly be historical-only")
+        _screen_snapshot({"results": params.observed_results})
+        segments = [
+            BidSegment(s.start_power, s.end_power, s.price)
+            for s in params.recommended_segments
+        ]
+        return await run_in_threadpool(
+            review_manual_result,
+            snapshot,
+            target_unit_id=params.target_unit_id,
+            case_date=params.snapshot.get("caseDate", ""),
+            uploaded_date=params.result_case_date,
+            recommended_segments=segments,
+            results=params.observed_results,
+            operator_confirmed=params.operator_confirmed,
+            original_results=params.snapshot.get("results"),
+        )
+    except (ValidationError, ValueError, KeyError, TypeError, StopIteration) as exc:
+        raise HTTPException(
+            422,
+            detail=(
+                "人工关联的出清结果未通过日期、机组、时段、报价曲线或安全校验。"
+                "请使用对应案例的24小时日前结果；旧历史原结果不能冒充新方案的出清。"
             ),
         ) from exc

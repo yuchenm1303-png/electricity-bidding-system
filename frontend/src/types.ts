@@ -465,3 +465,31 @@ export type PMSSHoldoutReview = {
   statisticalConfidenceEstablished: false;
   disclaimer: string;
 };
+
+/** Read-only manual association; NEVER verified candidate clearing or net profit. */
+export type PMSSManualClearingReview = {
+  case_date: string;
+  target_unit_id: string;
+  periods: 24;
+  shared_curve_24h: true;
+  observed_accepted_mwh: number;
+  local_surrogate_accepted_mwh: number;
+  hourly_dispatch_mae_mw: number;
+  reported_income_sum: number | null;
+  income_coverage: number;
+  price_coverage: number;
+  hours: {
+    period: number;
+    observed_accepted_mw: number;
+    local_surrogate_accepted_mw: number;
+    observed_unit_price: number | null;
+    reported_income: number | null;
+  }[];
+  association: "OPERATOR_ASSERTED_ONLY";
+  teacher_result_authenticated: false;
+  candidate_bid_causality_verified: false;
+  reported_income_is_net_profit: false;
+  pmss_write_performed: false;
+  pmss_clearing_executed: false;
+  automatic_submission_enabled: false;
+};

@@ -1,4 +1,4 @@
-import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange, PMSSJointMwhRange, PMSSHoldoutReview } from "./types";
+import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange, PMSSJointMwhRange, PMSSHoldoutReview, PMSSManualClearingReview } from "./types";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -131,6 +131,27 @@ export async function inspectPMSSHoldoutReport(
       method: "POST",
       headers: {"Content-Type": "application/json", "X-PowerBid-Request": "1"},
       body: JSON.stringify({report}),
+    }),
+  );
+}
+
+/** Human-confirmed association only; does NOT submit bids or trigger teacher clearing. */
+export async function reviewManuallyImportedPMSSResult(
+  snapshot: Record<string, unknown>,
+  target_unit_id: string,
+  recommended_segments: {start_power: number; end_power: number; price: number}[],
+  result_case_date: string,
+  observed_results: Record<string, unknown>,
+  operator_confirmed: boolean,
+): Promise<PMSSManualClearingReview> {
+  return unpack<PMSSManualClearingReview>(
+    await fetch(BASE + "api/pmss/manual-clearing-review", {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "X-PowerBid-Request": "1"},
+      body: JSON.stringify({
+        snapshot, target_unit_id, recommended_segments, result_case_date,
+        observed_results, operator_confirmed,
+      }),
     }),
   );
 }
