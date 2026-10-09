@@ -42,7 +42,7 @@ def validate_target(raw: str) -> str:
     ):
         raise ValueError("Supply an HTTP(S) PMSS page URL without credentials or query")
     try:
-        url.port
+        _ = url.port
     except ValueError as exc:
         raise ValueError("Invalid target port") from exc
     return raw
