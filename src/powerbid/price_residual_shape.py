@@ -9,10 +9,10 @@ We intentionally expose NO node identities, raw node prices or bids.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from math import isfinite
 from statistics import median
-from typing import Sequence
 
 
 @dataclass(frozen=True, slots=True)
