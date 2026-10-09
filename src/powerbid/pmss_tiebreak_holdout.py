@@ -18,6 +18,10 @@ from hashlib import sha256
 from math import isfinite
 from typing import Any
 
+from powerbid.deterministic_dc_tiebreak import (
+    DEFAULT_PRIMARY_COST_TOLERANCE_ABS,
+    DEFAULT_PRIMARY_COST_TOLERANCE_REL,
+)
 from powerbid.historical_tiebreak_audit import (
     HistoricalTieBreakStudy,
     audit_historical_tiebreaks,
@@ -164,6 +168,11 @@ def evaluate_heldout_tiebreak_rules(
     return {
         "schemaVersion": 1,
         "status": "CHRONOLOGICAL_HOLDOUT_ORIGINAL_BID_RESEARCH_ONLY",
+        "secondaryOptimizationCostToleranceAbs": DEFAULT_PRIMARY_COST_TOLERANCE_ABS,
+        "secondaryOptimizationCostToleranceRel": DEFAULT_PRIMARY_COST_TOLERANCE_REL,
+        "maximumObservedSecondaryCostDifference": max(
+            report.maximum_primary_bid_cost_increase for report in (*training, *testing)
+        ),
         "trainingCaseDates": train_dates,
         "untouchedHoldoutCaseDates": test_dates,
         "trainingCaseCount": len(train_dates),
