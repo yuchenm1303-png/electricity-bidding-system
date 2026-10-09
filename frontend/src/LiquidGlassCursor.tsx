@@ -460,7 +460,17 @@ function rasterizePortal(
       roundedRect(ctx, localX, localY, rect.width, rect.height, radius);
       ctx.clip();
     }
-    for (const child of Array.from(el.childNodes)) {
+    // Sticky header is a positive z-index stacking layer. Native browser
+    // paint order places it ABOVE the scrolling content, even though React
+    // mounts it first. Repainting children in raw DOM order let offscreen
+    // charts bleed through the header in the refracted ROI texture.
+    const childNodes = Array.from(el.childNodes);
+    if (el.classList.contains("app-main")) {
+      childNodes.sort((a, b) =>
+        Number(a instanceof HTMLElement && a.classList.contains("global-header")) -
+        Number(b instanceof HTMLElement && b.classList.contains("global-header")));
+    }
+    for (const child of childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
         drawTextNode(ctx, child as Text, style, roiLeft, roiTop, roiWidth, roiHeight, opacity);
       } else if (child instanceof HTMLElement) {
