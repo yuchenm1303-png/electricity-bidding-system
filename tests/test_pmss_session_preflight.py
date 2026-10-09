@@ -110,6 +110,18 @@ def test_non_json_and_private_pmss_retmsg_are_never_returned_in_errors():
         adapter.list_projects()
 
 
+def test_http_401_and_403_do_not_retry_or_expose_private_body():
+    for status in (401, 403):
+        adapter, calls = fake_adapter(FakeResponse(
+            status=status, text="SUPER-SECRET-LOGIN-RESPONSE",
+        ))
+        with pytest.raises(TeacherPlatformError) as exc:
+            adapter.list_projects()
+        assert f"HTTP {status}" in str(exc.value)
+        assert "SUPER-SECRET" not in str(exc.value)
+        assert len(calls) == 1
+
+
 def test_t000_is_a_distinct_non_retried_app_auth_state():
     adapter, calls = fake_adapter(FakeResponse(
         content={"retCode": "T000", "retMsg": "PRIVATE SECRET"},
