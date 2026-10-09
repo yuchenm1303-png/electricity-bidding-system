@@ -26,6 +26,7 @@ from powerbid.pmss_bid_rule_safety import (
 )
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
+from powerbid.pmss_joint_research import FIELDS, assess_joint_readiness
 from powerbid.pmss_network_rank import rank_network_bid_strategies
 from powerbid.pmss_strategy import optimize_segmented_bid
 from powerbid.strategy_lab import DemandStress
@@ -184,6 +185,8 @@ async def inspect_snapshot(request: Request) -> dict[str, Any]:
         "market_type": snapshot.limits.market_type,
         "max_segments": snapshot.limits.max_segments,
         "historical_bid_rule_audit": summarize_bid_rule_audit(snapshot),
+        "joint_readiness": asdict(assess_joint_readiness(snapshot, None)),
+        "joint_required_technical_fields": sorted(FIELDS),
         "network": network,
         "dc_grid_available": verified_grid is not None,
         "dc_grid_buses": len(verified_grid.buses) if verified_grid else 0,
