@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from powerbid.candidate_dispatch_uncertainty import assess_candidate_dispatch_uncertainty
 from powerbid.network_dispatch import network_from_dict
 from powerbid.network_feedback import compare_dc_baseline_to_pmss
 from powerbid.network_historical_audit import audit_pmss_historical_grid
@@ -421,4 +422,54 @@ async def rank_pmss_network_bids(request: Request) -> dict[str, Any]:
         "pmss_clearing_executed": False,
         "pmss_counterfactual_verified": False,
         "safe_for_live_submission": False,
+    }
+
+
+
+@router.post("/network-dispatch-range")
+async def candidate_dc_dispatch_range(request: Request) -> dict[str, Any]:
+    """Read-only optimal-cost MW envelope for ONE legal new 24h bid curve.
+
+    Unlike historical allocation comparisons, the calculation never uses
+    observed PMSS market results to choose a bid or dispatch. It cannot
+    validate real PMSS bidding/settlement and must not write to the platform.
+    """
+    try:
+        params = NetworkInput.model_validate(await _read_payload(request))
+        if params.recommended_segments is None:
+            raise ValueError("请提供待评估的新报价分段；不能把历史原报价当成新候选")
+        if params.snapshot.get("historicalBacktestOnly") is not True:
+            raise ValueError("只能使用显式标记的脱敏历史研究快照")
+        snapshot = _parse_snapshot(params.snapshot)
+        grid_raw = params.snapshot.get("dcNetwork")
+        if grid_raw is None:
+            raise ValueError("需要经验证的电网节点与线路输入")
+        network = network_from_dict(grid_raw)
+        verify_network_inputs(snapshot, network, params.target_unit_id)
+        if len(network.buses) > 60 or len(network.lines) > 90:
+            raise ValueError("在线不确定性分析限制60节点、90条线路")
+        candidate = tuple(
+            BidSegment(row.start_power, row.end_power, row.price)
+            for row in params.recommended_segments
+        )
+        validate_new_curve(snapshot, params.target_unit_id, candidate)
+        if not _NETWORK_LIMITER.acquire(blocking=False):
+            raise HTTPException(429, "已有一个网络分析正在进行，请稍后重试")
+        try:
+            result = await run_in_threadpool(
+                assess_candidate_dispatch_uncertainty,
+                snapshot, network, params.target_unit_id, candidate,
+            )
+        finally:
+            _NETWORK_LIMITER.release()
+    except (ValidationError, KeyError, TypeError, ValueError, StopIteration) as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(422, detail="离线求解器未能证明出力区间，无法给出可信结果") from exc
+    return {
+        **asdict(result),
+        "study_only": True,
+        "historical_model_training_days": 0,
+        "pmss_write_performed": False,
+        "pmss_clearing_executed": False,
     }
