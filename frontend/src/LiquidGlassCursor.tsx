@@ -10,8 +10,8 @@ const RELEASE_DISTANCE = 15;
 const FREE_ROI_PADDING = 64;
 const ROI_DEADZONE = 35;
 
-// One lens per meaningful surface. Search fields and the combined brand
-// lockup snap as a whole; nested icons, labels and glyphs never compete.
+// One lens per meaningful surface: both Smirel and PowerBid share the
+// brand-home-link magnetic target, not independent nested icon/text targets.
 const SNAP_SELECTOR = [
   ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
   ".brand-home-link", ".mobile-brand-home", ".ta-global-search",
@@ -52,13 +52,12 @@ function isEligibleSurface(element: HTMLElement) {
     rect.left < window.innerWidth && rect.top < window.innerHeight;
 }
 
-// Every eligible button/link uses its entire visible bounding box.
-// In particular, sidebar navigation rows must never collapse to a local
-// 186px pointer-following lens that only covers half of the button.
+// Frame the whole visible control with one lens. The entire brand-home-link
+// is a single target (Smirel graphic + PowerBid lettering) with the same
+// modest 8px padding used by other buttons, not an oversized header glass.
 function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
   const rect = element.getBoundingClientRect();
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
-  const brandLink = element.matches(".brand-home-link, .mobile-brand-home");
   const padding = compact ? 6 : 8;
 
   // The viewport may crop part of a control near its edges; frame the
@@ -68,23 +67,6 @@ function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: numbe
   let right = Math.min(window.innerWidth, rect.right + padding);
   let top = Math.max(0, rect.top - padding);
   let bottom = Math.min(window.innerHeight, rect.bottom + padding);
-  if (brandLink) {
-    // The brand link stays one clickable control; only the Smirel mark
-    // attracts glass. The PowerBid lettering must not become a refractive
-    // target, since the raster overlay makes its small type unreadable.
-    const icon = element.querySelector<HTMLElement>(".brand-mark-smirel, .mobile-smirel-logo");
-    const iconRect = icon?.getBoundingClientRect() ?? rect;
-    const localWidth = 92;
-    const localHeight = 64;
-    const centerX = Math.max(localWidth / 2, Math.min(window.innerWidth - localWidth / 2,
-      iconRect.left + iconRect.width / 2 - 4));
-    const centerY = Math.max(localHeight / 2, Math.min(window.innerHeight - localHeight / 2,
-      iconRect.top + iconRect.height / 2));
-    left = centerX - localWidth / 2;
-    right = centerX + localWidth / 2;
-    top = centerY - localHeight / 2;
-    bottom = centerY + localHeight / 2;
-  }
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
   const height = Math.max(1, Math.min(window.innerHeight, Math.max(MIN_LENS_HEIGHT, bottom - top)));
   return {
@@ -839,11 +821,6 @@ export function LiquidGlassCursor() {
       const coveringControl = topElement?.closest("button, a, input, textarea, select");
       for (const candidate of Array.from(root.querySelectorAll<HTMLElement>(SNAP_SELECTOR))) {
         if (candidate.dataset.powerbidLiquidCursor === "true" || !isEligibleSurface(candidate)) continue;
-        if (candidate.matches(".brand-home-link, .mobile-brand-home")) {
-          const icon = candidate.querySelector<HTMLElement>(".brand-mark-smirel, .mobile-smirel-logo");
-          // The adjacent PowerBid wordmark remains crisp on hover.
-          if (icon && rectDistance(icon.getBoundingClientRect(), pointerX, pointerY) > 6) continue;
-        }
         const rect = candidate.getBoundingClientRect();
         const distance = rectDistance(rect, pointerX, pointerY);
         if (distance > (candidate === previous ? RELEASE_DISTANCE : SNAP_DISTANCE)) continue;
