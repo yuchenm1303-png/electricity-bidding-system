@@ -59,3 +59,18 @@ unitTree / unitBids / marketSystem / demandForecastMw / forecastSource。
 输出文件权限0600；随后可以上传到新增 Streamlit PMSS 页面做本地计算。
 
 当前服务器缺少该 CLI 所需的认证配置文件验证，尚未声明已完成真实导出。
+
+
+## VPN 通了 ≠ PMSS 登录有效（2026-10-09 实测）
+
+即使学校 VPN 建立了隧道、PMSS 首页通过 SOCKS5 返回 HTTP 200，应用业务接口仍可能返回：
+
+```json
+{"retCode":"T000","retMsg":"登录超时","data":null}
+```
+
+这个状态表示 **PMSS 网页会话过期**，绝不是成功返回空项目列表。只有 `retCode="T200"` 且请求属于只读接口时，才能继续判断数据覆盖情况。
+
+`TeacherPlatformAdapter` 针对 `T000` 明确抛出 `TeacherPlatformAuthenticationExpired`。恢复流程应由用户通过学校官方登录页面重新认证，不能尝试猜测密码、复用已失效会话或调用报价保存/出清接口。登录成功后再请求只读项目列表、对应案例的场景约束、初始状态与历史结果。
+
+平台登录凭据、Cookies、令牌和原始响应只能存放在授权的可信服务器私有区域，不能提交 GitHub 或公开到前端。
