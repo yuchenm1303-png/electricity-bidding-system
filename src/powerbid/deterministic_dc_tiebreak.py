@@ -21,6 +21,10 @@ from powerbid.network_dispatch import (
     dc_clear_hour,
 )
 
+# Explicit tiny numerical allowance only: not a PMSS market rule.
+DEFAULT_PRIMARY_COST_TOLERANCE_ABS = 1e-6
+DEFAULT_PRIMARY_COST_TOLERANCE_REL = 1e-10
+
 
 @dataclass(frozen=True, slots=True)
 class DeterministicDcDispatch:
@@ -47,8 +51,8 @@ def select_dc_optimal_tiebreak(
     period: int,
     *,
     unit_priority: Sequence[str] | None = None,
-    max_cost_increase_abs: float = 1e-6,
-    max_cost_increase_rel: float = 1e-10,
+    max_cost_increase_abs: float = DEFAULT_PRIMARY_COST_TOLERANCE_ABS,
+    max_cost_increase_rel: float = DEFAULT_PRIMARY_COST_TOLERANCE_REL,
     time_limit_seconds: float = 12,
 ) -> DeterministicDcDispatch:
     """Maximize MW for each ordered unit sequentially, keeping lower ranks fixed.
