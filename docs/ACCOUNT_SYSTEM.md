@@ -60,3 +60,36 @@ This first milestone provides login, registration, sessions, roles, administrato
 ## Local tests
 
 Install Python web dependencies and run the account tests and existing API regressions. Browser previews should use a throwaway SQLite file and insecure cookies only on local loopback HTTP, never on the HTTPS production domain.
+
+## One-time browser-based administrator setup (optional, recommended)
+
+The administrator's own password can be chosen on a dedicated, single-use
+activation page rather than shared over chat or embedded into deployment scripts.
+
+Set the production container environment to:
+
+    POWERBID_AUTH_ENABLED=auto
+    POWERBID_ADMIN_SETUP_ENABLED=1
+    POWERBID_REGISTRATION_OPEN=1
+    POWERBID_COOKIE_SECURE=1
+
+In auto mode, the public demo remains accessible while there is no administrator,
+provided the mounted account database is intact. After the administrator
+is created, all API routes immediately begin enforcing authenticated sessions
+and public registration becomes available. Missing or inaccessible account
+storage fails closed rather than reopening API access.
+
+On the server, with the persistent /data directory already mounted, issue an
+invitation using the Python module inside the deployment container:
+
+    docker exec CONTAINER python -c 'from app.admin_setup import issue_invite; print(issue_invite())'
+
+The output is a single-use HTTPS link whose secret lives in the URL fragment,
+not in HTTP request logs. The secret is stored as a SHA-256 digest on the server,
+expires after 24 hours, and is consumed atomically when the first administrator
+registers. The admin provides their username, email and password inside the
+HTTPS page. Never put the invitation URL into a public repository or screenshots.
+
+After the first admin has activated, it is recommended to redeploy with
+POWERBID_ADMIN_SETUP_ENABLED=0 to disable the setup endpoint entirely.
+For production resilience, retain persistent off-host database backups.

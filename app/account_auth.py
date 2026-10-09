@@ -34,7 +34,16 @@ router = APIRouter(prefix="/api/auth", tags=["account"])
 
 
 def auth_enabled() -> bool:
-    return os.getenv("POWERBID_AUTH_ENABLED", "0") == "1"
+    mode = os.getenv("POWERBID_AUTH_ENABLED", "0")
+    if mode == "auto":
+        from app.admin_setup import has_admin
+
+        # An unmounted/missing account DB must NEVER re-open authenticated
+        # endpoints publicly after production activation.
+        if not db_path().exists():
+            return True
+        return has_admin()
+    return mode == "1"
 
 
 def registration_open() -> bool:
