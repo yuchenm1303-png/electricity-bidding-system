@@ -861,7 +861,6 @@ export function LiquidGlassCursor() {
 
       if (target) {
         const state = magneticStates.get(target);
-        const rect = target.getBoundingClientRect();
         // Lock the capture window to the target's non-magnetic base position.
         // The button can still wobble inside this texture without dragging the ROI.
         const bounds = getLensBounds(target, pointerX, pointerY);
