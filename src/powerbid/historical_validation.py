@@ -7,11 +7,11 @@ strategy for forward-looking use.
 """
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from hashlib import sha256
-import json
 from math import isfinite, sqrt
 from typing import Any
 
