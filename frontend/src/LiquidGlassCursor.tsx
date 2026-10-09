@@ -11,29 +11,75 @@ const RELEASE_DISTANCE = 17;
 const SNAP_PADDING = 10;
 const FREE_ROI_PADDING = 64;
 const ROI_DEADZONE = 35;
-// Product-only selector mapping. All optical, ROI and spring logic below is Loom's original.
+// PowerBid-only magnetic mapping: keep Loom Shader / refraction / spring physics.
+const BRAND_TARGET_SELECTOR = ".brand-mark-smirel, .brand-name strong, .brand-name small";
 const SNAP_SELECTOR = [
-  ".brand", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
-  ".primary-button:not(:disabled)", ".outline-button:not(:disabled)",
-  ".secondary-button:not(:disabled)", ".subtle-button:not(:disabled)",
-  ".ghost-cta:not(:disabled)", ".guide-action:not(:disabled)",
-  ".ta-report-link:not(:disabled)", ".pmss-import-button:not(:disabled)",
-  ".pmss-run-button:not(:disabled)", ".pmss-review-export:not(:disabled)",
-  ".pmss-hour-buttons button:not(:disabled)",
-  ".pmss-hour-track button:not(:disabled)",
-  ".pmss-review-tabs button:not(:disabled)",
-  ".mode-switch button:not(:disabled)", ".target-radio:not(:disabled)",
+  BRAND_TARGET_SELECTOR,
+  ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
+  ".nav-entry > svg", ".nav-entry .nav-label-text", ".nav-count",
+  ".ta-menu-toggle svg", ".ta-header-icon svg", ".sidebar-collapse svg",
+  ".primary-button > svg", ".primary-button > span",
+  ".outline-button > svg", ".outline-button > span",
+  ".secondary-button > svg", ".secondary-button > span",
+  ".pmss-run-button > svg", ".pmss-import-button > svg",
+  ".pmss-review-export > svg", ".pmss-hour-buttons svg",
+  ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
+  ".app a[href]:not(.brand-home-link)",
+  ".ta-global-search", ".table-search",
+  ".ta-stat-icon", ".ta-stat-bottom strong", ".ta-stat-badge",
+  ".ta-gauge-reading strong", ".ta-card-icon", ".ta-card-tag",
+  ".ta-report-complete strong", ".ta-chart-card .ta-card-title h3",
+  ".ta-bars .recharts-bar-rectangle", ".ta-capacity-footer strong",
+  ".recommendation-price > span", ".recommendation-facts strong",
+  ".result-metric strong", ".result-metric-top span", ".chart-tag",
+  ".pmss-metric strong", ".pmss-state-label", ".pmss-unit-avatar",
+  ".pmss-hour-facts strong", ".pmss-review-facts strong",
+  ".pmss-unit-identity strong", ".pmss-review-slider-title span",
+  ".pmss-table tbody .pmss-unit-identity",
+  ".recharts-legend-item", ".recharts-active-dot",
+  ".table-foot-note", ".unit-symbol",
   "[data-liquid-snap='true']",
 ].join(",");
 
+// Move only interactive targets and a few small anchors: not cards, chart
+// bars, axes, inputs or tooltips (translating those breaks visual alignment).
 const MAGNETIC_SELECTOR = [
-  ".brand", ".primary-button:not(:disabled)",
-  ".secondary-button:not(:disabled)", ".outline-button:not(:disabled)",
-  ".ghost-cta:not(:disabled)", ".guide-action:not(:disabled)",
-  ".ta-report-link:not(:disabled)", ".pmss-import-button:not(:disabled)",
-  ".pmss-run-button:not(:disabled)", ".pmss-review-export:not(:disabled)",
+  ".brand-mark-smirel", ".brand-name", ".sidebar-collapse", ".nav-entry",
+  ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
+  ".app a[href]:not(.brand-home-link)", ".ta-stat-icon", ".ta-card-icon",
+  ".pmss-unit-avatar", ".unit-symbol",
   "[data-magnetic-hover='true']",
 ].join(",");
+
+const BRAND_LENS_MAX_WIDTH = 132;
+const BRAND_LENS_MAX_HEIGHT = 52;
+const GENERAL_LENS_MAX_WIDTH = 208;
+const GENERAL_LENS_MAX_HEIGHT = 82;
+const MIN_LENS_WIDTH = 44;
+const MIN_LENS_HEIGHT = 36;
+
+function isBrandSurface(element: HTMLElement) {
+  return element.matches(BRAND_TARGET_SELECTOR);
+}
+
+function getLensBounds(element: HTMLElement, pointerX: number, pointerY: number) {
+  const rect = element.getBoundingClientRect();
+  const brand = isBrandSurface(element);
+  const padding = brand ? 5 : SNAP_PADDING;
+  const maxWidth = brand ? BRAND_LENS_MAX_WIDTH : element.matches(".nav-entry") ? 150 : GENERAL_LENS_MAX_WIDTH;
+  const maxHeight = brand ? BRAND_LENS_MAX_HEIGHT : element.matches(".nav-entry") ? 62 : GENERAL_LENS_MAX_HEIGHT;
+  const width = Math.min(Math.max(MIN_LENS_WIDTH, window.innerWidth - 20), Math.max(MIN_LENS_WIDTH, Math.min(rect.width + 2 * padding, maxWidth)));
+  const height = Math.min(Math.max(MIN_LENS_HEIGHT, window.innerHeight - 20), Math.max(MIN_LENS_HEIGHT, Math.min(rect.height + 2 * padding, maxHeight)));
+  // Large interactive surfaces get a local lens near the cursor, not an
+  // oversized lens anchored to the center of an entire card or long button.
+  const centerX = rect.width > width + 24
+    ? Math.max(rect.left + width / 2, Math.min(rect.right - width / 2, pointerX))
+    : rect.left + rect.width / 2;
+  const centerY = rect.height > height + 24
+    ? Math.max(rect.top + height / 2, Math.min(rect.bottom - height / 2, pointerY))
+    : rect.top + rect.height / 2;
+  return { width, height, centerX, centerY };
+}
 
 type SpringValue = { value: number; velocity: number; target: number };
 
@@ -665,7 +711,7 @@ export function LiquidGlassCursor() {
         const baseTop = rect.top - state.appliedY;
         const baseRight = baseLeft + rect.width;
         const baseBottom = baseTop + rect.height;
-        const hoverArea = element.classList.contains("brand") ? 22 : 18;
+        const hoverArea = isBrandSurface(element) || element.matches(".brand-name") ? 12 : 15;
         const inside =
           pointerInside &&
           pointerX >= baseLeft - hoverArea &&
@@ -678,7 +724,7 @@ export function LiquidGlassCursor() {
           const centerY = baseTop + rect.height / 2;
           const normalizedX = Math.max(-1, Math.min(1, (pointerX - centerX) / Math.max(rect.width / 2, 1)));
           const normalizedY = Math.max(-1, Math.min(1, (pointerY - centerY) / Math.max(rect.height / 2, 1)));
-          const distance = element.classList.contains("brand") ? 8 : (activeTarget === element ? 7 : 10);
+          const distance = isBrandSurface(element) || element.matches(".brand-name") ? 3.5 : (activeTarget === element ? 6 : 8);
           state.x.target = normalizedX * distance;
           state.y.target = normalizedY * distance;
         } else {
@@ -722,24 +768,29 @@ export function LiquidGlassCursor() {
     refreshMagneticTargets();
 
     const findSnapTarget = () => {
-      if (activeTarget?.isConnected) {
-        if (rectDistance(activeTarget.getBoundingClientRect(), pointerX, pointerY) <= RELEASE_DISTANCE) return activeTarget;
-      }
-      activeTarget = null;
-      let closest = SNAP_DISTANCE + 0.001;
+      const previous = activeTarget;
+      let next: HTMLElement | null = null;
+      let bestScore = Number.POSITIVE_INFINITY;
       for (const candidate of Array.from(root.querySelectorAll<HTMLElement>(SNAP_SELECTOR))) {
         if (candidate.dataset.powerbidLiquidCursor === "true") continue;
+        if (candidate.matches(":disabled") || candidate.closest("[aria-hidden='true']")) continue;
         const style = getComputedStyle(candidate);
         if (style.pointerEvents === "none" || style.visibility === "hidden" || style.display === "none") continue;
         const rect = candidate.getBoundingClientRect();
         if (rect.width <= 0 || rect.height <= 0) continue;
         const distance = rectDistance(rect, pointerX, pointerY);
-        if (distance <= closest) {
-          closest = distance;
-          activeTarget = candidate;
+        if (distance > (candidate === previous ? RELEASE_DISTANCE : SNAP_DISTANCE)) continue;
+        // When an icon/label lives inside a button, use the smaller surface;
+        // otherwise the broad parent swallows all the detailed magnetic points.
+        const areaScore = Math.log2(1 + Math.min(rect.width * rect.height, 120000));
+        const score = distance * 24 + areaScore - (candidate === previous ? 2.4 : 0);
+        if (score < bestScore) {
+          bestScore = score;
+          next = candidate;
         }
       }
-      return activeTarget;
+      activeTarget = next;
+      return next;
     };
 
     const updateTargets = () => {
@@ -751,9 +802,7 @@ export function LiquidGlassCursor() {
         rasterDirty = true;
         roiLockedTarget = null;
         if (target) {
-          const rect = target.getBoundingClientRect();
-          const finalLensWidth = Math.min(Math.max(38, window.innerWidth - 20), Math.max(38, rect.width + SNAP_PADDING * 2));
-          const finalLensHeight = Math.min(Math.max(34, window.innerHeight - 20), Math.max(34, rect.height + SNAP_PADDING * 2));
+          const { width: finalLensWidth, height: finalLensHeight } = getLensBounds(target, pointerX, pointerY);
           snappedRoiWidth = Math.min(
             MAX_ROI_SIZE,
             Math.max(FREE_ROI_SIZE, Math.ceil((finalLensWidth + SNAP_ROI_PADDING * 2) / 16) * 16),
@@ -765,11 +814,11 @@ export function LiquidGlassCursor() {
         }
       }
       if (target) {
-        const rect = target.getBoundingClientRect();
-        x.target = rect.left + rect.width / 2;
-        y.target = rect.top + rect.height / 2;
-        width.target = Math.min(Math.max(38, window.innerWidth - 20), Math.max(38, rect.width + SNAP_PADDING * 2));
-        height.target = Math.min(Math.max(34, window.innerHeight - 20), Math.max(34, rect.height + SNAP_PADDING * 2));
+        const lens = getLensBounds(target, pointerX, pointerY);
+        x.target = lens.centerX;
+        y.target = lens.centerY;
+        width.target = lens.width;
+        height.target = lens.height;
         snap.target = 1;
       } else {
         x.target = pointerX;
@@ -819,11 +868,11 @@ export function LiquidGlassCursor() {
 
       if (target) {
         const state = magneticStates.get(target);
-        const rect = target.getBoundingClientRect();
         // Lock the capture window to the target's non-magnetic base position.
         // The button can still wobble inside this texture without dragging the ROI.
-        const baseCenterX = rect.left + rect.width / 2 - (state?.appliedX ?? 0);
-        const baseCenterY = rect.top + rect.height / 2 - (state?.appliedY ?? 0);
+        const bounds = getLensBounds(target, pointerX, pointerY);
+        const baseCenterX = bounds.centerX - (state?.appliedX ?? 0);
+        const baseCenterY = bounds.centerY - (state?.appliedY ?? 0);
         if (roiLockedTarget !== target || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop)) {
           roiLeft = Math.round(Math.max(0, Math.min(maxLeft, baseCenterX - roiWidth / 2)));
           roiTop = Math.round(Math.max(0, Math.min(maxTop, baseCenterY - roiHeight / 2)));
