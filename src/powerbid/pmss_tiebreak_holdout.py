@@ -160,21 +160,13 @@ def evaluate_heldout_tiebreak_rules(
         training_scores[policy], _TIE_ORDER.index(policy)
     ))
 
-    testing = tuple(audit_historical_tiebreaks(indexed[d]) for d in test_dates)
-    for result in testing:
-        if result.compared_hours != 24 or result.examined_hours != 24:
-            raise ValueError("Holdout requires complete 24h unit observations")
-    testing_scores = _summaries(testing)
     train_margin = training_scores[winner] - training_scores["canonical_lp"]
-    test_margin = testing_scores[winner] - testing_scores["canonical_lp"]
 
     # Per-DAY paired deltas prevent pooled unit-hour averages hiding a
     # failure concentrated in one day. All gate decisions use TRAINING only.
     # Later cases are observed strictly for descriptive validation.
     train_bids = signatures[:-holdout_dates]
-    heldout_bids = signatures[-holdout_dates:]
     training_diversity = len(set(train_bids))
-    reused_heldout = sum(s in set(train_bids) for s in heldout_bids)
     training_daily = []
     for i, report in enumerate(training):
         daily_scores = _summaries((report,))
@@ -188,18 +180,6 @@ def evaluate_heldout_tiebreak_rules(
                 train_bids[i] in train_bids[:i]
             ),
         })
-    testing_daily = []
-    for i, report in enumerate(testing):
-        daily_scores = _summaries((report,))
-        selected_delta = daily_scores[winner] - daily_scores["canonical_lp"]
-        testing_daily.append({
-            "caseDate": test_dates[i],
-            "maeMwByPolicy": daily_scores,
-            "selectedVsCanonicalDeltaMaeMw": selected_delta,
-            "selectedBetterThanCanonical": selected_delta < -1e-8,
-            "identicalOfferCurveSeenInTraining": heldout_bids[i] in train_bids,
-        })
-
     # A reproducible, PREDECLARED minimum improvement helps prevent
     # a tiny solver-driven training MAE difference being called a priority
     # discovery. With only 2 training dates this is a cautious screening
@@ -219,6 +199,40 @@ def evaluate_heldout_tiebreak_rules(
         reasons.append("NOT_EVERY_TRAINING_DAY_IMPROVES_MATERIALLY")
     guardrail_pass = not reasons
     guarded_policy = winner if guardrail_pass else "canonical_lp"
+
+    # Lock BOTH candidate selection and its conservative fallback before
+    # evaluating any held-out PMSS observed dispatch. Never revise either
+    # based on the later-day winner, daily loss, or repeated held-out bids.
+    testing = tuple(audit_historical_tiebreaks(indexed[d]) for d in test_dates)
+    for result in testing:
+        if result.compared_hours != 24 or result.examined_hours != 24:
+            raise ValueError("Holdout requires complete 24h unit observations")
+    testing_scores = _summaries(testing)
+    test_margin = testing_scores[winner] - testing_scores["canonical_lp"]
+    heldout_bids = signatures[-holdout_dates:]
+    reused_heldout = sum(s in set(train_bids) for s in heldout_bids)
+    testing_daily = []
+    for i, report in enumerate(testing):
+        daily_scores = _summaries((report,))
+        selected_delta = daily_scores[winner] - daily_scores["canonical_lp"]
+        guarded_delta = daily_scores[guarded_policy] - daily_scores["canonical_lp"]
+        testing_daily.append({
+            "caseDate": test_dates[i],
+            "maeMwByPolicy": daily_scores,
+            "selectedVsCanonicalDeltaMaeMw": selected_delta,
+            "selectedBetterThanCanonical": selected_delta < -1e-8,
+            "guardedVsCanonicalDeltaMaeMw": guarded_delta,
+            "guardedBetterThanCanonical": guarded_delta < -1e-8,
+            "identicalOfferCurveSeenInTraining": heldout_bids[i] in train_bids,
+        })
+
+
+    guarded_training_mae = training_scores[guarded_policy]
+    guarded_holdout_mae = testing_scores[guarded_policy]
+    guarded_holdout_delta = guarded_holdout_mae - testing_scores["canonical_lp"]
+    guarded_daily_worst = max(
+        0.0, *(day["guardedVsCanonicalDeltaMaeMw"] for day in testing_daily)
+    )
     holdout_winner = min(_TIE_ORDER, key=lambda policy: (
         testing_scores[policy], _TIE_ORDER.index(policy)
     ))
@@ -252,6 +266,18 @@ def evaluate_heldout_tiebreak_rules(
         "holdoutBestPolicyExPostDiagnosticOnly": holdout_winner,
         "trainingSelectedVsCanonicalDeltaMaeMw": train_margin,
         "holdoutSelectedVsCanonicalDeltaMaeMw": test_margin,
+        "trainingConservativeComparatorMaeMw": guarded_training_mae,
+        "holdoutConservativeComparatorMaeMw": guarded_holdout_mae,
+        "trainingConservativeVsCanonicalDeltaMaeMw": (
+            guarded_training_mae - training_scores["canonical_lp"]
+        ),
+        "holdoutConservativeVsCanonicalDeltaMaeMw": guarded_holdout_delta,
+        "holdoutConservativeDaysBetterThanCanonical": sum(
+            day["guardedBetterThanCanonical"] for day in testing_daily
+        ),
+        "largestHoldoutConservativeDeteriorationMaeMw": guarded_daily_worst,
+        "conservativeComparatorLockedBeforeHoldout": True,
+        "conservativeComparatorEligibleForLivePMSS": False,
         "holdoutSelectedBetterThanCanonical": test_margin < -1e-8,
         "sourceOrderReferenceHoldoutMaeMw": _weighted_error(
             testing, "source_order_baseline_mae_mw"
