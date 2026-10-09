@@ -168,6 +168,11 @@ export function PMSSJointMwhPanel({
       中标曲线或平台只读技术字段自动填成启停/爬坡参数。
       请只在掌握课程资料且能够逐台核实参数时主动导入。
     </div>
+    <p className="pmss-footnote">
+      {inspection.evidence_binding
+        ? "证据摘要已与当前案例完成文件完整性绑定；老师平台来源仍未经独立认证，场景日期仅由授权操作人员声明。"
+        : "当前快照尚无同案例证据完整性绑定；若需补齐，请通过可信服务器的离线白名单合并脚本生成新快照。"}
+    </p>
     <details className="pmss-audit-details">
       <summary>
         查看13项机组约束的数据缺口 · 匿名源字段
