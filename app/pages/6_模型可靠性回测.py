@@ -23,6 +23,7 @@ from powerbid.historical_ambiguity import audit_historical_optimal_ambiguity  # 
 from powerbid.historical_price_hypotheses import (  # noqa: E402
     audit_historical_price_caps,
 )
+from powerbid.historical_tiebreak_audit import audit_historical_tiebreaks  # noqa: E402
 from powerbid.historical_validation import (  # noqa: E402
     ValidationPolicy,
     judge_historical_model,
@@ -393,6 +394,66 @@ st.info(
     "也不表示新报价可以突破当前申报上限。"
 )
 
+st.subheader("确定性并列最优分配 · 出清结果对机组排序是否敏感？")
+st.caption(
+    "以相同历史原始报价、相同DC网架与不变的最低报价成本为前提，"
+    "依次比较：原始申报文件顺序、规范化机组与报价段顺序、"
+    "机组ID正序优先和机组ID倒序优先。"
+    "历史中标量仅用于事后测评，绝不用于选择预测规则。"
+)
+with st.spinner("正在验证多组相同主目标成本下的确定性次级分配"):
+    tiebreak_study = audit_historical_tiebreaks(
+        raw_by_date[selected_day.case_date]
+    )
+st.dataframe(
+    pd.DataFrame([
+        {"同成本出力方案": "原始报价输入顺序的标准LP解",
+         "该日事后中标量MAE (MW)": tiebreak_study.source_order_baseline_mae_mw},
+        {"同成本出力方案": "规范化报价段顺序的标准LP解",
+         "该日事后中标量MAE (MW)": tiebreak_study.canonical_order_baseline_mae_mw},
+        {"同成本出力方案": "机组ID正序优先",
+         "该日事后中标量MAE (MW)": tiebreak_study.ascending_dispatch_mae_mw},
+        {"同成本出力方案": "机组ID倒序优先",
+         "该日事后中标量MAE (MW)": tiebreak_study.descending_dispatch_mae_mw},
+    ]),
+    hide_index=True, use_container_width=True,
+)
+tie_cols = st.columns(3)
+tie_cols[0].metric(
+    "不同顺序产生不同出力分配的小时",
+    f"{tiebreak_study.hours_with_different_deterministic_allocations}/24",
+)
+tie_cols[1].metric(
+    "最大全机组出力重新分配量",
+    f"{tiebreak_study.maximum_total_allocation_difference_mw:,.2f} MW",
+)
+tie_cols[2].metric(
+    "最大主目标申报成本偏差",
+    f"{tiebreak_study.maximum_primary_bid_cost_increase:,.6f}",
+)
+st.dataframe(
+    pd.DataFrame([
+        {
+            "小时": h.period,
+            "原始顺序 LP MAE(MW)": h.source_order_baseline_mae_mw,
+            "规范顺序 LP MAE(MW)": h.canonical_order_baseline_mae_mw,
+            "正序优先 MAE(MW)": h.ascending_mae_mw,
+            "倒序优先 MAE(MW)": h.descending_mae_mw,
+            "正序/倒序出力绝对位移(MW)": h.ascending_vs_descending_total_mw_shift,
+            "申报成本偏差": h.max_primary_cost_increase,
+        }
+        for h in tiebreak_study.hours
+    ]),
+    hide_index=True, use_container_width=True,
+)
+st.warning(
+    "这里的排序规则完全是PowerBid为测试设计的固定假设，"
+    "并未识别老师PMSS实际采用什么顺序。"
+    "即使有规则在单日历史MAE更小，也不表示新报价回测通过。"
+    "同时，无论如何更换原始LP最优出力，都不能直接把1001价格假设"
+    "当作真实结算规则写入利润模型。"
+)
+
 report = {
     "notice": (
         "Historical original PMSS bids vs offline DC baseline ONLY. "
@@ -404,6 +465,7 @@ report = {
     "selected_day_attribution": asdict(diagnostic.comparison),
     "selected_day_optimal_face": asdict(ambiguity),
     "selected_day_price_hypotheses": asdict(price_study),
+    "selected_day_deterministic_tiebreak": asdict(tiebreak_study),
     "selected_day_expost_zero_sensitivity": asdict(zero_stress),
     "selected_day_fixed_dispatch_lines": [
         asdict(line) for line in diagnostic.observed_dispatch.per_line
