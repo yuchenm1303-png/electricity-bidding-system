@@ -176,8 +176,8 @@ def test_training_guardrail_uses_no_holdout_labels_or_offer_novelty(monkeypatch)
     # Different offer segment boundaries but identical marginal offer prices.
     # For this isolated selection test, mock the heavy local LP study.
     samples[1]["unitBids"]["G2"]["datas"][0]["segmentDatas"] = [
-        {"startPower": 0, "endPower": 75, "price": 90},
-        {"startPower": 75, "endPower": 150, "price": 90},
+        {"startPower": 0, "endPower": 75, "price": 90, "segmentOrder": 1},
+        {"startPower": 75, "endPower": 150, "price": 90, "segmentOrder": 2},
     ]
     def fake_study(raw):
         heldout = raw["caseDate"] == "2025-09-03"
