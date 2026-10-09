@@ -131,11 +131,14 @@ export default function App() {
   const [drawerMounted, setDrawerMounted] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
-    window.localStorage.getItem("powerbid-theme") === "dark" ? "dark" : "light"
+    window.localStorage.getItem("powerbid-theme-preference-v2") === "light" ? "light" : "dark"
   );
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0C1222" : "#F8F9FC");
     window.localStorage.setItem("powerbid-theme", theme);
+    window.localStorage.setItem("powerbid-theme-preference-v2", theme);
   }, [theme]);
   const [mobileNav, setMobileNav] = useState(false);
   const [pmssVisited, setPmssVisited] = useState(false);

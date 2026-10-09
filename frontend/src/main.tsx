@@ -12,6 +12,13 @@ const route = window.location.pathname.startsWith(base)
 const inWorkspace = route === "app" || route.startsWith("app/")
   || new URLSearchParams(window.location.search).get("workspace") === "1";
 const workspaceHref = base + "app";
+
+// Default to dark on first visit, but respect the user's explicit choice.
+// Set the root before React mounts to prevent a flash of light UI.
+let storedTheme: string | null = null;
+try { storedTheme = window.localStorage.getItem("powerbid-theme-preference-v2"); } catch { /* storage disabled */ }
+document.documentElement.dataset.theme = storedTheme === "light" ? "light" : "dark";
+document.documentElement.style.colorScheme = storedTheme === "light" ? "light" : "dark";
 if (inWorkspace) document.title = "PowerBid Studio · 报价策略工作台";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

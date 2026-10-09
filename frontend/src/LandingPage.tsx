@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, Activity, BarChart3, Check, ChevronRight, CircleDot, Compass, Gauge, Layers3, Menu, MousePointer2, MoveUpRight, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import "./landing.css";
+import "./landing-dark.css";
 import PowerConstellation from "./PowerConstellation";
 
 type LandingProps = { workspaceHref: string };
