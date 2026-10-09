@@ -114,6 +114,18 @@ export type PMSSInspection = {
   historical_only: boolean;
   load_source_kind: string;
   max_segments: number;
+  joint_readiness: {
+    ready: boolean;
+    total_units: number;
+    supplied_units: number;
+    missing_unit_ids: string[];
+    unexpected_unit_ids: string[];
+    invalid: Record<string, string>;
+    source: string;
+    independently_verified: boolean;
+    message: string;
+  };
+  joint_required_technical_fields: string[];
   historical_bid_rule_audit: {
     price_floor: number | null;
     price_ceiling: number | null;
