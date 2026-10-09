@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
+from typing import Literal
 
 from powerbid.network_dispatch import DcNetwork
 from powerbid.network_strategy import verify_network_inputs
@@ -44,6 +45,24 @@ class JointMarketResult:
     terminal_mode: TerminalMode
     pricing_method: str = "fixed-commitment continuous LP duals"
     model_label: str = "24h simplified DC+UC MILP, NOT PMSS market clearing"
+
+
+@dataclass(frozen=True, slots=True)
+class JointMwhExtreme:
+    """One extreme of the 24h feasible near-minimum *bid+startup* cost set."""
+
+    target_unit_id: str
+    direction: Literal["minimum", "maximum"]
+    target_accepted_mwh: float
+    target_dispatch_24h: tuple[float, ...]
+    target_online_24h: tuple[bool, ...]
+    primary_optimum_cost: float
+    extreme_total_cost: float
+    allowed_cost_increase: float
+    model_label: str = (
+        "24h near-optimal DC+UC feasible dispatch projection; "
+        "no LMPs, no verified PMSS counterfactual, no actual settlement"
+    )
 
 
 class JointInfeasibleError(ValueError):
@@ -81,7 +100,10 @@ def joint_clear_day(
     peer_bid_multiplier: float = 1.0,
     terminal_mode: TerminalMode = "complete",
     time_limit_seconds: float = 25.0,
-) -> JointMarketResult:
+    target_mwh_extreme: Literal["minimum", "maximum"] | None = None,
+    extreme_cost_tolerance_abs: float = 1e-5,
+    extreme_cost_tolerance_rel: float = 1e-9,
+) -> JointMarketResult | JointMwhExtreme:
     """Optimize 24h bid-cost, start/stop and network flow jointly.
 
     We do not infer actual PMSS startup/dispatch cost or nodal parameters.
@@ -98,6 +120,15 @@ def joint_clear_day(
             raise ValueError("Initial unit on/off status must be an actual boolean")
         if spec.max_mw > snapshot.unit(ident).capacity_mw + 1e-7:
             raise ValueError(f"{ident}: technical maximum exceeds snapshot capacity")
+    if target_mwh_extreme not in (None, "minimum", "maximum"):
+        raise ValueError("target_mwh_extreme must be minimum, maximum or None")
+    if any(
+        type(value) not in (float, int) or not isfinite(value) or value < 0
+        for value in (extreme_cost_tolerance_abs, extreme_cost_tolerance_rel)
+    ):
+        raise ValueError("MWh extreme cost tolerances must be finite nonnegative")
+    if extreme_cost_tolerance_abs > 1 or extreme_cost_tolerance_rel > 1e-5:
+        raise ValueError("MWh extreme cost tolerance exceeds safe study limit")
     if terminal_mode not in ("complete", "carryover"):
         raise ValueError("terminal_mode must be complete or carryover")
     for val in (demand_multiplier, peer_bid_multiplier, time_limit_seconds):
@@ -331,6 +362,66 @@ def joint_clear_day(
         raise RuntimeError(
             f"24-hour mixed-integer market dispatch did not prove optimality: "
             f"{mixed.message}"
+        )
+
+    if target_mwh_extreme is not None:
+        # A second MILP projects the *integrated* 24-hour economic optimum
+        # set on the target generator's total accepted MWh. All original
+        # network, commitment, start/stop, ramp and bid constraints remain.
+        # The two extremes may have different binary unit commitments.
+        allowed_cost_increase = (
+            extreme_cost_tolerance_abs
+            + extreme_cost_tolerance_rel * max(1.0, abs(float(mixed.fun)))
+        )
+        cost_ceiling = float(mixed.fun) + allowed_cost_increase
+        projected_objective = np.zeros_like(c_arr)
+        sign = 1.0 if target_mwh_extreme == "minimum" else -1.0
+        for t in range(24):
+            for idx in blocks[t, target_unit_id]:
+                projected_objective[idx] = sign
+        projected = milp(
+            c=projected_objective,
+            integrality=np.asarray(integer, dtype=int),
+            bounds=Bounds(lo_arr, hi_arr),
+            constraints=[
+                LinearConstraint(a_eq, eq_rhs, eq_rhs),
+                LinearConstraint(a_ub, -np.inf, ub_rhs),
+                LinearConstraint(
+                    c_arr.reshape(1, -1), -np.inf, cost_ceiling
+                ),
+            ],
+            options={"time_limit": time_limit_seconds, "mip_rel_gap": 1e-9},
+        )
+        if projected.status == 2:
+            raise JointInfeasibleError(
+                "No integrated 24h schedule satisfies the economic optimum face"
+            )
+        if projected.status != 0 or projected.x is None:
+            raise RuntimeError(
+                "24h physical MW extreme not proven optimal: "
+                + str(projected.message)
+            )
+        projected_cost = float(c_arr @ projected.x)
+        if projected_cost > cost_ceiling + max(1e-4, allowed_cost_increase*1e-3):
+            raise RuntimeError("Joint MW extreme violates the primary cost ceiling")
+        schedule = tuple(
+            sum(max(0.0, float(projected.x[idx]))
+                for idx in blocks[t, target_unit_id])
+            for t in range(24)
+        )
+        online = tuple(
+            bool(round(projected.x[commitment[t, target_unit_id][0]]))
+            for t in range(24)
+        )
+        return JointMwhExtreme(
+            target_unit_id=target_unit_id,
+            direction=target_mwh_extreme,
+            target_accepted_mwh=sum(schedule),
+            target_dispatch_24h=schedule,
+            target_online_24h=online,
+            primary_optimum_cost=float(mixed.fun),
+            extreme_total_cost=projected_cost,
+            allowed_cost_increase=allowed_cost_increase,
         )
 
     # Fix ONLY the binary commitment decisions and price the continuous
