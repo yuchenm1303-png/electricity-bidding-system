@@ -40,6 +40,12 @@ class UnitError:
 
 
 @dataclass(frozen=True, slots=True)
+class ElementError:
+    element_id: str
+    metric: ErrorMetric
+
+
+@dataclass(frozen=True, slots=True)
 class DayValidation:
     case_date: str
     grid_fingerprint: str
@@ -51,6 +57,8 @@ class DayValidation:
     nodal_price: ErrorMetric
     line_flow_abs: ErrorMetric
     per_unit: tuple[UnitError, ...]
+    per_node: tuple[ElementError, ...]
+    per_branch: tuple[ElementError, ...]
     max_hourly_dispatch_mae: float | None
     max_hourly_lmp_mae: float | None
     model_label: str = (
@@ -204,6 +212,8 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
     # Construct offers from the immutable original snapshot at each hour.
     # This is the only modeled bid set admissible to historical comparison.
     per_unit: dict[str, list[float]] = {u: [] for u in unit_ids}
+    per_node: dict[str, list[float]] = {node: [] for node in network.buses}
+    per_branch: dict[str, list[float]] = {line: [] for line in line_ids}
     all_unit_errors: list[float] = []
     all_price_errors: list[float] = []
     all_flow_errors: list[float] = []
@@ -255,12 +265,24 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
                 per_unit[uid].append(
                     result.accepted_by_unit[uid] - observed_power
                 )
+        for bus in network.buses:
+            value = prices[bus][hour]
+            if value is not None:
+                per_node[bus].append(result.nodal_prices[bus] - value)
+        for line in line_ids:
+            value = flows[line][hour]
+            if value is not None:
+                per_branch[line].append(
+                    abs(result.line_flows_mw[line]) - abs(value)
+                )
 
     grid_parameters = {
         "buses": sorted(network.buses),
         "lines": sorted((x.line_id, x.from_bus, x.to_bus,
                          x.reactance_pu, x.limit_mw) for x in network.lines),
         "unit_bus": sorted(network.unit_bus.items()),
+        "slack_bus": network.slack_bus,
+        "base_mva": network.base_mva,
     }
     fingerprint = sha256(
         json.dumps(grid_parameters, sort_keys=True).encode("utf-8")
@@ -278,6 +300,14 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
         per_unit=tuple(
             UnitError(unit_id=uid, dispatch=_error_metric(per_unit[uid], 24))
             for uid in sorted(unit_ids)
+        ),
+        per_node=tuple(
+            ElementError(element_id=bus, metric=_error_metric(per_node[bus], 24))
+            for bus in sorted(network.buses)
+        ),
+        per_branch=tuple(
+            ElementError(element_id=line, metric=_error_metric(per_branch[line], 24))
+            for line in sorted(line_ids)
         ),
         max_hourly_dispatch_mae=max(unit_hour_peak, default=None),
         max_hourly_lmp_mae=max(price_hour_peak, default=None),
