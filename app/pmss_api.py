@@ -16,7 +16,6 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from powerbid.candidate_dispatch_uncertainty import assess_candidate_dispatch_uncertainty
-from powerbid.pmss_evidence_attachment import verify_pmss_evidence_binding
 from powerbid.joint_candidate_bounds import assess_joint_candidate_mwh_envelope
 from powerbid.network_dispatch import network_from_dict
 from powerbid.network_feedback import compare_dc_baseline_to_pmss
@@ -28,6 +27,7 @@ from powerbid.pmss_bid_rule_safety import (
     validate_new_curve,
 )
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
+from powerbid.pmss_evidence_attachment import verify_pmss_evidence_binding
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_joint_research import FIELDS, assess_joint_readiness
 from powerbid.pmss_network_rank import rank_network_bid_strategies
