@@ -2,7 +2,11 @@
 import pytest
 from test_historical_validation import _fixture
 
-from powerbid.deterministic_dc_tiebreak import select_dc_optimal_tiebreak
+from powerbid.deterministic_dc_tiebreak import (
+    DEFAULT_PRIMARY_COST_TOLERANCE_ABS,
+    DEFAULT_PRIMARY_COST_TOLERANCE_REL,
+    select_dc_optimal_tiebreak,
+)
 from powerbid.historical_tiebreak_audit import audit_historical_tiebreaks
 from powerbid.network_dispatch import DcLine, DcNetwork, DcOffer
 
@@ -103,3 +107,36 @@ def test_historical_input_only_and_missing_observations_refuse_imputation():
     sample["historicalBacktestOnly"] = False
     with pytest.raises(ValueError, match="historical"):
         audit_historical_tiebreaks(sample)
+
+
+
+def test_large_historical_offer_values_keep_cost_optimality_explicitly_bounded():
+    # High-priced historical bids cause a large primary objective.
+    # Secondary LPs must only redistribute near-optimal supply, never
+    # change the network or silently loosen the user's hard MW limits.
+    bids = (DcOffer("G2", 1, 100, 7000), DcOffer("G1", 1, 100, 7000))
+    result = select_dc_optimal_tiebreak(_onebus(), bids, 1)
+    assert DEFAULT_PRIMARY_COST_TOLERANCE_ABS == 1e-6
+    assert DEFAULT_PRIMARY_COST_TOLERANCE_REL == 1e-10
+    allowed = (
+        DEFAULT_PRIMARY_COST_TOLERANCE_ABS +
+        DEFAULT_PRIMARY_COST_TOLERANCE_REL *
+        max(1., abs(result.primary_optimum_bid_cost))
+    )
+    assert result.allowed_primary_cost_increase == pytest.approx(allowed)
+    assert result.selected_bid_cost <= (
+        result.primary_optimum_bid_cost + allowed + 1e-5
+    )
+    assert sum(result.selected_mw.values()) == pytest.approx(80)
+    assert result.selected_mw["G1"] == pytest.approx(80, abs=1e-4)
+
+    # Explicit user overrides are honored; no automatic silent relaxation.
+    strict = select_dc_optimal_tiebreak(
+        _onebus(), bids, 1,
+        max_cost_increase_abs=0.,
+        max_cost_increase_rel=0.,
+    )
+    assert strict.allowed_primary_cost_increase == 0.
+    assert strict.selected_bid_cost == pytest.approx(
+        strict.primary_optimum_bid_cost, abs=1e-5
+    )
