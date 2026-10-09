@@ -92,6 +92,12 @@ def _request(origin: str, path: str, method: str = "GET") -> tuple[int, bytes]:
 
 
 def _js_path(href: str, parent: str) -> str:
+    if (
+        not re.fullmatch(
+            r"(?:/assets/|assets/|\./)[A-Za-z0-9._/-]+\.js", href
+        ) or ".." in href.split("/") or "//" in href
+    ):
+        raise ValueError("Unsafe JavaScript asset reference")
     if href.startswith("/assets/"):
         candidate = href
     elif href.startswith("assets/"):
