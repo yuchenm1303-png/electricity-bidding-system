@@ -80,9 +80,16 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
           <a href="#capabilities" onClick={()=>setMenuOpen(false)}>核心能力</a>
           <a href="#explore" onClick={()=>setMenuOpen(false)}>交互探索</a>
           <a href="#workflow" onClick={()=>setMenuOpen(false)}>研究流程</a>
+          <a className="pb-mobile-auth-entry" href={import.meta.env.BASE_URL + "login"} onClick={()=>setMenuOpen(false)}>登录账号 <ArrowUpRight size={15}/></a>
+          <a className="pb-mobile-auth-entry" href={import.meta.env.BASE_URL + "register"} onClick={()=>setMenuOpen(false)}>注册账号 <ArrowUpRight size={15}/></a>
           <a className="pb-mobile-enter" href={workspaceHref} onClick={()=>setMenuOpen(false)}>进入工作台 <ArrowUpRight size={16}/></a>
         </nav>
-        <div className="pb-header-actions"><span className="pb-header-status"><i/>LAB IS OPEN</span><a href={workspaceHref} className="pb-header-cta">进入工作台 <ArrowUpRight size={16}/></a></div>
+        <div className="pb-header-actions">
+          <a href={import.meta.env.BASE_URL + "login"} className="pb-header-auth-link">登录</a>
+          <a href={import.meta.env.BASE_URL + "register"} className="pb-header-auth-register">注册</a>
+          <a href={workspaceHref} className="pb-header-cta">进入工作台 <ArrowUpRight size={16}/></a>
+        </div>
+        <a className="pb-mobile-auth-quick" href={import.meta.env.BASE_URL + "login"}>登录</a>
         <button className="pb-menu-toggle" type="button" onClick={()=>setMenuOpen(v=>!v)} aria-label={menuOpen?"关闭导航":"打开导航"} aria-expanded={menuOpen}>{menuOpen?<X size={21}/>:<Menu size={21}/>}</button>
       </div>
     </header>

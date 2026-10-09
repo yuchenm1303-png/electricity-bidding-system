@@ -229,3 +229,9 @@
 .mobile-topbar .pb-account-menu{position:relative;z-index:75}
 .mobile-topbar .pb-account-dropdown{right:0;top:calc(100% + 11px)}
 @media(max-width:390px){.pb-mobile-actions{gap:3px}.mobile-topbar .pb-account-trigger{padding:5px}.mobile-topbar .pb-account-trigger>svg{display:none}}
+
+.pb-identity-unavailable{display:flex;align-items:flex-start;gap:10px;border:1px solid rgba(143,169,230,.30);border-radius:10px;background:rgba(70,94,153,.13);color:#afc3f4;padding:13px 14px;margin:0 0 20px;font-size:12px;line-height:1.7}
+.pb-identity-unavailable svg{flex-shrink:0;margin-top:2px}
+.pb-identity-primary:disabled{cursor:not-allowed;opacity:.64;transform:none;box-shadow:none}
+.pb-identity-demo-link{color:#b9c8ff;font-weight:650;text-decoration:none;display:inline-flex;align-items:center;gap:7px}
+.pb-identity-demo-link:hover{text-decoration:underline}
