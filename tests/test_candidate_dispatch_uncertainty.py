@@ -9,8 +9,8 @@ from test_historical_validation import _fixture
 from powerbid.candidate_dispatch_uncertainty import (
     assess_candidate_dispatch_uncertainty,
 )
-from powerbid.network_dispatch import DcLine, DcNetwork
 from powerbid.pmss_integration import BidSegment, snapshot_from_pmss
+from powerbid.network_dispatch import network_from_dict
 
 
 def _input():
@@ -22,7 +22,6 @@ def _input():
         demand_forecast_mw=raw["demandForecastMw"],
         forecast_source=raw["forecastSource"],
     )
-    from powerbid.network_dispatch import network_from_dict
     return snap, network_from_dict(raw["dcNetwork"])
 
 
