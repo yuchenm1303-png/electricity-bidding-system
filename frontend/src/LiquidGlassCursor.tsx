@@ -74,11 +74,11 @@ function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: numbe
     const menu = header?.querySelector<HTMLElement>(".sidebar-collapse, .ta-menu-toggle");
     const menuRect = menu?.getBoundingClientRect();
     const rightLimit = menuRect && menuRect.left > rect.right
-      ? menuRect.left - 8 : (area ? area.right - 8 : window.innerWidth - 8);
-    left = Math.max(area ? area.left + 8 : 8, rect.left - 26);
+      ? menuRect.left - 8 : (area ? area.right - 4 : window.innerWidth - 4);
+    left = Math.max(area ? area.left + 4 : 4, rect.left - 26);
     right = Math.min(window.innerWidth, Math.max(rect.right, Math.min(rightLimit, rect.right + 26)));
-    top = Math.max(0, area ? area.top + 8 : rect.top - 31, rect.top - 31);
-    bottom = Math.min(window.innerHeight, area ? area.bottom - 8 : rect.bottom + 31, rect.bottom + 31);
+    top = Math.max(0, area ? area.top + 5 : rect.top - 31, rect.top - 31);
+    bottom = Math.min(window.innerHeight, area ? area.bottom - 5 : rect.bottom + 31, rect.bottom + 31);
   }
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
   const height = Math.max(1, Math.min(window.innerHeight, Math.max(MIN_LENS_HEIGHT, bottom - top)));
