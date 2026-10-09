@@ -39,10 +39,13 @@ def _rows(page: Any, label: str) -> list[dict[str, Any]]:
 
 
 def _switch(raw: Any) -> str:
+    # A numerical 1/0 is not automatically a verified enable/disable.
+    # The PMSS backend may use inverse or tri-state flags. Report the
+    # exact binary *code*, never its physical effect.
     if raw is True or raw == 1 or raw == "1":
-        return "on"
+        return "value_1"
     if raw is False or raw == 0 or raw == "0":
-        return "off"
+        return "value_0"
     if raw is None or raw == "":
         return "missing"
     return "unrecognized"
@@ -66,7 +69,7 @@ def summarize_scene_constraint_evidence(
     initial = _rows(initial_page, "initial state")
     flags: dict[str, dict[str, int]] = {}
     for field in SWITCHES:
-        counts = {"on": 0, "off": 0, "missing": 0, "unrecognized": 0}
+        counts = {"value_1": 0, "value_0": 0, "missing": 0, "unrecognized": 0}
         for record in calc:
             counts[_switch(record.get(field))] += 1
         flags[field] = counts
@@ -94,6 +97,7 @@ def summarize_scene_constraint_evidence(
         "physicalUnitsVerified": False,
         "jointMilpReady": False,
         "remark": (
+            "Value_1/value_0 are unverified encoded codes, NOT proven on/off states. "
             "Counts describe a particular source scene and case only. "
             "No case-to-bid unit identity mapping, model flag semantics, "
             "initial-state encoding, or ramp/time unit validation is implied."
@@ -137,7 +141,7 @@ def validate_scene_constraint_evidence(
     for field in SWITCHES:
         stat = raw["switches"][field]
         if not isinstance(stat, dict) or set(stat) != {
-            "on", "off", "missing", "unrecognized",
+            "value_1", "value_0", "missing", "unrecognized",
         } or any(type(v) is not int or v < 0 for v in stat.values()):
             raise ValueError("Invalid PMSS constraint-switch statistics")
         if sum(stat.values()) != raw["constraintRows"]:
