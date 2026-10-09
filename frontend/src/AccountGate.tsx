@@ -10,6 +10,7 @@ import AdminActivation from "./AdminActivation";
 import TurnstileWidget from "./TurnstileWidget";
 import Workspace from "./WorkspaceEntry";
 import "./account.css";
+import "./account-portal-polish.css";
 
 export type AccountUser = {
   id: number;
@@ -145,6 +146,9 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
             </svg>
             <div className="pb-identity-network-caption"><Activity size={13}/> POWER FLOW / CONNECTED NODES</div>
           </div>
+          <div className="pb-identity-story-trails" aria-label="研究流程">
+            <span><i/> 数据洞察</span><span><i/> 策略推演</span><span><i/> 情景评估</span>
+          </div>
         </div>
         <div className="pb-identity-story-footer"><span>电力报价系统 · 小组作业</span><span>EST. 2026 <span className="pb-identity-footer-dot"/> SYSTEM ONLINE</span></div>
       </aside>
@@ -202,7 +206,12 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
                     onClick={()=>setShowPassword(v=>!v)}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button>
                 </div>
                 {capsLock&&<span className="pb-identity-field-note">Caps Lock 已开启</span>}
-                {isRegister&&<span className="pb-identity-field-note">为保护账号，请设置不少于 12 位的密码。</span>}
+                {isRegister&&<>
+                  <div className="pb-pass-progress" aria-hidden="true">
+                    {[3,6,9,12].map(length=><span key={length} className={password.length>=length?"is-filled":""}/>)}
+                  </div>
+                  <div className="pb-pass-progress-label"><span>密码长度至少 12 位</span><strong>{Math.min(password.length,128)} / 12</strong></div>
+                </>}
               </div>
               {config.turnstile_site_key && <TurnstileWidget
                 siteKey={config.turnstile_site_key} onChange={setCaptcha} resetKey={resetCaptcha}/>}
