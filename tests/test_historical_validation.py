@@ -13,7 +13,6 @@ from powerbid.historical_validation import (
 from powerbid.network_dispatch import DcOffer, dc_clear_hour, network_from_dict
 from powerbid.pmss_integration import curve_for_period, snapshot_from_pmss
 
-
 ROOT = Path(__file__).resolve().parents[1] / "data" / "examples"
 
 
