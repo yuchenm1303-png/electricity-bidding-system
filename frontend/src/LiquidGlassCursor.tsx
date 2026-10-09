@@ -17,7 +17,7 @@ const SNAP_SELECTOR = [
   BRAND_TARGET_SELECTOR,
   ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
   ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
-  ".app a[href]",
+  ".app a[href]:not(.brand-home-link)",
   ".ta-global-search", ".table-search",
   ".ta-stat-icon", ".ta-stat-bottom strong", ".ta-stat-badge",
   ".ta-gauge-reading strong", ".ta-card-icon", ".ta-card-tag",
@@ -39,7 +39,7 @@ const SNAP_SELECTOR = [
 const MAGNETIC_SELECTOR = [
   ".brand-mark-smirel", ".brand-name", ".sidebar-collapse", ".nav-entry",
   ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
-  ".app a[href]", ".ta-stat-icon", ".ta-card-icon",
+  ".app a[href]:not(.brand-home-link)", ".ta-stat-icon", ".ta-card-icon",
   ".pmss-unit-avatar", ".unit-symbol",
   "[data-magnetic-hover='true']",
 ].join(",");
