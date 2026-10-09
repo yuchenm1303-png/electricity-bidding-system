@@ -109,11 +109,16 @@ def _head(url: str, *, proxy: str | None, timeout: int) -> Probe:
     except subprocess.TimeoutExpired:
         return Probe(False, None, 28, "network_timeout")
     status = int(done.stdout.strip()) if done.stdout.strip().isdigit() else 0
+    # A gateway 502/503/504 can be generated before any request reaches
+    # the campus host. Do not turn a proxy error page into VPN success.
+    success = 100 <= status < 500 and done.returncode == 0
     return Probe(
-        transport_reachable=bool(status),
+        transport_reachable=success,
         http_status=status if status else None,
         curl_exit_code=done.returncode,
-        fault_category=_fault(done.returncode),
+        fault_category=(
+            "http_5xx_ambiguous" if status >= 500 else _fault(done.returncode)
+        ),
     )
 
 
