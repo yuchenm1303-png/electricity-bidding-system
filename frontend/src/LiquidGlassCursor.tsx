@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 
 const FREE_ROI_SIZE = 420;
 const SNAP_ROI_PADDING = 160;
-const MAX_ROI_SIZE = 1200;
 const BASE_WIDTH = 80;
 const BASE_HEIGHT = 54;
 const FREE_OFFSET_Y = -32;
@@ -32,8 +31,6 @@ const MAGNETIC_SELECTOR = [
 
 const EDITABLE_SELECTOR = "input, textarea, select, [contenteditable='true'], [role='slider']";
 const EXCLUDED_SURFACE_SELECTOR = ".brand-home-link, .table-search, [data-liquid-snap='false']";
-const GENERAL_LENS_MAX_WIDTH = 186;
-const GENERAL_LENS_MAX_HEIGHT = 68;
 const MIN_LENS_WIDTH = 42;
 const MIN_LENS_HEIGHT = 36;
 
@@ -50,28 +47,31 @@ function isEligibleSurface(element: HTMLElement) {
     rect.left < window.innerWidth && rect.top < window.innerHeight;
 }
 
-function getLensBounds(element: HTMLElement, pointerX: number, pointerY: number) {
+// Every eligible button/link uses its entire visible bounding box.
+// In particular, sidebar navigation rows must never collapse to a local
+// 186px pointer-following lens that only covers half of the button.
+function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
   const rect = element.getBoundingClientRect();
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
-  const navigation = element.matches(".nav-entry");
   const padding = compact ? 6 : 8;
-  const maxWidth = compact ? 66 : navigation ? 186 : GENERAL_LENS_MAX_WIDTH;
-  const maxHeight = compact ? 62 : navigation ? 60 : GENERAL_LENS_MAX_HEIGHT;
-  const width = Math.min(window.innerWidth - 16, Math.max(MIN_LENS_WIDTH, Math.min(rect.width + 2 * padding, maxWidth)));
-  const height = Math.min(window.innerHeight - 16, Math.max(MIN_LENS_HEIGHT, Math.min(rect.height + 2 * padding, maxHeight)));
-  // Very wide interactive rows receive a local lens at the real pointer
-  // position, not a giant glass sheet anchored in the middle of the row.
-  const centerX = rect.width > width + 16
-    ? Math.max(rect.left + width / 2, Math.min(rect.right - width / 2, pointerX))
-    : rect.left + rect.width / 2;
-  const centerY = rect.height > height + 16
-    ? Math.max(rect.top + height / 2, Math.min(rect.bottom - height / 2, pointerY))
-    : rect.top + rect.height / 2;
+
+  // The viewport may crop part of a control near its edges; frame the
+  // entire *visible* control rather than moving the center away and
+  // leaving its first/last letters outside the lens.
+  const left = Math.max(0, rect.left - padding);
+  const right = Math.min(window.innerWidth, rect.right + padding);
+  const top = Math.max(0, rect.top - padding);
+  const bottom = Math.min(window.innerHeight, rect.bottom + padding);
+  const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
+  const height = Math.max(1, Math.min(window.innerHeight, Math.max(MIN_LENS_HEIGHT, bottom - top)));
+  const radius = Math.min(height / 2, radiusFromStyle(getComputedStyle(element), rect) + padding);
+
   return {
     width,
     height,
-    centerX: Math.max(width / 2 + 3, Math.min(window.innerWidth - width / 2 - 3, centerX)),
-    centerY: Math.max(height / 2 + 3, Math.min(window.innerHeight - height / 2 - 3, centerY)),
+    radius,
+    centerX: Math.max(width / 2, Math.min(window.innerWidth - width / 2, (left + right) / 2)),
+    centerY: Math.max(height / 2, Math.min(window.innerHeight - height / 2, (top + bottom) / 2)),
   };
 }
 
@@ -492,6 +492,7 @@ function createProgram(gl: WebGLRenderingContext) {
     uniform vec2 u_resolution;
     uniform vec2 u_lensCenter;
     uniform vec2 u_lensSize;
+    uniform float u_cornerRadius;
     uniform float u_strength;
     uniform float u_pinch;
     uniform float u_aberration;
@@ -521,16 +522,17 @@ function createProgram(gl: WebGLRenderingContext) {
       vec2 pixel = screenUv * u_resolution;
       vec2 halfSize = max(u_lensSize * 0.5, vec2(2.0));
       float radius = max(2.0, min(halfSize.x, halfSize.y));
+      float corner = clamp(u_cornerRadius, 2.0, radius);
       vec2 local = warpPoint(pixel - u_lensCenter, radius);
-      float d = sdRoundBox(local, halfSize, radius);
+      float d = sdRoundBox(local, halfSize, corner);
       if (d > 1.5) {
         gl_FragColor = vec4(0.0);
         return;
       }
 
       float e = 1.0;
-      float dx = sdRoundBox(local + vec2(e, 0.0), halfSize, radius) - sdRoundBox(local - vec2(e, 0.0), halfSize, radius);
-      float dy = sdRoundBox(local + vec2(0.0, e), halfSize, radius) - sdRoundBox(local - vec2(0.0, e), halfSize, radius);
+      float dx = sdRoundBox(local + vec2(e, 0.0), halfSize, corner) - sdRoundBox(local - vec2(e, 0.0), halfSize, corner);
+      float dy = sdRoundBox(local + vec2(0.0, e), halfSize, corner) - sdRoundBox(local - vec2(0.0, e), halfSize, corner);
       vec2 normal = normalize(vec2(dx, dy) + vec2(0.00001));
       float distNorm = clamp(1.0 + d / radius, 0.0, 1.0);
       float effectivePinch = u_pinch * (radius / 100.0);
@@ -615,7 +617,13 @@ export function LiquidGlassCursor() {
 
     const capture = document.createElement("canvas");
     const scratch = document.createElement("canvas");
-    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 1.75));
+    // Keep the full button inside the captured texture, including very
+    // wide rows. Adapt DPR when the GPU has a smaller texture limit.
+    const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    const dpr = Math.min(
+      Math.max(1, Math.min(window.devicePixelRatio || 1, 1.75)),
+      maxTextureSize / Math.max(window.innerWidth, window.innerHeight, 1),
+    );
     let roiWidth = FREE_ROI_SIZE;
     let roiHeight = FREE_ROI_SIZE;
 
@@ -663,6 +671,7 @@ export function LiquidGlassCursor() {
       resolution: gl.getUniformLocation(program, "u_resolution"),
       lensCenter: gl.getUniformLocation(program, "u_lensCenter"),
       lensSize: gl.getUniformLocation(program, "u_lensSize"),
+      cornerRadius: gl.getUniformLocation(program, "u_cornerRadius"),
       strength: gl.getUniformLocation(program, "u_strength"),
       pinch: gl.getUniformLocation(program, "u_pinch"),
       aberration: gl.getUniformLocation(program, "u_aberration"),
@@ -697,6 +706,7 @@ export function LiquidGlassCursor() {
     const y: SpringValue = { value: pointerY + FREE_OFFSET_Y, velocity: 0, target: pointerY + FREE_OFFSET_Y };
     const width: SpringValue = { value: BASE_WIDTH, velocity: 0, target: BASE_WIDTH };
     const height: SpringValue = { value: BASE_HEIGHT, velocity: 0, target: BASE_HEIGHT };
+    const cornerRadius: SpringValue = { value: BASE_HEIGHT / 2, velocity: 0, target: BASE_HEIGHT / 2 };
     const snap: SpringValue = { value: 0, velocity: 0, target: 0 };
 
     type MagneticState = {
@@ -846,12 +856,14 @@ export function LiquidGlassCursor() {
         roiLockedTarget = null;
         if (target) {
           const { width: finalLensWidth, height: finalLensHeight } = getLensBounds(target, pointerX, pointerY);
+          // Full-width controls require a full-width capture. A fixed 1200px
+          // cap clipped large buttons even after the lens geometry was fixed.
           snappedRoiWidth = Math.min(
-            MAX_ROI_SIZE,
+            window.innerWidth,
             Math.max(FREE_ROI_SIZE, Math.ceil((finalLensWidth + SNAP_ROI_PADDING * 2) / 16) * 16),
           );
           snappedRoiHeight = Math.min(
-            MAX_ROI_SIZE,
+            window.innerHeight,
             Math.max(FREE_ROI_SIZE, Math.ceil((finalLensHeight + SNAP_ROI_PADDING * 2) / 16) * 16),
           );
         }
@@ -862,6 +874,7 @@ export function LiquidGlassCursor() {
         y.target = lens.centerY;
         width.target = lens.width;
         height.target = lens.height;
+        cornerRadius.target = lens.radius;
         snap.target = 1;
       } else {
         // Keep the unsnapped lens wholly on-screen near the top/bottom.
@@ -869,6 +882,7 @@ export function LiquidGlassCursor() {
         y.target = Math.max(BASE_HEIGHT / 2 + 6, Math.min(window.innerHeight - BASE_HEIGHT / 2 - 6, pointerY + FREE_OFFSET_Y));
         width.target = BASE_WIDTH;
         height.target = BASE_HEIGHT;
+        cornerRadius.target = BASE_HEIGHT / 2;
         snap.target = 0;
       }
     };
@@ -1004,6 +1018,7 @@ export function LiquidGlassCursor() {
       stepSpring(y, dt, snapping ? 300 : 500, snapping ? 25 : 60);
       stepSpring(width, dt, snapping ? 235 : 310, snapping ? 19 : 32);
       stepSpring(height, dt, snapping ? 235 : 310, snapping ? 19 : 32);
+      stepSpring(cornerRadius, dt, snapping ? 235 : 310, snapping ? 19 : 32);
       stepSpring(snap, dt, 220, 18);
       // Firm compression on contact, then one softer elastic release.
       stepSpring(pressure, dt, pressed ? 620 : 400, pressed ? 38 : 23);
@@ -1035,6 +1050,7 @@ export function LiquidGlassCursor() {
         gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
         gl.uniform2f(uniforms.lensCenter, (x.value - roiLeft) * dpr, (y.value - roiTop) * dpr);
         gl.uniform2f(uniforms.lensSize, width.value * dpr * (1 + 0.025 * deformation), height.value * dpr * (1 - 0.085 * deformation));
+        gl.uniform1f(uniforms.cornerRadius, cornerRadius.value * dpr);
         gl.uniform1f(uniforms.strength, strength);
         gl.uniform1f(uniforms.pinch, pinch);
         gl.uniform1f(uniforms.aberration, aberration);
@@ -1049,11 +1065,13 @@ export function LiquidGlassCursor() {
         Math.abs(y.target - y.value) < 0.08 &&
         Math.abs(width.target - width.value) < 0.08 &&
         Math.abs(height.target - height.value) < 0.08 &&
+        Math.abs(cornerRadius.target - cornerRadius.value) < 0.08 &&
         Math.abs(snap.target - snap.value) < 0.002 &&
         Math.abs(x.velocity) < 0.08 &&
         Math.abs(y.velocity) < 0.08 &&
         Math.abs(width.velocity) < 0.08 &&
         Math.abs(height.velocity) < 0.08 &&
+        Math.abs(cornerRadius.velocity) < 0.08 &&
         Math.abs(pressure.target - pressure.value) < 0.001 &&
         Math.abs(pressure.velocity) < 0.01 &&
         magneticSettled;
