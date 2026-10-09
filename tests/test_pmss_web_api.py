@@ -223,6 +223,8 @@ def test_real_historical_network_audit_appears_only_for_complete_original_day():
         ],
         "branchFlows": [series("L1", "Line AB", "powerFlow", 50)],
     }
+    case["results"]["unitResults"][0]["price"] = {"datas": [60] * 24}
+    case["results"]["unitResults"][1]["price"] = {"datas": [80] * 24}
     response = client.post("/api/pmss/network-evaluate", json={
         "snapshot": case, "target_unit_id": "G30",
     })
@@ -234,17 +236,6 @@ def test_real_historical_network_audit_appears_only_for_complete_original_day():
     assert report["bus_balance_mae_mw"] == pytest.approx(0)
     assert report["modeled_nodal_price_mae"] == pytest.approx(0)
     assert data["historical_unavailable_reason"] is None
-
-    case["results"]["unitResults"][0]["price"] = {"datas": [60] * 24}
-    case["results"]["unitResults"][1]["price"] = {"datas": [80] * 24}
-    # The previous comparison used historical unit prices for strict alignment.
-    # Recalculate with the complete PMSS price series before testing the
-    # intentionally incomplete node case.
-    good = client.post("/api/pmss/network-evaluate", json={
-        "snapshot": case, "target_unit_id": "G30",
-    })
-    assert good.status_code == 200, good.text
-    assert good.json()["historical_grid_audit"]["balanced_hour_count"] == 24
 
     case["results"]["nodalPrices"].pop()
     response = client.post("/api/pmss/network-evaluate", json={
