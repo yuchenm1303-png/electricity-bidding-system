@@ -57,3 +57,29 @@
   }
   :root .sidebar .brand-name strong { font-size: 18px; }
 }
+/* Entire brand lockup is a home link, but the sidebar toggle remains separate. */
+:root .sidebar .brand-home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 8px;
+}
+:root .sidebar .brand-home-link:hover { opacity: .83; }
+:root .sidebar .brand-home-link:focus-visible,
+:root .mobile-topbar .mobile-brand-home:focus-visible {
+  outline: 2px solid #8fa7ff;
+  outline-offset: 5px;
+}
+:root .mobile-topbar .mobile-brand-home {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+  cursor: pointer;
+}
+:root .mobile-topbar .mobile-brand-home:hover { opacity: .83; }
