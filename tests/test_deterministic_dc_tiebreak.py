@@ -87,7 +87,8 @@ def test_historical_comparison_never_chooses_or_claims_platform_tie_policy():
     assert report.examined_hours == 24
     assert report.compared_hours == 24
     assert report.generator_count == 2
-    assert report.baseline_dispatch_mae_mw == pytest.approx(0)
+    assert report.source_order_baseline_mae_mw == pytest.approx(0)
+    assert report.canonical_order_baseline_mae_mw == pytest.approx(0)
     assert "not PMSS" in report.disclaimer.lower() or "not PMSS" in report.disclaimer
     assert report.maximum_primary_bid_cost_increase < 1e-3
 
@@ -97,7 +98,8 @@ def test_historical_input_only_and_missing_observations_refuse_imputation():
     sample["results"]["unitResults"][0]["accepted_mw"][3] = None
     report = audit_historical_tiebreaks(sample)
     assert report.compared_hours == 23
-    assert report.hours[3].baseline_mae_mw is None
+    assert report.hours[3].source_order_baseline_mae_mw is None
+    assert report.hours[3].canonical_order_baseline_mae_mw is None
     sample["historicalBacktestOnly"] = False
     with pytest.raises(ValueError, match="historical"):
         audit_historical_tiebreaks(sample)
