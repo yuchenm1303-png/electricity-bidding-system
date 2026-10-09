@@ -674,6 +674,7 @@ export function LiquidGlassCursor() {
     let pointerX = window.innerWidth / 2;
     let pointerY = window.innerHeight / 2;
     let pointerInside = false;
+    let overEditable = false;
     let pressed = false;
     const pressure: SpringValue = { value: 0, velocity: 0, target: 0 };
     let activeTarget: HTMLElement | null = null;
@@ -804,11 +805,13 @@ export function LiquidGlassCursor() {
       let next: HTMLElement | null = null;
       let bestScore = Number.POSITIVE_INFINITY;
       const topElement = document.elementFromPoint(pointerX, pointerY);
-      // Inputs retain the free-moving glass cursor, without a giant focus
-      // lens that obscures placeholder, caret or native browser controls.
-      if (topElement?.closest(EDITABLE_SELECTOR) ||
-          topElement?.closest(".brand-home-link, .table-search") ||
-          (topElement?.closest(".ta-global-search") && !topElement.closest(".ta-search-results"))) {
+      // Hide the lens over editing surfaces: caret, selection and placeholder
+      // are browser-native, so duplicating them in WebGL is inherently lossy.
+      // The original white-circle pointer remains visible.
+      overEditable = Boolean(topElement?.closest(EDITABLE_SELECTOR) ||
+        topElement?.closest(".table-search") ||
+        (topElement?.closest(".ta-global-search") && !topElement.closest(".ta-search-results")));
+      if (overEditable || topElement?.closest(".brand-home-link")) {
         activeTarget = null;
         return null;
       }
@@ -861,8 +864,9 @@ export function LiquidGlassCursor() {
         height.target = lens.height;
         snap.target = 1;
       } else {
-        x.target = pointerX;
-        y.target = pointerY + FREE_OFFSET_Y;
+        // Keep the unsnapped lens wholly on-screen near the top/bottom.
+        x.target = Math.max(BASE_WIDTH / 2 + 6, Math.min(window.innerWidth - BASE_WIDTH / 2 - 6, pointerX));
+        y.target = Math.max(BASE_HEIGHT / 2 + 6, Math.min(window.innerHeight - BASE_HEIGHT / 2 - 6, pointerY + FREE_OFFSET_Y));
         width.target = BASE_WIDTH;
         height.target = BASE_HEIGHT;
         snap.target = 0;
@@ -1010,7 +1014,7 @@ export function LiquidGlassCursor() {
 
       canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
+      canvas.style.opacity = pointerInside && textureReady && !overEditable ? "1" : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
       if (textureReady) {
@@ -1093,6 +1097,7 @@ export function LiquidGlassCursor() {
     };
     const handlePointerLeave = () => {
       pointerInside = false;
+      overEditable = false;
       pressed = false;
       pressure.target = 0;
       activeTarget = null;
