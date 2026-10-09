@@ -20,10 +20,7 @@ from math import isfinite
 from powerbid.network_dispatch import DcNetwork, DcOffer
 from powerbid.network_strategy import verify_network_inputs
 from powerbid.optimal_dispatch_ranges import optimal_unit_dispatch_ranges
-from powerbid.pmss_bid_rule_safety import (
-    audit_saved_bid_price_limits,
-    validate_new_curve,
-)
+from powerbid.pmss_bid_rule_safety import validate_new_curve
 from powerbid.pmss_integration import BidSegment, PeriodBid, PMSSSnapshot, curve_for_period
 
 
@@ -86,7 +83,20 @@ def assess_candidate_dispatch_uncertainty(
     validated = tuple(new_segments)
     validate_new_curve(snapshot, target_unit_id, validated)
     plan = (PeriodBid(1, 24, validated),)
-    history_rule = audit_saved_bid_price_limits(snapshot)
+    # Count only actual PEER units from the original historical environment.
+    # The original TARGET quote is replaced by the new, rule-legal candidate;
+    # counting its old (possibly legacy-illegal) price would be misleading.
+    lower = snapshot.limits.price_floor
+    upper = snapshot.limits.price_ceiling
+    peers_outside_current_rule = sum(
+        any(
+            (lower is not None and seg.price < lower)
+            or (upper is not None and seg.price > upper)
+            for period_bid in snapshot.bids[peer.unit_id]
+            for seg in period_bid.segments
+        )
+        for peer in snapshot.units if peer.unit_id != target_unit_id
+    )
     hours = []
     for period in range(1, 25):
         offers: list[DcOffer] = []
@@ -145,5 +155,5 @@ def assess_candidate_dispatch_uncertainty(
             row.range_width_mw > ambiguity_threshold_mw for row in final_hours
         ),
         maximum_hourly_width_mw=max(row.range_width_mw for row in final_hours),
-        original_peer_units_over_current_price_rule=history_rule.original_units_outside_current_range,
+        original_peer_units_over_current_price_rule=peers_outside_current_rule,
     )
