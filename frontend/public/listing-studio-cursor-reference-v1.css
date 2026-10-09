@@ -1,0 +1,51 @@
+@media (pointer: fine) {
+  * {
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' width='10px' height='10px'><circle cx='4' cy='4' r='4' fill='white' /></svg>") 4 4, auto !important;
+  }
+
+  html.custom-cursor.custom-cursor,
+  html.custom-cursor.custom-cursor body,
+  html.custom-cursor.custom-cursor body * {
+    cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' width='10px' height='10px'><circle cx='4' cy='4' r='4' fill='white' /></svg>") 4 4, auto !important;
+  }
+
+  .cursor-dot,
+  html.custom-cursor body .cursor-dot,
+  html.custom-cursor.custom-cursor body .cursor-dot {
+    display: none !important;
+  }
+
+  .cursor-follow {
+    position: fixed !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 !important;
+    background: #fff !important;
+    border: 0 !important;
+    border-radius: 25px !important;
+    box-shadow: none !important;
+    opacity: .25 !important;
+    pointer-events: none !important;
+    z-index: 10086 !important;
+    transform: scale(1) !important;
+    transform-origin: center !important;
+    transition: .2s ease-in-out !important;
+    transition-property: background, opacity, transform !important;
+  }
+
+  .cursor-follow.hidden {
+    opacity: 0 !important;
+  }
+
+  .cursor-follow.active {
+    opacity: .5 !important;
+    transform: scale(.5) !important;
+  }
+}
+
+@media (max-width: 720px), (pointer: coarse) {
+  .cursor-dot,
+  .cursor-follow {
+    display: none !important;
+  }
+}

@@ -149,6 +149,49 @@ def optimize(payload: OptimizationInput) -> dict[str, object]:
     }
 
 
+# Explicitly serve the two vendored cursor assets. Vite copies public/ files
+# into dist/, while the SPA fallback must not return HTML for JavaScript/CSS.
+_CURSOR_ASSETS = {
+    "listing-studio-download-cursor-v2.js": "text/javascript",
+    "listing-studio-cursor-reference-v1.css": "text/css",
+    "listing-anime-3.2.1.min.js": "text/javascript",
+    "listing-anime-3.2.1-license.md": "text/markdown",
+}
+
+
+def _cursor_asset(filename: str) -> FileResponse:
+    if filename not in _CURSOR_ASSETS:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset = DIST / filename
+    if not asset.is_file():
+        raise HTTPException(status_code=404, detail="Cursor asset not available")
+    return FileResponse(
+        asset,
+        media_type=_CURSOR_ASSETS[filename],
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@app.get("/listing-studio-download-cursor-v2.js", include_in_schema=False)
+def listing_cursor_script() -> FileResponse:
+    return _cursor_asset("listing-studio-download-cursor-v2.js")
+
+
+@app.get("/listing-studio-cursor-reference-v1.css", include_in_schema=False)
+def listing_cursor_css() -> FileResponse:
+    return _cursor_asset("listing-studio-cursor-reference-v1.css")
+
+
+@app.get("/listing-anime-3.2.1.min.js", include_in_schema=False)
+def listing_anime_script() -> FileResponse:
+    return _cursor_asset("listing-anime-3.2.1.min.js")
+
+
+@app.get("/listing-anime-3.2.1-license.md", include_in_schema=False)
+def listing_anime_license() -> FileResponse:
+    return _cursor_asset("listing-anime-3.2.1-license.md")
+
+
 @app.get("/")
 def index() -> FileResponse:
     return _index()
