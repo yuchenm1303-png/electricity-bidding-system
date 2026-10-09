@@ -19,6 +19,7 @@ from powerbid.network_dispatch import DcOffer, dc_clear_hour, network_from_dict
 from powerbid.network_strategy import verify_network_inputs
 from powerbid.pmss_diagnostics import series24
 from powerbid.pmss_integration import curve_for_period, snapshot_from_pmss
+from powerbid.price_residual_shape import price_residual_shape
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +59,12 @@ class HourlyError:
     max_unit_abs_error_mw: float | None
     max_nodal_price_abs_error: float | None
     max_line_flow_abs_error_mw: float | None
+    # Ex-post median uses observed historical prices: NEVER a live price fix.
+    nodal_price_median_signed_residual: float | None = None
+    nodal_price_median_centered_mae: float | None = None
+    nodal_price_residual_range: float | None = None
+    nodal_price_compared_nodes_for_shape: int = 0
+    nodal_price_uniform_shift_within_tolerance: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -269,6 +276,7 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
         flow_errors = _errors_for_hour(
             flows, result.line_flows_mw, hour, absolute_values=True
         )
+        price_shape = price_residual_shape(price_errors)
         all_unit_errors.extend(unit_errors)
         all_price_errors.extend(price_errors)
         all_flow_errors.extend(flow_errors)
@@ -280,6 +288,13 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
             max_unit_abs_error_mw=max(map(abs, unit_errors), default=None),
             max_nodal_price_abs_error=max(map(abs, price_errors), default=None),
             max_line_flow_abs_error_mw=max(map(abs, flow_errors), default=None),
+            nodal_price_median_signed_residual=price_shape.signed_median_shift,
+            nodal_price_median_centered_mae=price_shape.centered_mae,
+            nodal_price_residual_range=price_shape.residual_range,
+            nodal_price_compared_nodes_for_shape=price_shape.compared_nodes,
+            nodal_price_uniform_shift_within_tolerance=(
+                price_shape.uniform_shift_within_tolerance
+            ),
         ))
         if unit_errors:
             unit_hour_peak.append(sum(abs(x) for x in unit_errors) / len(unit_errors))
