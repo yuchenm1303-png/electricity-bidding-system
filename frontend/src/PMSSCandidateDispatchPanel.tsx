@@ -195,6 +195,7 @@ export function PMSSCandidateDispatchPanel({
     {plan && inspection.dc_grid_available && <PMSSJointMwhPanel
       key={key}
       snapshot={snapshot}
+      inspection={inspection}
       target={target}
       candidate={plan}
       planLabel={label}

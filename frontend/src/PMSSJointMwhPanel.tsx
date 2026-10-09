@@ -5,7 +5,7 @@ import {
   Tooltip, XAxis, YAxis,
 } from "recharts";
 import { analyzePMSSJointCandidateMwh } from "./api";
-import { numeric, type PMSSJointMwhRange } from "./types";
+import { numeric, type PMSSInspection, type PMSSJointMwhRange } from "./types";
 
 type Segment = {start_power: number; end_power: number; price: number};
 const FIELD_UNITS: Record<string, string> = {
@@ -45,9 +45,10 @@ function downloadTemplate(template: unknown) {
 }
 
 export function PMSSJointMwhPanel({
-  snapshot, target, candidate, planLabel, disabled,
+  snapshot, inspection, target, candidate, planLabel, disabled,
 }: {
   snapshot: Record<string, unknown>;
+  inspection: PMSSInspection;
   target: string;
   candidate: Segment[];
   planLabel: string;
@@ -167,6 +168,42 @@ export function PMSSJointMwhPanel({
       中标曲线或平台只读技术字段自动填成启停/爬坡参数。
       请只在掌握课程资料且能够逐台核实参数时主动导入。
     </div>
+    <details className="pmss-audit-details">
+      <summary>
+        查看13项机组约束的数据缺口 · 匿名源字段
+        {inspection.physical_evidence_gaps.fields_with_any_anonymous_observations}
+        /13 · 已独立核实 0/13
+      </summary>
+      <p className="pmss-footnote">
+        这里只追踪是否观察过字段，不证明其单位、场景启用状态或与机组ID的映射。
+        0/1开关只是未解释的原始编码，不是已开启/关闭的结论。
+      </p>
+      <div className="pmss-table-scroll">
+        <table className="pmss-table">
+          <thead><tr><th>联合约束参数</th><th>PMSS只读字段线索</th>
+            <th>匿名源覆盖</th><th>下一步所需证据</th></tr></thead>
+          <tbody>{inspection.physical_evidence_gaps.fields.map(gap => <tr key={gap.field}>
+            <td>{gap.field}<small> ({gap.model_unit})</small></td>
+            <td>{gap.observed_source_field ?? "目前无对应线索"}
+              {gap.relevant_switch_name_unverified &&
+                <small> · 开关线索 {gap.relevant_switch_name_unverified}（编码未确认）</small>}
+            </td>
+            <td>
+              {gap.status === "NO_FIELD_OBSERVATION" ? "尚无匿名字段证据" :
+                gap.status === "PARTIAL_ANONYMOUS_OBSERVATION" ? "匿名源覆盖不完整" :
+                "仅存在匿名源观测"}
+              {gap.aggregate_rows_reported > 0 &&
+                <small> · {gap.aggregate_values_present}/{gap.aggregate_rows_reported}条</small>}
+            </td>
+            <td>{gap.required_next_evidence}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+      <p className="pmss-footnote">
+        缺少的字段、已读取的源记录，均不能自动生成模型参数。
+        当前联合PMSS物理可信状态：仍未独立认证。
+      </p>
+    </details>
     <div className="pmss-controls">
       <label>逐机组技术参数 JSON（所有机组完整字段）
         <input type="file" accept=".json,application/json" disabled={busy || disabled}
