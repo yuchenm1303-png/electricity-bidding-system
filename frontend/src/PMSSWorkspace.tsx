@@ -316,6 +316,53 @@ export function PMSSWorkspace() {
           可在可信服务器用带 --include-technical-evidence 的网架合并脚本重新导出；
           真实联合求解仍保持锁定。
         </p>}
+        {inspection.scene_constraint_evidence && <>
+          <div className="pmss-result-toolbar">
+            <h4>场景计算约束 · 原始编码审计</h4>
+            <span className="pmss-state-label">只读观察 · 未核实启用含义</span>
+          </div>
+          <p className="pmss-footnote">
+            已上传的脱敏场景摘要包含
+            {inspection.scene_constraint_evidence.constraint_rows}条计算约束记录、
+            {inspection.scene_constraint_evidence.initial_rows}条初始状态记录。
+            以下的编码0和编码1不是已核实的关/开状态，
+            也不代表当前案例已被验证具有真实机组启停约束。
+          </p>
+          <div className="pmss-table-scroll"><table className="pmss-table">
+            <thead><tr><th>PMSS 场景字段</th><th>编码1</th><th>编码0</th>
+              <th>缺失</th><th>其他/待确认</th></tr></thead>
+            <tbody>{Object.entries(inspection.scene_constraint_evidence.switches).map(
+              ([field, stat]) => <tr key={field}>
+                <td>{field}</td>
+                <td>{stat.value_1}</td><td>{stat.value_0}</td>
+                <td>{stat.missing}</td><td>{stat.unrecognized}</td>
+              </tr>,
+            )}</tbody>
+          </table></div>
+          <div className="pmss-result-toolbar"><h4>初始状态输入 · 取值覆盖</h4>
+            <span className="pmss-state-label">时间及状态编码待确认</span></div>
+          <div className="pmss-table-scroll"><table className="pmss-table">
+            <thead><tr><th>原始字段</th><th>非空行</th><th>数值行</th>
+              <th>原始数值范围</th></tr></thead>
+            <tbody>{Object.entries(inspection.scene_constraint_evidence.initial_fields).map(
+              ([field, stat]) => <tr key={field}>
+                <td>{field}</td><td>{stat.present}</td><td>{stat.numeric}</td>
+                <td>{stat.minimum === null ? "未提供数值" :
+                  numeric(stat.minimum, 2) + " ～ " +
+                  numeric(stat.maximum ?? stat.minimum, 2)}</td>
+              </tr>,
+            )}</tbody>
+          </table></div>
+          <p className="pmss-footnote">
+            这里展示的是上传文件的统计，网页不能独立验证来源。
+            初始开停机状态、持续时间、成本和开关实际语义都尚未核实；
+            24小时联合 MILP 不会因此自动解锁。
+          </p>
+        </>}
+        {!inspection.scene_constraint_evidence && <p className="pmss-footnote">
+          暂无当前场景的只读约束证据。联网读取恢复后，可在可信环境
+          生成匿名汇总并合并到脱敏快照，再在此显示开关与初始状态字段统计。
+        </p>}
         <div className="pmss-toolbar">
           <p>可生成无默认值的参数模板，再使用课程或可信来源逐台补齐。
             在完成之前，继续使用上方独立 DC 网络报价研究，不冒充联合优化。</p>

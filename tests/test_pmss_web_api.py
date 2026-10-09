@@ -363,3 +363,51 @@ def test_pmss_inspect_joint_readiness_reports_missing_physical_parameters():
                      "ramp_up_mw", "min_up_hours", "startup_cost"):
         assert required in fields
     assert "runningCost" not in fields
+
+
+def test_scene_constraint_summary_is_read_only_and_never_unlocks_real_joint_milp():
+    from powerbid.pmss_scene_constraint_evidence import (
+        summarize_scene_constraint_evidence,
+    )
+
+    raw = safe_snapshot()
+    before = client.post("/api/pmss/inspect", json={"snapshot": raw})
+    assert before.status_code == 200, before.text
+    count = len(before.json()["units"])
+    assert before.json()["scene_constraint_evidence"] is None
+    calc = {
+        "rowCount": count,
+        "datas": [
+            {"ifConRamp": "1", "ifConMinOnOffTm": "0"}
+            for _ in range(count)
+        ],
+    }
+    initial = {
+        "rowCount": count,
+        "datas": [
+            {"initialState": 1, "keepTime": 120, "power": 0}
+            for _ in range(count)
+        ],
+    }
+    report = summarize_scene_constraint_evidence(
+        calc, initial, expected_units=count
+    )
+    raw["sceneConstraintEvidence"] = report
+    response = client.post("/api/pmss/inspect", json={"snapshot": raw})
+    assert response.status_code == 200, response.text
+    data = response.json()
+    scene = data["scene_constraint_evidence"]
+    assert scene["constraint_rows"] == count
+    assert scene["initial_rows"] == count
+    assert scene["switches"]["ifConRamp"]["value_1"] == count
+    assert scene["switches"]["ifConMinOnOffTm"]["value_0"] == count
+    assert scene["joint_milp_ready"] is False
+    assert data["joint_readiness"]["ready"] is False
+
+    raw["sceneConstraintEvidence"]["jointMilpReady"] = True
+    bad = client.post("/api/pmss/inspect", json={"snapshot": raw})
+    assert bad.status_code == 422
+    raw["sceneConstraintEvidence"]["jointMilpReady"] = False
+    raw["sceneConstraintEvidence"]["sensitiveToken"] = "example"
+    blocked = client.post("/api/pmss/inspect", json={"snapshot": raw})
+    assert blocked.status_code == 422

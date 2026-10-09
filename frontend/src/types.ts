@@ -114,6 +114,27 @@ export type PMSSInspection = {
   historical_only: boolean;
   load_source_kind: string;
   max_segments: number;
+  scene_constraint_evidence: {
+    expected_units: number;
+    constraint_rows: number;
+    initial_rows: number;
+    switches: Record<string, {
+      value_1: number;
+      value_0: number;
+      missing: number;
+      unrecognized: number;
+    }>;
+    initial_fields: Record<string, {
+      present: number;
+      numeric: number;
+      minimum: number | null;
+      maximum: number | null;
+      unitsVerified: false;
+    }>;
+    physical_units_verified: false;
+    joint_milp_ready: false;
+    note: string;
+  } | null;
   technical_evidence: {
     unit_count: number;
     capacity_match_count: number;

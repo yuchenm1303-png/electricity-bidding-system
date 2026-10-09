@@ -60,3 +60,12 @@ python scripts/summarize_pmss_scene_constraints.py --calculation-json /private/c
 ```
 
 该摘要只保留开关原始编码的0/1计数、缺失数量，以及初始字段的覆盖与数值范围；不会输出原始机组行。由于开关编码和时间单位尚未独立验证，0/1 **不能直接解释为启用/关闭**，所有真实联合优化准入仍保持关闭。若返回不完整分页，程序拒绝出具摘要。
+
+
+## 场景证据显示与快照合并
+
+两份授权读取的场景响应经离线汇总成 `scene-summary.json` 后，可在可信服务器上使用 `merge_pmss_grid.py --scene-evidence /private/scene-summary.json` 与其他必需的 `--snapshot`、`--grid`、`--output` 参数生成新的脱敏快照。
+
+合并脚本与网站 API 都会校验仅包含统计汇总、原始编码0/1不可擅自解释为启停状态、`physicalUnitsVerified=false`、`jointMilpReady=false`。PowerBid 网页会显示场景开关编码与初始状态字段覆盖；没有只读响应时，使用不带场景证据的原有快照也能正常操作。
+
+**注意：** 该汇总文件只能表达上传者提供的来源统计，并不等于 PMSS 独立核验过的参数；必须有完整机组技术数据和多日回测才能评估联合优化可靠性。
