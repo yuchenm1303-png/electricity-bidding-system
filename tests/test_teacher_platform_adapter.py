@@ -2,9 +2,9 @@ import pytest
 
 from powerbid.adapters.teacher_platform import (
     TeacherPlatformAdapter,
+    TeacherPlatformAuthenticationExpired,
     TeacherPlatformContext,
     TeacherPlatformError,
-    TeacherPlatformAuthenticationExpired,
 )
 
 
