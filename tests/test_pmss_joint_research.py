@@ -137,11 +137,26 @@ def test_joint_strategies_require_typed_provenance_and_resource_bounds():
 def test_cli_json_output_and_missing_technical_gate():
     pytest.importorskip("scipy")
     runner = EXAMPLES.parents[1] / "scripts" / "study_pmss_joint.py"
-    args = [sys.executable, str(runner), "--snapshot", str(EXAMPLES / "synthetic_dc_pmss.json"), "--network", str(EXAMPLES / "synthetic_dc_network.json"), "--target-unit", "G1"]
-    absent = subprocess.run(args + ["--inspect"], capture_output=True, text=True, timeout=30, check=False)
+    args = [
+        sys.executable, str(runner),
+        "--snapshot", str(EXAMPLES / "synthetic_dc_pmss.json"),
+        "--network", str(EXAMPLES / "synthetic_dc_network.json"),
+        "--target-unit", "G1",
+    ]
+    absent = subprocess.run(
+        args + ["--inspect"], capture_output=True,
+        text=True, timeout=30, check=False,
+    )
     assert absent.returncode == 2
     assert json.loads(absent.stdout)["ready"] is False
-    done = subprocess.run(args + ["--technical", str(EXAMPLES / "synthetic_joint_technical.json"), "--technical-source", "synthetic", "--technical-description", "artificial dataset"], capture_output=True, text=True, timeout=90, check=False)
+    done = subprocess.run(
+        args + [
+            "--technical", str(EXAMPLES / "synthetic_joint_technical.json"),
+            "--technical-source", "synthetic",
+            "--technical-description", "artificial dataset",
+        ],
+        capture_output=True, text=True, timeout=90, check=False,
+    )
     assert done.returncode == 0, done.stderr
     report = json.loads(done.stdout)
     assert len(report["ranked"]) == 2
