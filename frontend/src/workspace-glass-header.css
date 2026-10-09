@@ -9,20 +9,20 @@
   z-index: 40;
   margin-bottom: -76px;
   overflow: visible;
-  background: rgba(247, 248, 250, .42);
-  -webkit-backdrop-filter: blur(22px) saturate(85%);
-  backdrop-filter: blur(22px) saturate(85%);
-  border-bottom: 1px solid rgba(40, 46, 56, .11);
-  box-shadow: 0 2px 12px rgba(18, 21, 30, .045);
+  background: rgba(250, 251, 253, .22);
+  -webkit-backdrop-filter: blur(26px) saturate(105%);
+  backdrop-filter: blur(26px) saturate(105%);
+  border-bottom: 1px solid rgba(20, 26, 36, .10);
+  box-shadow: 0 4px 20px rgba(8, 12, 20, .035);
 }
 /* The previous gradient/highlight layer made a second cloudy film. */
 :root .app-main > .global-header::before { content: none; }
 :root[data-theme="dark"] .app-main > .global-header {
-  background: rgba(17, 19, 24, .35);
-  -webkit-backdrop-filter: blur(24px) saturate(65%);
-  backdrop-filter: blur(24px) saturate(65%);
-  border-bottom-color: rgba(229, 233, 242, .10);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, .12);
+  background: rgba(11, 16, 26, .22);
+  -webkit-backdrop-filter: blur(28px) saturate(90%);
+  backdrop-filter: blur(28px) saturate(90%);
+  border-bottom-color: rgba(255, 255, 255, .07);
+  box-shadow: 0 5px 22px rgba(0, 0, 0, .08);
 }
 /* Preserve initial page alignment but allow charts/cards behind glass
  * as the page scrolls. Do not alter the mobile workspace header. */
@@ -37,28 +37,28 @@
 }
 /* Quiet neutral controls; a single blurred parent, no nested blur. */
 :root .app .global-header :is(.ta-global-search, .ta-menu-toggle, .ta-header-icon, .pb-account-trigger) {
-  background: rgba(248, 249, 252, .24);
-  border: 1px solid rgba(29, 35, 44, .13);
+  background: rgba(255, 255, 255, .10);
+  border: 1px solid rgba(26, 33, 44, .10);
   border-radius: 12px;
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
 :root[data-theme="dark"] .app .global-header :is(.ta-global-search, .ta-menu-toggle, .ta-header-icon, .pb-account-trigger) {
-  background: rgba(13, 16, 21, .17);
-  border-color: rgba(233, 237, 247, .12);
-  color: #bec6d2;
+  background: rgba(255, 255, 255, .04);
+  border-color: rgba(255, 255, 255, .08);
+  color: #c6ceda;
   box-shadow: none;
 }
 :root .app .global-header :is(.ta-global-search, .ta-menu-toggle, .ta-header-icon, .pb-account-trigger):hover:not(:disabled) {
-  background: rgba(178, 188, 207, .19);
+  background: rgba(178, 188, 207, .13);
   border-color: rgba(116, 126, 145, .36);
   box-shadow: none;
   transform: none;
 }
 :root[data-theme="dark"] .app .global-header :is(.ta-global-search, .ta-menu-toggle, .ta-header-icon, .pb-account-trigger):hover:not(:disabled) {
-  background: rgba(225, 232, 245, .09);
-  border-color: rgba(224, 230, 243, .24);
+  background: rgba(255, 255, 255, .07);
+  border-color: rgba(255, 255, 255, .14);
   color: #f1f3f7;
 }
 :root .app .global-header .ta-global-search:focus-within {
@@ -72,13 +72,13 @@
 :root .app .global-header .ta-global-search kbd {
   border: 1px solid rgba(42, 50, 65, .12);
   border-radius: 7px;
-  background: rgba(80, 91, 109, .09);
+  background: rgba(90, 98, 112, .08);
   box-shadow: none;
 }
 :root[data-theme="dark"] .app .global-header .ta-global-search kbd {
   color: #acb4c0;
   border-color: rgba(225, 230, 243, .10);
-  background: rgba(218, 223, 236, .065);
+  background: rgba(255, 255, 255, .05);
 }
 /* Keep the environment chip meaningful, but remove its neon glow. */
 :root .app .global-header .environment-pill {
@@ -88,7 +88,7 @@
 }
 :root[data-theme="dark"] .app .global-header .environment-pill {
   color: #95dcb7;
-  background: rgba(43, 135, 94, .16);
+  background: rgba(53, 146, 102, .16);
   border-color: rgba(99, 189, 135, .15);
 }
 :root .app .global-header .environment-pill .online-dot { box-shadow: none; }
