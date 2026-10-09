@@ -9,8 +9,8 @@ from test_historical_validation import _fixture
 from powerbid.candidate_dispatch_uncertainty import (
     assess_candidate_dispatch_uncertainty,
 )
-from powerbid.pmss_integration import BidSegment, snapshot_from_pmss
 from powerbid.network_dispatch import network_from_dict
+from powerbid.pmss_integration import BidSegment, snapshot_from_pmss
 
 
 def _input():
@@ -37,7 +37,8 @@ def test_equal_price_candidate_has_visible_bounded_dispatch_uncertainty():
     assert result.ambiguous_hours == 24
     assert all(item.range_width_mw > 0 for item in result.hours)
     assert result.maximum_accepted_mwh > result.minimum_accepted_mwh
-    assert result.minimum_accepted_mwh <= result.default_lp_accepted_mwh <= result.maximum_accepted_mwh
+    assert (result.minimum_accepted_mwh <= result.default_lp_accepted_mwh
+            <= result.maximum_accepted_mwh)
     assert result.safe_for_live_submission is False
     assert result.counterfactual_pmss_verified is False
     assert result.uses_historical_outcomes_as_forecast is False
