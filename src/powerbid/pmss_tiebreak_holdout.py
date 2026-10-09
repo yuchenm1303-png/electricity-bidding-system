@@ -18,6 +18,10 @@ from hashlib import sha256
 from math import isfinite
 from typing import Any
 
+from powerbid.deterministic_dc_tiebreak import (
+    DEFAULT_PRIMARY_COST_TOLERANCE_ABS,
+    DEFAULT_PRIMARY_COST_TOLERANCE_REL,
+)
 from powerbid.historical_tiebreak_audit import (
     HistoricalTieBreakStudy,
     audit_historical_tiebreaks,
@@ -220,9 +224,24 @@ def evaluate_heldout_tiebreak_rules(
     ))
     # Only dates and numerical aggregate MAEs are included; no machine IDs,
     # source raw rows, bid fingerprints or market credential information.
+    cost_differences = [
+        report.maximum_primary_bid_cost_increase
+        for report in (*training, *testing)
+        if hasattr(report, "maximum_primary_bid_cost_increase")
+    ]
     return {
         "schemaVersion": 1,
         "status": "CHRONOLOGICAL_HOLDOUT_ORIGINAL_BID_RESEARCH_ONLY",
+        "secondaryOptimizationCostToleranceAbs": DEFAULT_PRIMARY_COST_TOLERANCE_ABS,
+        "secondaryOptimizationCostToleranceRel": DEFAULT_PRIMARY_COST_TOLERANCE_REL,
+        # Real HistoricalTieBreakStudy reports carry this value. Some
+        # analysis-only injected test doubles intentionally omit solver
+        # measurements; report unknown as null, never fabricate zero.
+        "maximumObservedSecondaryCostDifference": (
+            max(cost_differences)
+            if len(cost_differences) == len((*training, *testing))
+            else None
+        ),
         "trainingCaseDates": train_dates,
         "untouchedHoldoutCaseDates": test_dates,
         "trainingCaseCount": len(train_dates),

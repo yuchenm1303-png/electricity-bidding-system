@@ -21,6 +21,10 @@ from powerbid.network_dispatch import (
     dc_clear_hour,
 )
 
+# Explicit tiny numerical allowance only: not a PMSS market rule.
+DEFAULT_PRIMARY_COST_TOLERANCE_ABS = 1e-6
+DEFAULT_PRIMARY_COST_TOLERANCE_REL = 1e-10
+
 
 @dataclass(frozen=True, slots=True)
 class DeterministicDcDispatch:
@@ -47,16 +51,21 @@ def select_dc_optimal_tiebreak(
     period: int,
     *,
     unit_priority: Sequence[str] | None = None,
-    max_cost_increase_abs: float = 1e-6,
-    max_cost_increase_rel: float = 1e-11,
+    max_cost_increase_abs: float = DEFAULT_PRIMARY_COST_TOLERANCE_ABS,
+    max_cost_increase_rel: float = DEFAULT_PRIMARY_COST_TOLERANCE_REL,
     time_limit_seconds: float = 12,
 ) -> DeterministicDcDispatch:
     """Maximize MW for each ordered unit sequentially, keeping lower ranks fixed.
 
-    Only the generator order chooses among already-primary-optimal feasible
-    dispatches. Every phase preserves the original hourly demand, DC line
-    physics, MW bounds and primary bid-cost ceiling. All band input ordering
-    is canonicalized, so permuted source JSON never silently changes ranking.
+    Only the generator order chooses among near-primary-optimal feasible
+    dispatches. Every phase preserves hourly demand, DC line physics,
+    MW bounds and an EXPLICIT tiny primary bid-cost tolerance. A 1e-10
+    relative cost tolerance avoids false HiGHS infeasibility when several
+    sequential lexicographic equality locks accumulate numerical error
+    (observed on historical high-price multi-unit LP cases). It is a
+    solver feasibility allowance, NEVER a fitted PMSS dispatch rule.
+    All band input ordering is canonicalized, so permuted source JSON
+    never silently changes ranking.
     """
     if not 1 <= period <= 24:
         raise ValueError("period must be 1..24")
@@ -123,6 +132,9 @@ def select_dc_optimal_tiebreak(
             equations[nb+j, theta_id[line.to_bus]] += x_factor
 
     base_cost = original.clearing_offer_cost
+    # Cost-optimality is measured in the original offer objective units.
+    # Tiny relative slack is needed for multiple sequential LP equality
+    # locks at large objective scale; NEVER relax voltage/line or MW limits.
     tolerance = max_cost_increase_abs + max_cost_increase_rel*max(1., abs(base_cost))
     cost_upper = base_cost + tolerance
     locked = lil_matrix((0, nvar), dtype=float).tocsr()
