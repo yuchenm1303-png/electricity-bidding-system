@@ -48,6 +48,10 @@ def test_three_days_keeps_holdout_rule_choice_independent_of_future_labels():
     assert a["holdoutMaeMwByPolicy"]["unit_id_ascending"] == pytest.approx(0, abs=.002)
     assert a["holdoutMaeMwByPolicy"]["unit_id_descending"] > 50
     assert a["selectionUsesHoldoutObservations"] is False
+    assert a["secondaryOptimizationCostToleranceAbs"] == 1e-6
+    assert a["secondaryOptimizationCostToleranceRel"] == 1e-10
+    assert a["maximumObservedSecondaryCostDifference"] >= 0
+    assert a["maximumObservedSecondaryCostDifference"] < 1e-3
     assert a["validatedNewBids"] is False
     assert a["pmssWritePerformed"] is False
     assert a["profitPredictionVerified"] is False
