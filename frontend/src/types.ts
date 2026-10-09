@@ -114,6 +114,24 @@ export type PMSSInspection = {
   historical_only: boolean;
   load_source_kind: string;
   max_segments: number;
+  technical_evidence: {
+    unit_count: number;
+    capacity_match_count: number;
+    minimum_match_count: number;
+    source_claim_only: true;
+    technical_inputs_verified: false;
+    joint_milp_ready: false;
+    observed_fields: Record<string, {
+      present: number;
+      zero: number;
+      distinct: number;
+      min: number | null;
+      max: number | null;
+      meaning: string;
+      validated_for_joint_milp: false;
+    }>;
+    note: string;
+  } | null;
   joint_readiness: {
     ready: boolean;
     total_units: number;

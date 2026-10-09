@@ -279,6 +279,42 @@ export function PMSSWorkspace() {
             value={inspection.joint_readiness.ready ? "可试算" : "已阻止"}
             detail="禁止推断爬坡、启停与初始状态"/>
         </div>
+        {inspection.technical_evidence && <>
+          <div className="pmss-result-toolbar">
+            <h4>老师平台原始机组字段 · 取值证据</h4>
+            <span className="pmss-state-label">含义及单位待核验</span>
+          </div>
+          <p className="pmss-footnote">
+            当前导入的脱敏快照声明：{inspection.technical_evidence.unit_count}台机组
+            与原始机组表逐ID匹配，容量字段一致
+            {inspection.technical_evidence.capacity_match_count}台；
+            以下只是原始字段统计，不证明其单位、课程规则或物理约束含义。
+            不会自动用于联合 MILP。
+          </p>
+          <div className="pmss-table-scroll"><table className="pmss-table">
+            <thead><tr><th>原始字段</th><th>覆盖机组</th><th>零值</th>
+              <th>取值区间</th><th>待核验含义</th></tr></thead>
+            <tbody>{Object.entries(inspection.technical_evidence.observed_fields).map(
+              ([field, stat]) => <tr key={field}>
+                <td>{field}</td><td>{stat.present}/{inspection.technical_evidence!.unit_count}</td>
+                <td>{stat.zero}</td>
+                <td>{stat.min === null ? "无数据" :
+                  numeric(stat.min,2) + " ～ " + numeric(stat.max ?? stat.min,2)}</td>
+                <td>{stat.meaning}</td>
+              </tr>,
+            )}</tbody>
+          </table></div>
+          <p className="pmss-footnote">
+            注意：10台机组若均出现相同20的爬坡相关字段或0的开停机字段，
+            也不能直接把它们解释成 MW/h、0小时或零启停成本。
+            参数来源由上传文件声明，公开网页不具备独立核真能力。
+          </p>
+        </>}
+        {!inspection.technical_evidence && <p className="pmss-footnote">
+          这份快照尚未加入原始机组技术字段的脱敏取值证据。
+          可在可信服务器用带 --include-technical-evidence 的网架合并脚本重新导出；
+          真实联合求解仍保持锁定。
+        </p>}
         <div className="pmss-toolbar">
           <p>可生成无默认值的参数模板，再使用课程或可信来源逐台补齐。
             在完成之前，继续使用上方独立 DC 网络报价研究，不冒充联合优化。</p>

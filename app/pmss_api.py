@@ -29,6 +29,7 @@ from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_joint_research import FIELDS, assess_joint_readiness
 from powerbid.pmss_network_rank import rank_network_bid_strategies
 from powerbid.pmss_strategy import optimize_segmented_bid
+from powerbid.pmss_technical_evidence import validate_client_technical_evidence
 from powerbid.strategy_lab import DemandStress
 
 router = APIRouter(prefix="/api/pmss")
@@ -43,6 +44,7 @@ ALLOWED_ROOT_KEYS = {
     "unitTree", "unitBids", "marketSystem", "demandForecastMw",
     "forecastSource", "historicalBacktestOnly", "caseDate",
     "results", "loadSourceKind", "loadNodeCount", "dcNetwork",
+    "technicalEvidence",
 }
 
 
@@ -138,6 +140,8 @@ def _parse_snapshot(raw: dict[str, Any]):
     )
     if len(snapshot.units) > 30:
         raise ValueError("在线演示最多分析 30 台机组")
+    if raw.get("technicalEvidence") is not None:
+        validate_client_technical_evidence(raw["technicalEvidence"], snapshot=snapshot)
     return snapshot
 
 
@@ -187,6 +191,11 @@ async def inspect_snapshot(request: Request) -> dict[str, Any]:
         "historical_bid_rule_audit": summarize_bid_rule_audit(snapshot),
         "joint_readiness": asdict(assess_joint_readiness(snapshot, None)),
         "joint_required_technical_fields": sorted(FIELDS),
+        "technical_evidence": (
+            validate_client_technical_evidence(
+                params.snapshot["technicalEvidence"], snapshot=snapshot
+            ) if params.snapshot.get("technicalEvidence") is not None else None
+        ),
         "network": network,
         "dc_grid_available": verified_grid is not None,
         "dc_grid_buses": len(verified_grid.buses) if verified_grid else 0,
