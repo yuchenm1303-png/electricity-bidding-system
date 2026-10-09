@@ -24,8 +24,8 @@ def fixture():
 def test_collect_source_only_evidence_and_reject_verified_forgery():
     c, i = fixture()
     report = summarize_scene_constraint_evidence(c, i, expected_units=2)
-    assert report["switches"]["ifConRamp"]["on"] == 1
-    assert report["switches"]["ifConRamp"]["off"] == 1
+    assert report["switches"]["ifConRamp"]["value_1"] == 1
+    assert report["switches"]["ifConRamp"]["value_0"] == 1
     assert report["switches"]["ifConMinOnOffTm"]["missing"] == 1
     assert report["initialFields"]["keepTime"]["maximum"] == 120
     assert report["initialFields"]["initialState"]["numeric"] == 0
@@ -37,7 +37,7 @@ def test_collect_source_only_evidence_and_reject_verified_forgery():
     with pytest.raises(ValueError, match="cannot assert"):
         validate_scene_constraint_evidence(evil, expected_units=2)
     evil = deepcopy(report)
-    evil["switches"]["ifConRamp"]["on"] = 2
+    evil["switches"]["ifConRamp"]["value_1"] = 2
     with pytest.raises(ValueError, match="coverage"):
         validate_scene_constraint_evidence(evil, expected_units=2)
 
