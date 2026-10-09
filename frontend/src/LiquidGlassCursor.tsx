@@ -69,16 +69,21 @@ function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: numbe
   let top = Math.max(0, rect.top - padding);
   let bottom = Math.min(window.innerHeight, rect.bottom + padding);
   if (brandLink) {
-    const header = element.closest<HTMLElement>(".brand, .mobile-topbar");
-    const area = header?.getBoundingClientRect();
-    const menu = header?.querySelector<HTMLElement>(".sidebar-collapse, .ta-menu-toggle");
-    const menuRect = menu?.getBoundingClientRect();
-    const rightLimit = menuRect && menuRect.left > rect.right
-      ? menuRect.left - 8 : (area ? area.right - 4 : window.innerWidth - 4);
-    left = Math.max(area ? area.left + 4 : 4, rect.left - 26);
-    right = Math.min(window.innerWidth, Math.max(rect.right, Math.min(rightLimit, rect.right + 26)));
-    top = Math.max(0, area ? area.top + 5 : rect.top - 31, rect.top - 31);
-    bottom = Math.min(window.innerHeight, area ? area.bottom - 5 : rect.bottom + 31, rect.bottom + 31);
+    // The brand link stays one clickable control; only the Smirel mark
+    // attracts glass. The PowerBid lettering must not become a refractive
+    // target, since the raster overlay makes its small type unreadable.
+    const icon = element.querySelector<HTMLElement>(".brand-mark-smirel, .mobile-smirel-logo");
+    const iconRect = icon?.getBoundingClientRect() ?? rect;
+    const localWidth = 92;
+    const localHeight = 64;
+    const centerX = Math.max(localWidth / 2, Math.min(window.innerWidth - localWidth / 2,
+      iconRect.left + iconRect.width / 2 - 4));
+    const centerY = Math.max(localHeight / 2, Math.min(window.innerHeight - localHeight / 2,
+      iconRect.top + iconRect.height / 2));
+    left = centerX - localWidth / 2;
+    right = centerX + localWidth / 2;
+    top = centerY - localHeight / 2;
+    bottom = centerY + localHeight / 2;
   }
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
   const height = Math.max(1, Math.min(window.innerHeight, Math.max(MIN_LENS_HEIGHT, bottom - top)));
@@ -860,6 +865,11 @@ export function LiquidGlassCursor() {
       const coveringControl = topElement?.closest("button, a, input, textarea, select");
       for (const candidate of Array.from(root.querySelectorAll<HTMLElement>(SNAP_SELECTOR))) {
         if (candidate.dataset.powerbidLiquidCursor === "true" || !isEligibleSurface(candidate)) continue;
+        if (candidate.matches(".brand-home-link, .mobile-brand-home")) {
+          const icon = candidate.querySelector<HTMLElement>(".brand-mark-smirel, .mobile-smirel-logo");
+          // The adjacent PowerBid wordmark remains crisp on hover.
+          if (icon && rectDistance(icon.getBoundingClientRect(), pointerX, pointerY) > 6) continue;
+        }
         const rect = candidate.getBoundingClientRect();
         const distance = rectDistance(rect, pointerX, pointerY);
         if (distance > (candidate === previous ? RELEASE_DISTANCE : SNAP_DISTANCE)) continue;
@@ -1061,7 +1071,12 @@ export function LiquidGlassCursor() {
 
       canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
+      const brandSnapped = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home"));
+      const hoveringBrandText = Boolean(document.elementFromPoint(pointerX, pointerY)?.closest(".brand-name"));
+      // Blend some of the original (crisp) SVG through the already-existing
+      // refraction. No shader/texture capture change is needed.
+      canvas.style.opacity = pointerInside && textureReady && !hoveringBrandText
+        ? (brandSnapped ? ".58" : "1") : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
       if (textureReady) {
@@ -1071,11 +1086,14 @@ export function LiquidGlassCursor() {
         const readingSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home, .ta-global-search, input, textarea, select, [contenteditable='true']"));
         // Lower refraction on typography-rich surfaces: no ghosted search
         // placeholder or oversized, displaced brand lettering.
-        const strength = readingSurface ? 0.68 + 0.18 * pressWeight
+        const strength = isBrandSurface ? 0.23 + 0.07 * pressWeight
+          : readingSurface ? 0.68 + 0.18 * pressWeight
           : (0.95 + (1.14 - 0.95) * snap.value) + 0.62 * pressWeight;
         const pinch = (7.7 + (7.35 - 7.7) * snap.value) - 0.85 * pressWeight;
-        const aberration = readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
-        const zoom = readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
+        const aberration = isBrandSurface ? 0.015
+          : readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
+        const zoom = isBrandSurface ? 1
+          : readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
           : 1 + 0.055 * snap.value + 0.025 * pressWeight;
         const wobble = 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
 
@@ -1089,12 +1107,14 @@ export function LiquidGlassCursor() {
         gl.uniform2f(uniforms.lensCenter, (x.value - roiLeft) * dpr, (y.value - roiTop) * dpr);
         gl.uniform2f(uniforms.lensSize, width.value * dpr * (1 + 0.025 * deformation), height.value * dpr * (1 - 0.085 * deformation));
         gl.uniform1f(uniforms.cornerRadius, cornerRadius.value * dpr);
-        gl.uniform1f(uniforms.brandFrame, isBrandSurface ? 1 : 0);
+        // Existing default WebGL refraction path; the custom brand frame
+        // was the reason the centre never refracted.
+        gl.uniform1f(uniforms.brandFrame, 0);
         gl.uniform1f(uniforms.strength, strength);
         gl.uniform1f(uniforms.pinch, pinch);
         gl.uniform1f(uniforms.aberration, aberration);
         gl.uniform1f(uniforms.zoom, zoom);
-        gl.uniform1f(uniforms.wobble, isBrandSurface ? 0.035 : wobble);
+        gl.uniform1f(uniforms.wobble, isBrandSurface ? 0.025 : wobble);
         gl.uniform1f(uniforms.time, now / 1000);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       }
