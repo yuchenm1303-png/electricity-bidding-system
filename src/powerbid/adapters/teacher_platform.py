@@ -107,7 +107,21 @@ class TeacherPlatformAdapter:
         response = None
         last_error: Exception | None = None
 
-        for attempt in range(3):
+        # Retry only verified read endpoints. POST bid saves and POST clearing
+        # may succeed remotely just before a network failure: replaying them
+        # could cause duplicate submission or an extra clearing execution.
+        readonly_posts = {
+            "tmScene/spot/unit/getUnitDictTreeFilterByTypesWithMva",
+            "scene/loadFc/list",
+            "marketResult/unitBid/listForGd",
+            "marketResult/nodalLmp/list",
+            "marketResult/branchFlow/list",
+        }
+        retryable = method.upper() == "GET" or (
+            method.upper() == "POST" and path.lstrip("/") in readonly_posts
+        )
+        max_attempts = 3 if retryable else 1
+        for attempt in range(max_attempts):
             try:
                 response = self.session.request(
                     method,
@@ -120,9 +134,10 @@ class TeacherPlatformAdapter:
                 break
             except requests.RequestException as exc:
                 last_error = exc
-                if attempt == 2:
+                if attempt == max_attempts - 1:
                     raise TeacherPlatformError(
-                        f"Network request failed after 3 attempts: {method} {path}: {exc}"
+                        f"Network request failed after {max_attempts} attempt(s): "
+                        f"{method} {path}: {exc}"
                     ) from exc
 
         if response is None:
