@@ -292,6 +292,7 @@ function rasterizePortal(
   roiWidth: number,
   roiHeight: number,
   dpr: number,
+  snapTarget: HTMLElement | null,
 ) {
   const ctx = canvas.getContext("2d", { alpha: true });
   const scratchCtx = scratch.getContext("2d", { alpha: true });
@@ -392,10 +393,15 @@ function rasterizePortal(
 
     for (const child of Array.from(el.childNodes)) {
       if (child.nodeType === Node.TEXT_NODE) {
-        drawTextNode(ctx, child as Text, style, roiLeft, roiTop, roiWidth, roiHeight, opacity);
+        // Keep labels crisp while the refracted glass morphs around a control:
+        // the browser paints the real text beneath the translucent lens.
+        if (!snapTarget?.contains(el)) {
+          drawTextNode(ctx, child as Text, style, roiLeft, roiTop, roiWidth, roiHeight, opacity);
+        }
       } else if (child instanceof HTMLElement) {
         renderElement(child, opacity);
       } else if (child instanceof SVGSVGElement) {
+        if (snapTarget?.contains(child)) continue;
         const svgStyle = getComputedStyle(child);
         if (svgStyle.display !== "none" && svgStyle.visibility !== "hidden" && intersects(child.getBoundingClientRect(), roiLeft, roiTop, roiWidth, roiHeight)) {
           drawSvgIcon(ctx, child, roiLeft, roiTop, opacity * cssNumber(svgStyle.opacity, 1));
@@ -897,7 +903,7 @@ export function LiquidGlassCursor() {
       lastRoiLeft = roiLeft;
       lastRoiTop = roiTop;
       rasterDirty = false;
-      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roiWidth, roiHeight, dpr)) return;
+      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roiWidth, roiHeight, dpr, activeTarget)) return;
       try {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         if (!textureReady) {
@@ -940,7 +946,9 @@ export function LiquidGlassCursor() {
 
       canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
+      // The original 100% lens can duplicate high-contrast CTA lettering.
+      // Fade the glass while snapped so native labels remain readable.
+      canvas.style.opacity = pointerInside && textureReady ? (activeTarget ? ".48" : "1") : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
       if (textureReady) {
