@@ -55,12 +55,12 @@ function Sidebar({ active, change, report, compact, toggle, source }: {
     <nav className="sidebar-nav" aria-label="主导航">
       {navigation.map(item => {
         const Icon = item.icon;
-        return <button type="button" key={item.id} title={item.label}
+        return <button type="button" key={item.id} aria-label={item.label}
           onClick={() => change(item.id)} className={"nav-entry " + (active === item.id ? "active" : "")}>
           <Icon size={19}/>{!compact && <><span><span className="nav-label-text">{item.label}</span></span>{item.id === "trials" && report && <small className="nav-count">{report.count}</small>}</>}
         </button>;
       })}
-      <a className="nav-entry legacy-entry" href="/legacy/" title="老师 PMSS · 原版工作台">
+      <a className="nav-entry legacy-entry" href="/legacy/" aria-label="老师 PMSS · 原版工作台">
         <ExternalLink size={18} />
         {!compact && <span>老师 PMSS 平台</span>}
       </a>
