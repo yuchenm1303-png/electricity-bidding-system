@@ -131,9 +131,10 @@ def assess_joint_candidate_mwh_envelope(
     if smallest.target_accepted_mwh > largest.target_accepted_mwh + 1e-3:
         raise RuntimeError("Joint MILP MWh interval has inverted bounds")
     if any(
-        value > spec.max_mw + 1e-3
-        for value, spec in (
-            (sum(largest.target_dispatch_24h_mw) / 24, specs[target_unit_id]),
+        value > specs[target_unit_id].max_mw + 1e-3
+        for value in (
+            *smallest.target_dispatch_24h,
+            *largest.target_dispatch_24h,
         )
     ):
         raise RuntimeError("Extreme target dispatch exceeds technical rating")
