@@ -166,6 +166,18 @@ export type PMSSInspection = {
   };
   joint_required_technical_fields: string[];
 
+  evidence_binding: {
+    case_date: string;
+    technical_evidence_attached: boolean;
+    technical_association: string;
+    scene_evidence_attached: boolean;
+    scene_association: string;
+    content_digests_matched: boolean;
+    teacher_platform_source_authenticated: false;
+    teacher_physical_semantics_verified: false;
+    model_technical_parameters_verified: false;
+    notice: string;
+  } | null;
   physical_evidence_gaps: {
     unit_count: number;
     fields_required_per_unit: number;
