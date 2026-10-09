@@ -7,10 +7,15 @@
     <meta name="theme-color" content="#0C1222" />
     <meta name="description" content="PowerBid Lab — 面向电力市场教学与研究的报价决策实验室" />
     <script>try{document.documentElement.dataset.theme=localStorage.getItem("powerbid-theme-preference-v2")==="light"?"light":"dark";document.documentElement.style.colorScheme=document.documentElement.dataset.theme;}catch(e){document.documentElement.dataset.theme="dark";document.documentElement.style.colorScheme="dark";}</script>
+    <link rel="stylesheet" href="%BASE_URL%listing-studio-cursor-reference-v1.css" />
     <title>PowerBid Lab — 电力报价系统小组作业</title>
   </head>
   <body>
     <div id="root"></div>
+    <!-- The white circle + delayed follower are the original Listing Studio download cursor. -->
+    <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+    <div class="cursor-follow" id="cursorFollow" aria-hidden="true"></div>
+    <script src="%BASE_URL%listing-studio-download-cursor-v2.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
