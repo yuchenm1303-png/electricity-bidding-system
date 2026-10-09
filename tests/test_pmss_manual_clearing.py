@@ -5,8 +5,9 @@ from copy import deepcopy
 
 import pytest
 from fastapi.testclient import TestClient
-from app.web_server import app
 from test_pmss_web_api import safe_snapshot
+
+from app.web_server import app
 
 
 def payload():
