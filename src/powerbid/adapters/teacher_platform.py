@@ -14,6 +14,10 @@ class TeacherPlatformError(RuntimeError):
     """Raised when the teaching PMSS platform rejects or cannot serve a request."""
 
 
+class TeacherPlatformAuthenticationExpired(TeacherPlatformError):
+    """PMSS application session has expired; transport/VPN may still be healthy."""
+
+
 @dataclass(frozen=True)
 class TeacherPlatformContext:
     project: dict[str, Any]
@@ -153,6 +157,15 @@ class TeacherPlatformAdapter:
                 f"PMSS returned non-JSON data for {path}: {response.text[:300]}"
             ) from exc
 
+        if payload.get("retCode") == "T000":
+            # PMSS frontend maps T000 to the application's own expired
+            # session. HTTP 200 and a working campus VPN are NOT evidence
+            # that the user is still authenticated.
+            raise TeacherPlatformAuthenticationExpired(
+                "PMSS application login has expired (T000). "
+                "Reauthenticate on the official PMSS login page before "
+                "reading projects, market rules or historical results."
+            )
         if payload.get("retCode") != "T200":
             raise TeacherPlatformError(
                 f"{path} failed: retCode={payload.get('retCode')!r}, "
