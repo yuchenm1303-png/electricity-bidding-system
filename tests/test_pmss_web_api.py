@@ -244,3 +244,43 @@ def test_real_historical_network_audit_appears_only_for_complete_original_day():
     data = response.json()
     assert data["historical_grid_audit"] is None
     assert data["historical_unavailable_reason"]
+
+
+def test_current_rule_is_shown_even_if_saved_historical_bid_is_above_cap():
+    raw = safe_snapshot()
+    raw["unitBids"]["G30"]["datas"][0]["segmentDatas"][0]["price"] = 7000
+    check = client.post("/api/pmss/inspect", json={"snapshot": raw})
+    assert check.status_code == 200, check.text
+    audit = check.json()["historical_bid_rule_audit"]
+    assert audit["price_ceiling"] == 1000
+    assert audit["original_units_outside_current_range"] == 1
+    assert audit["original_segments_outside_current_range"] == 1
+    assert audit["largest_original_price"] == 7000
+
+    invalid = client.post("/api/pmss/optimize", json={
+        "snapshot": raw, "target_unit_id": "G30",
+        "candidate_prices": [100, 1001], "iterations": 1,
+    })
+    assert invalid.status_code == 422
+    assert "market rule" in invalid.text
+
+    valid = client.post("/api/pmss/optimize", json={
+        "snapshot": raw, "target_unit_id": "G30",
+        "candidate_prices": [100, 200, 1000], "iterations": 1,
+    })
+    assert valid.status_code == 200, valid.text
+    assert all(s["price"] <= 1000 for s in valid.json()["recommended"]["segments"])
+
+
+def test_network_counterfactual_rejects_above_ceiling_without_modifying_history():
+    raw = _synthetic_network_case()
+    raw["unitBids"]["G30"]["datas"][0]["segmentDatas"][0]["price"] = 7000
+    reply = client.post("/api/pmss/network-evaluate", json={
+        "snapshot": raw, "target_unit_id": "G30",
+        "recommended_segments": [
+            {"start_power": 0, "end_power": 100, "price": 8000},
+        ],
+    })
+    assert reply.status_code == 422
+    assert "market rule" in reply.text
+    assert raw["unitBids"]["G30"]["datas"][0]["segmentDatas"][0]["price"] == 7000

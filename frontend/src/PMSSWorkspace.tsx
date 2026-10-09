@@ -73,6 +73,8 @@ export function PMSSWorkspace() {
       const inspected = await inspectPMSS(raw);
       setSnapshot(raw);
       setInspection(inspected);
+      setMinimum(inspected.historical_bid_rule_audit.price_floor ?? 0);
+      setMaximum(Math.min(10000, inspected.historical_bid_rule_audit.price_ceiling ?? 1000));
       setFileName(file.name);
       setTarget(inspected.units[0]?.unit_id || "");
     } catch (err) {
@@ -95,8 +97,10 @@ export function PMSSWorkspace() {
   const run = async () => {
     if (!snapshot || !target || busy || networkBusy) return;
     if (![minimum, maximum, step].every(Number.isFinite) ||
-        minimum < 0 || maximum > 10000 || maximum < minimum || step <= 0) {
-      setError("报价范围必须为 0–10000，且步长应大于零");
+        minimum < (inspection?.historical_bid_rule_audit.price_floor ?? 0) ||
+        maximum > (inspection?.historical_bid_rule_audit.price_ceiling ?? 10000) ||
+        maximum > 10000 || maximum < minimum || step <= 0) {
+      setError("候选报价必须符合当前 PMSS 市场价格上下限，且步长大于零");
       return;
     }
     const count = Math.floor((maximum - minimum) / step) + 1;
@@ -201,6 +205,22 @@ export function PMSSWorkspace() {
         <Metric label="节点电价" value={network ? String(network.node_count) + " 个" : "未包含"} detail="24小时历史 LMP"/>
         <Metric label="线路潮流" value={network ? String(network.branch_count) + " 条" : "未包含"} detail="已出清支路数据"/>
       </div>
+      <div className="pmss-privacy">
+        <ShieldCheck size={17}/>
+        <span>当前快照申报价格规则：
+          {inspection.historical_bid_rule_audit.price_floor ?? "未提供"} 至
+          {inspection.historical_bid_rule_audit.price_ceiling ?? "未提供"}。
+          新生成的候选曲线必须遵守此限制；
+          现有历史报价将保留原值用于研究，不自动修改。</span>
+      </div>
+      {inspection.historical_bid_rule_audit.original_segments_outside_current_range > 0 &&
+        <div className="pmss-error" role="status">
+          历史原始报价与当前读取的市场价格限制不一致：
+          {inspection.historical_bid_rule_audit.original_units_outside_current_range} 台机组、
+          {inspection.historical_bid_rule_audit.original_segments_outside_current_range} 个历史报价段超出当前限制。
+          历史最高申报价为 {numeric(inspection.historical_bid_rule_audit.largest_original_price, 2)}。
+          不能仅凭当前规则断定历史提交违规，也不能用历史报价为新报价越界提供依据。
+        </div>}
       <MarketExplorer inspection={inspection}/>
       {network && <div className="pmss-panel">
         <div className="pmss-panel-head"><div><small>02 / OBSERVED NETWORK</small><h3>节点价格分化与历史线路影子价格</h3>

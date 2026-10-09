@@ -114,6 +114,15 @@ export type PMSSInspection = {
   historical_only: boolean;
   load_source_kind: string;
   max_segments: number;
+  historical_bid_rule_audit: {
+    price_floor: number | null;
+    price_ceiling: number | null;
+    original_units_outside_current_range: number;
+    original_segments_outside_current_range: number;
+    largest_original_price: number;
+    affected_unit_names: string[];
+    interpretation: string;
+  };
   dc_grid_available: boolean;
   dc_grid_buses: number;
   dc_grid_lines: number;

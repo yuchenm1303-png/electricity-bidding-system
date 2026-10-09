@@ -19,6 +19,11 @@ from powerbid.network_dispatch import network_from_dict
 from powerbid.network_feedback import compare_dc_baseline_to_pmss
 from powerbid.network_historical_audit import audit_pmss_historical_grid
 from powerbid.network_strategy import evaluate_network_plan, verify_network_inputs
+from powerbid.pmss_bid_rule_safety import (
+    summarize_bid_rule_audit,
+    validate_new_bid_prices,
+    validate_new_curve,
+)
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_strategy import optimize_segmented_bid
@@ -169,6 +174,7 @@ async def inspect_snapshot(request: Request) -> dict[str, Any]:
         "load_source_kind": str(params.snapshot.get("loadSourceKind", "")),
         "market_type": snapshot.limits.market_type,
         "max_segments": snapshot.limits.max_segments,
+        "historical_bid_rule_audit": summarize_bid_rule_audit(snapshot),
         "network": network,
         "dc_grid_available": verified_grid is not None,
         "dc_grid_buses": len(verified_grid.buses) if verified_grid else 0,
@@ -181,9 +187,8 @@ async def inspect_snapshot(request: Request) -> dict[str, Any]:
 async def optimize_snapshot(request: Request) -> dict[str, Any]:
     try:
         params = OptimizeInput.model_validate(await _read_payload(request))
-        if any(price < 0 or price > 10_000 for price in params.candidate_prices):
-            raise ValueError("候选价格必须处于 0–10000；正式提交仍须核对课程规则")
         snapshot = _parse_snapshot(params.snapshot)
+        validate_new_bid_prices(snapshot, params.candidate_prices)
         if params.target_unit_id not in snapshot.bids:
             raise ValueError("目标机组不在本次只读快照内")
         result = optimize_segmented_bid(
@@ -299,6 +304,8 @@ async def evaluate_network_snapshot(request: Request) -> dict[str, Any]:
             )
             if params.recommended_segments is not None else None
         )
+        if candidate is not None:
+            validate_new_curve(snapshot, params.target_unit_id, candidate)
         if not _NETWORK_LIMITER.acquire(blocking=False):
             raise HTTPException(429, "网络约束模型繁忙，请稍后重试")
         try:
