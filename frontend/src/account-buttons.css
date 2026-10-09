@@ -1,0 +1,97 @@
+/* Account controls, independent of light/dark workspace preference.
+   Preserve form behavior, captcha, OAuth disabled state and destructive actions. */
+.pb-identity-screen,.pb-identity-overlay,.pb-identity-loading {
+  --pb-auth-outline:#9caefe;
+  --pb-auth-ring:rgba(140,161,255,.2);
+}
+.pb-identity-screen :is(button,a),.pb-identity-overlay :is(button,a) {
+  -webkit-tap-highlight-color:transparent;
+}
+.pb-identity-screen :is(.pb-identity-primary,.pb-social-button,.pb-identity-tabs button,.pb-identity-eye),
+.pb-identity-overlay :is(button,.pb-account-trigger) {
+  transition:transform .22s ease,background .22s ease,border-color .22s ease,box-shadow .24s ease,color .2s ease;
+}
+.pb-identity-screen .pb-identity-primary {
+  position:relative;isolation:isolate;overflow:hidden;
+  border:1px solid rgba(211,219,255,.23);border-radius:13px;
+  background:linear-gradient(115deg,#8294ff 0%,#677bec 70%,#5d72e8 100%);
+  box-shadow:0 11px 28px rgba(74,93,215,.28),inset 0 1px 0 rgba(255,255,255,.22);
+  color:white;
+}
+.pb-identity-screen .pb-identity-primary::before {
+  content:"";position:absolute;pointer-events:none;inset:1px 1px auto;height:44%;
+  background:linear-gradient(180deg,rgba(255,255,255,.13),transparent);
+  border-radius:inherit;z-index:-1;
+}
+.pb-identity-screen .pb-identity-primary:hover:not(:disabled) {
+  background:linear-gradient(115deg,#93a4ff,#7489fb 70%,#6880f1);
+  border-color:rgba(215,223,255,.5);transform:translateY(-2px);
+  box-shadow:0 17px 39px rgba(80,103,234,.36),inset 0 1px 0 rgba(255,255,255,.24);
+}
+.pb-identity-screen .pb-identity-primary:active:not(:disabled) {transform:translateY(0) scale(.99)}
+.pb-identity-screen .pb-identity-primary:disabled {
+  opacity:.58;cursor:not-allowed;transform:none;box-shadow:none;
+}
+.pb-identity-screen .pb-identity-tabs {border-radius:13px;padding:4px;gap:5px}
+.pb-identity-screen .pb-identity-tabs button {
+  border-radius:9px;border:1px solid transparent;min-height:41px;
+}
+.pb-identity-screen .pb-identity-tabs button:hover:not(.selected) {
+  background:rgba(125,151,236,.11);color:#eef2ff;
+}
+.pb-identity-screen .pb-identity-tabs button.selected {
+  border-color:rgba(154,174,249,.19);color:#f6f8ff;
+  background:linear-gradient(140deg,rgba(65,85,134,.91),rgba(41,57,89,.96));
+  box-shadow:0 4px 14px rgba(3,8,23,.18),inset 0 1px 0 rgba(255,255,255,.08);
+}
+.pb-identity-screen .pb-social-button {
+  min-height:49px;border:1px solid rgba(148,170,229,.28);border-radius:11px;
+  background:linear-gradient(135deg,rgba(42,57,88,.73),rgba(24,39,65,.88));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+}
+.pb-identity-screen .pb-social-button:not(.is-disabled):hover {
+  transform:translateY(-2px);border-color:rgba(160,181,255,.63);
+  background:linear-gradient(135deg,rgba(65,85,132,.88),rgba(29,45,76,.95));
+  box-shadow:0 9px 25px rgba(7,12,31,.2);
+}
+.pb-identity-screen .pb-social-button.is-disabled {
+  opacity:.48;pointer-events:none;cursor:not-allowed;
+}
+.pb-identity-screen .pb-identity-eye:hover {
+  color:#f5f7ff;background:rgba(137,158,234,.16);
+}
+.pb-identity-overlay :is(.pb-identity-secondary-full,.pb-identity-table-action,.pb-identity-close),
+.pb-identity-overlay .pb-identity-confirm-actions button {
+  border-radius:11px;border-color:rgba(154,175,233,.32);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+.pb-identity-overlay :is(.pb-identity-secondary-full,.pb-identity-table-action,.pb-identity-close):hover:not(:disabled),
+.pb-identity-overlay .pb-identity-confirm-actions button:hover:not(:disabled) {
+  transform:translateY(-1px);border-color:#96a9f9;
+  background:#304567;box-shadow:0 9px 21px rgba(4,9,24,.23);
+}
+.pb-identity-overlay .pb-identity-confirm-actions button.danger,
+.pb-identity-overlay .pb-identity-confirm-actions button.danger:hover {
+  background:#a84d62;border-color:#d7798c;color:#fff;
+}
+.pb-identity-overlay .pb-identity-confirm-actions button.danger:hover {
+  background:#b95b71;
+}
+.pb-identity-overlay .pb-identity-admin-filters button {
+  border-radius:8px;transition:background .2s,color .2s;
+}
+.pb-identity-overlay .pb-identity-admin-filters button:hover {
+  background:rgba(132,157,233,.15);color:#f5f7ff;
+}
+.pb-identity-overlay .pb-identity-admin-filters button.selected {
+  background:linear-gradient(120deg,#40567c,#304564);color:#f4f7ff;
+}
+.pb-identity-screen :is(button,a):focus-visible,
+.pb-identity-overlay :is(button,a):focus-visible {
+  outline:2px solid var(--pb-auth-outline);outline-offset:3px;
+}
+.pb-identity-overlay button:disabled {opacity:.5;cursor:not-allowed;transform:none!important}
+@media(prefers-reduced-motion:reduce) {
+  .pb-identity-screen :is(button,a),.pb-identity-overlay :is(button,a) {transition:none!important}
+  .pb-identity-screen :is(button,a):hover,.pb-identity-overlay :is(button,a):hover {transform:none!important}
+}

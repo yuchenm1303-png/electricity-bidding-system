@@ -1,0 +1,77 @@
+/* PowerBid control language — scoped to the workspace.
+   Works in both light and dark themes; existing danger/success semantics remain. */
+.app {
+  --pb-control-edge:var(--ta-border);
+  --pb-control-ink:var(--ta-ink);
+  --pb-control-ease:cubic-bezier(.2,.8,.2,1);
+}
+.app button { -webkit-tap-highlight-color:transparent; }
+.app button:focus-visible,
+.app a:focus-visible {
+  outline:2px solid var(--ta-primary);outline-offset:3px;
+}
+.app :is(.primary-button,.outline-button,.secondary-button,.subtle-button,.guide-action,
+  .icon-button,.ta-menu-toggle,.ta-header-icon,.pmss-import-button,.pmss-run-button) {
+  border-radius:11px;
+  transition:background .22s var(--pb-control-ease),border-color .22s ease,
+    box-shadow .24s var(--pb-control-ease),transform .22s var(--pb-control-ease),color .22s ease;
+}
+.app :is(.primary-button,.pmss-import-button,.pmss-run-button,.guide-action) {
+  position:relative;isolation:isolate;
+  background:linear-gradient(118deg,#8195ff,#6077ee);
+  color:#fff;border:1px solid rgba(180,197,255,.44);
+  box-shadow:0 7px 17px rgba(77,98,219,.16),inset 0 1px 0 rgba(255,255,255,.18);
+}
+.app :is(.primary-button,.pmss-import-button,.pmss-run-button,.guide-action):hover:not(:disabled) {
+  background:linear-gradient(120deg,#8da0ff,#7186f7);color:#fff;
+  border-color:rgba(195,208,255,.64);
+  transform:translateY(-1px);
+  box-shadow:0 11px 24px rgba(86,104,225,.24),inset 0 1px 0 rgba(255,255,255,.21);
+}
+.app :is(.primary-button,.pmss-import-button,.pmss-run-button,.guide-action):active:not(:disabled) {
+  transform:translateY(0) scale(.99);
+}
+.app :is(.outline-button,.secondary-button,.subtle-button) {
+  background:var(--ta-panel);
+  color:var(--ta-ink-2);
+  border:1px solid var(--pb-control-edge);
+  box-shadow:0 2px 7px rgba(4,12,31,.035);
+}
+.app :is(.outline-button,.secondary-button,.subtle-button):hover:not(:disabled) {
+  background:var(--ta-primary-soft);color:var(--ta-primary);
+  border-color:var(--ta-primary);
+  box-shadow:0 6px 16px rgba(43,69,155,.08);
+  transform:translateY(-1px);
+}
+.app :is(.icon-button,.ta-menu-toggle,.ta-header-icon) {
+  border:1px solid var(--ta-border);
+  background:var(--ta-panel);
+  color:var(--ta-muted);
+}
+.app :is(.icon-button,.ta-menu-toggle,.ta-header-icon):hover:not(:disabled) {
+  border-color:var(--ta-primary);background:var(--ta-primary-soft);
+  color:var(--ta-primary);transform:translateY(-1px);
+}
+.app .nav-entry {border-radius:11px;transition:background .2s ease,color .2s ease,border-color .2s ease}
+.app .nav-entry:hover:not(.active) {
+  background:var(--ta-hover);color:var(--ta-ink);
+}
+.app .nav-entry.active {background:var(--ta-primary-soft);color:var(--ta-primary)}
+.app :is(.sort-button,.row-action,.sidebar-collapse,.mobile-close,.pb-account-trigger) {
+  border-radius:9px;transition:background .2s,color .2s,border-color .2s,transform .2s;
+}
+.app :is(.sort-button,.sidebar-collapse,.mobile-close,.pb-account-trigger):hover:not(:disabled) {
+  color:var(--ta-primary);border-color:var(--ta-primary);
+}
+.app .row-action:hover:not(:disabled) {
+  background:rgba(193,77,90,.13);color:#d96d7c;
+}
+.app button:disabled,
+.app [aria-disabled="true"] {
+  transform:none!important;box-shadow:none!important;cursor:not-allowed;
+}
+/* Avoid touching the optically sampled pointer / LiquidGlassCursor layers. */
+@media(prefers-reduced-motion:reduce){
+  .app button {transition:none!important}
+  .app button:hover,.app button:active {transform:none!important}
+}

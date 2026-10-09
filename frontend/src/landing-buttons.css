@@ -1,0 +1,128 @@
+/* PowerBid button language — public homepage only.
+   Depth and response without covering content or changing link behavior. */
+.pb-landing {
+  --pb-action-border:rgba(153,176,245,.28);
+  --pb-action-glow:rgba(97,124,252,.24);
+  --pb-action-ease:cubic-bezier(.2,.8,.2,1);
+}
+.pb-landing :is(.pb-header-auth-link,.pb-header-auth-register,.pb-header-cta,.pb-button-main,.pb-mobile-auth-quick,.pb-finale-bottom>a,.pb-lab-footer>a,.pb-product-link) {
+  -webkit-tap-highlight-color:transparent;
+  transition:background .24s var(--pb-action-ease), color .24s ease,
+    border-color .24s ease, box-shadow .3s var(--pb-action-ease),
+    transform .25s var(--pb-action-ease);
+}
+:root[data-theme="dark"] .pb-landing .pb-header-actions {gap:10px}
+:root[data-theme="dark"] .pb-landing .pb-header-auth-link,
+:root[data-theme="dark"] .pb-landing .pb-header-auth-register {
+  height:43px; min-width:72px; padding:0 18px; border-radius:12px;
+  font-size:12px; font-weight:720; letter-spacing:.025em;
+  border:1px solid rgba(154,176,233,.24);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.065);
+}
+:root[data-theme="dark"] .pb-landing .pb-header-auth-link {
+  background:linear-gradient(155deg,rgba(39,55,87,.43),rgba(21,32,54,.46));
+  color:#e7edff;
+}
+:root[data-theme="dark"] .pb-landing .pb-header-auth-register {
+  background:linear-gradient(135deg,rgba(66,85,142,.39),rgba(29,44,73,.71));
+  border-color:rgba(154,174,250,.38);color:#f1f4ff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 6px 20px rgba(3,8,26,.12);
+}
+:root[data-theme="dark"] .pb-landing .pb-header-auth-link:hover,
+:root[data-theme="dark"] .pb-landing .pb-header-auth-register:hover {
+  transform:translateY(-2px);border-color:rgba(165,184,255,.66);
+  background:linear-gradient(130deg,rgba(79,100,165,.52),rgba(38,55,92,.8));
+  color:#fff;box-shadow:0 10px 25px rgba(35,54,134,.22),inset 0 1px 0 rgba(255,255,255,.1);
+}
+:root[data-theme="dark"] .pb-landing .pb-header-cta,
+:root[data-theme="dark"] .pb-landing .pb-button-main {
+  position:relative;isolation:isolate;
+  border:1px solid rgba(198,210,255,.3);
+  color:#fff!important;
+  background:linear-gradient(123deg,#8395ff 0%,#687cf2 54%,#526de1 100%);
+  box-shadow:0 12px 28px rgba(65,87,216,.25),inset 0 1px 0 rgba(255,255,255,.22);
+}
+:root[data-theme="dark"] .pb-landing .pb-header-cta {
+  height:43px;min-width:136px;justify-content:center;gap:13px;
+  border-radius:12px;padding:0 15px 0 18px;font-size:12px;letter-spacing:.015em;
+}
+:root[data-theme="dark"] .pb-landing .pb-button-main {
+  border-radius:14px;min-height:60px;
+}
+:root[data-theme="dark"] .pb-landing .pb-header-cta::before,
+:root[data-theme="dark"] .pb-landing .pb-button-main::before {
+  content:"";position:absolute;inset:1px 1px auto;height:45%;
+  border-radius:inherit;pointer-events:none;z-index:-1;
+  background:linear-gradient(180deg,rgba(255,255,255,.16),transparent);
+}
+:root[data-theme="dark"] .pb-landing .pb-header-cta:hover,
+:root[data-theme="dark"] .pb-landing .pb-button-main:hover {
+  transform:translateY(-2px);
+  border-color:rgba(218,224,255,.55);
+  background:linear-gradient(123deg,#93a4ff,#7489fa 60%,#647bec);
+  box-shadow:0 19px 39px rgba(65,88,232,.32),0 0 25px rgba(108,129,255,.12),
+    inset 0 1px 0 rgba(255,255,255,.24);
+}
+:root[data-theme="dark"] .pb-landing .pb-button-main>span {
+  border-radius:10px;background:#f6f7ff;color:#5369dd;
+  box-shadow:0 5px 18px rgba(29,44,124,.18);
+}
+.pb-landing .pb-header-cta svg {transition:transform .24s ease}
+.pb-landing .pb-header-cta:hover svg {transform:translate(2px,-2px)}
+/* Secondary link actions remain legible and visually distinct from CTAs. */
+:root[data-theme="dark"] .pb-landing .pb-text-link {
+  color:#d6e0ff!important; transition:color .22s ease,transform .22s ease;
+}
+:root[data-theme="dark"] .pb-landing .pb-text-link:hover {
+  color:#fff!important;transform:translateY(-1px);
+}
+:root[data-theme="dark"] .pb-landing :is(.pb-lab-footer>a,.pb-product-link) {
+  color:#c9d6ff!important;border-radius:10px;padding:9px 12px;
+  margin:-9px -12px;
+}
+:root[data-theme="dark"] .pb-landing :is(.pb-lab-footer>a,.pb-product-link):hover {
+  color:#fff!important;background:rgba(128,154,245,.11);
+}
+.pb-landing .pb-flow-step {border-radius:0 0 13px 13px;transition:background .25s,border-color .25s,transform .25s}
+.pb-landing .pb-flow-step:hover {background:rgba(125,153,240,.06);transform:translateY(-2px)}
+.pb-landing .pb-flow-step[aria-pressed="true"] {background:rgba(125,153,240,.075)}
+.pb-landing .pb-menu-toggle {transition:border-color .2s,background .2s,transform .2s}
+.pb-landing .pb-menu-toggle:hover {border-color:rgba(157,177,251,.55);transform:translateY(-1px)}
+:root[data-theme="dark"] .pb-landing .pb-finale-bottom>a {
+  border:1px solid rgba(226,233,255,.38);border-radius:13px;
+  background:linear-gradient(125deg,#f7f8ff,#dae2ff);color:#253976;
+  box-shadow:0 15px 35px rgba(5,12,29,.16),inset 0 1px 0 #fff;
+}
+:root[data-theme="dark"] .pb-landing .pb-finale-bottom>a:hover {
+  transform:translateY(-3px);background:#fff;box-shadow:0 20px 42px rgba(3,8,24,.24);
+}
+.pb-landing :is(a,button):focus-visible {
+  outline:2px solid #a4b7ff;outline-offset:3px;
+}
+.pb-landing :is(.pb-header-cta,.pb-header-auth-link,.pb-header-auth-register,.pb-button-main,.pb-finale-bottom>a):active {
+  transform:translateY(0) scale(.985);
+}
+@media(max-width:1080px) {
+  /* Keep the original mobile navigation behavior: header auth links stay hidden. */
+  .pb-landing .pb-header-links .pb-mobile-auth-entry {
+    border-radius:9px;transition:background .2s,color .2s;
+  }
+  .pb-landing .pb-header-links .pb-mobile-auth-entry:hover {
+    background:rgba(118,146,232,.1);color:#fff;
+  }
+}
+@media(max-width:600px){
+  :root[data-theme="dark"] .pb-landing .pb-mobile-auth-quick {
+    padding:9px 13px;border:1px solid rgba(153,176,240,.32);
+    border-radius:10px;background:rgba(80,101,166,.17);
+    color:#dfe7ff;font-size:12px;
+  }
+  :root[data-theme="dark"] .pb-landing .pb-mobile-auth-quick:hover {
+    border-color:rgba(165,190,255,.56);background:rgba(94,122,195,.28);
+  }
+  :root[data-theme="dark"] .pb-landing .pb-button-main {min-height:49px;border-radius:11px}
+}
+@media(prefers-reduced-motion:reduce){
+  .pb-landing :is(a,button),.pb-landing .pb-header-cta svg {transition:none!important}
+  .pb-landing :is(a,button):hover,.pb-landing :is(a,button):active {transform:none!important}
+}

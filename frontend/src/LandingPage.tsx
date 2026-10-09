@@ -4,6 +4,7 @@ import { ArrowDown, ArrowRight, ArrowUpRight, Activity, BarChart3, Check, Chevro
 import "./landing.css";
 import "./landing-dark.css";
 import "./portal-polish.css";
+import "./landing-buttons.css";
 import PowerConstellation from "./PowerConstellation";
 
 type LandingProps = { workspaceHref: string };

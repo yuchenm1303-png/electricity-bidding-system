@@ -11,6 +11,7 @@ import TurnstileWidget from "./TurnstileWidget";
 import Workspace from "./WorkspaceEntry";
 import "./account.css";
 import "./account-portal-polish.css";
+import "./account-buttons.css";
 
 export type AccountUser = {
   id: number;
