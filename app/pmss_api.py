@@ -30,6 +30,7 @@ from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseli
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_joint_research import FIELDS, assess_joint_readiness
 from powerbid.pmss_network_rank import rank_network_bid_strategies
+from powerbid.pmss_physical_lineage import validate_technical_lineage
 from powerbid.pmss_scene_constraint_evidence import validate_scene_constraint_evidence
 from powerbid.pmss_strategy import optimize_segmented_bid
 from powerbid.pmss_technical_evidence import validate_client_technical_evidence
@@ -89,6 +90,7 @@ class JointRangeInput(NetworkInput):
     """Technical records are separate, never sourced from PMSS observation fields."""
 
     technical: dict[str, dict[str, Any]] = Field(min_length=1, max_length=12)
+    technical_lineage: dict[str, Any] | None = None
     technical_source: str = Field(min_length=1, max_length=60)
     technical_source_description: str = Field(min_length=1, max_length=500)
     terminal_mode: str = Field(default="carryover", pattern="^(carryover|complete)$")
@@ -529,6 +531,22 @@ async def candidate_joint_day_mwh_bounds(request: Request) -> dict[str, Any]:
             for row in params.recommended_segments
         )
         validate_new_curve(snapshot, params.target_unit_id, candidate)
+        # Synthetic fixtures are explicitly *not* attested physical equipment.
+        # Real course-sourced inputs MUST carry a unit-by-unit field ledger
+        # matching the case, exact technical values and physical units.
+        if params.technical_source == "course_verified_by_user":
+            if params.technical_lineage is None:
+                raise ValueError(
+                    "课程来源必须提供覆盖每台机组全部字段的 technical_lineage 清单"
+                )
+            lineage = validate_technical_lineage(
+                snapshot, params.technical, params.technical_lineage,
+                case_date=str(params.snapshot.get("caseDate") or ""),
+            )
+        elif params.technical_lineage is not None:
+            raise ValueError("合成教学参数不能附带真实课程核实声明")
+        else:
+            lineage = None
         if not _NETWORK_LIMITER.acquire(blocking=False):
             raise HTTPException(429, "已有一个网络研究计算正在进行，请稍后重试")
         try:
@@ -549,6 +567,7 @@ async def candidate_joint_day_mwh_bounds(request: Request) -> dict[str, Any]:
         ) from exc
     return {
         **asdict(result),
+        "technical_lineage_audit": asdict(lineage) if lineage else None,
         "study_only": True,
         "pmss_write_performed": False,
         "pmss_clearing_executed": False,

@@ -355,6 +355,14 @@ export type PMSSCandidateDispatchRange = {
 };
 
 export type PMSSJointMwhRange = {
+  technical_lineage_audit: {
+    case_date: string;
+    unit_count: number;
+    attested_fields: number;
+    total_required_fields: number;
+    user_source_attested: true;
+    independent_pmss_semantics_verified: false;
+  } | null;
   target_unit_id: string;
   minimum_accepted_mwh: number;
   maximum_accepted_mwh: number;

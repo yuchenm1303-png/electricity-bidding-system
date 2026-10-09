@@ -104,6 +104,7 @@ export async function analyzePMSSJointCandidateMwh(
   target_unit_id: string,
   recommended_segments: {start_power: number; end_power: number; price: number}[],
   technical: Record<string, unknown>,
+  technical_lineage: Record<string, unknown>,
   technical_source_description: string,
 ): Promise<PMSSJointMwhRange> {
   return unpack<PMSSJointMwhRange>(
@@ -111,7 +112,7 @@ export async function analyzePMSSJointCandidateMwh(
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
-        snapshot, target_unit_id, recommended_segments, technical,
+        snapshot, target_unit_id, recommended_segments, technical, technical_lineage,
         technical_source: "course_verified_by_user",
         technical_source_description,
         terminal_mode: "carryover",
