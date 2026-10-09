@@ -10,12 +10,15 @@ const RELEASE_DISTANCE = 15;
 const FREE_ROI_PADDING = 64;
 const ROI_DEADZONE = 35;
 
-// Only *actions* own a lens. Icons/text inside a button, the brand lockup,
-// metric values, form fields and chart geometry must not compete as targets.
+// One lens per meaningful surface. Search fields and the combined brand
+// lockup snap as a whole; nested icons, labels and glyphs never compete.
 const SNAP_SELECTOR = [
   ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
+  ".brand-home-link", ".mobile-brand-home", ".ta-global-search",
   ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
-  ".app a[href]:not(.brand-home-link)",
+  ".app a[href]",
+  ".app input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='password'])",
+  ".app textarea", ".app select", ".app [contenteditable='true']",
   "[data-liquid-snap='true']",
 ].join(",");
 
@@ -29,16 +32,18 @@ const MAGNETIC_SELECTOR = [
   "[data-magnetic-hover='true']",
 ].join(",");
 
-const EDITABLE_SELECTOR = "input, textarea, select, [contenteditable='true'], [role='slider']";
-const EXCLUDED_SURFACE_SELECTOR = ".brand-home-link, .table-search, [data-liquid-snap='false']";
+const EDITABLE_SELECTOR = "input, textarea, select, [contenteditable='true']";
+const EXCLUDED_SURFACE_SELECTOR = "[data-liquid-snap='false']";
 const MIN_LENS_WIDTH = 42;
 const MIN_LENS_HEIGHT = 36;
 
 function isEligibleSurface(element: HTMLElement) {
   if (element.matches(":disabled") || element.closest("[aria-hidden='true']")) return false;
-  if (element.matches(EDITABLE_SELECTOR) || element.closest(EXCLUDED_SURFACE_SELECTOR)) return false;
-  // Search suggestion *buttons* can snap; the surrounding search field cannot.
-  if (element.closest(".ta-global-search") && !element.closest(".ta-search-results")) return false;
+  if (element.closest(EXCLUDED_SURFACE_SELECTOR)) return false;
+  // The full search shell owns the lens, not the text input inside it.
+  if (element.matches(EDITABLE_SELECTOR) && element.closest(".ta-global-search")) return false;
+  if (element.matches("input") && ["button", "submit", "reset", "image", "password"].includes((element as HTMLInputElement).type)) return false;
+  if (element.matches("[role='slider']")) return false;
   const style = getComputedStyle(element);
   if (style.pointerEvents === "none" || style.visibility !== "visible" || style.display === "none") return false;
   const rect = element.getBoundingClientRect();
@@ -53,7 +58,7 @@ function isEligibleSurface(element: HTMLElement) {
 function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
   const rect = element.getBoundingClientRect();
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
-  const padding = compact ? 6 : 8;
+  const padding = compact ? 6 : element.matches(".brand-home-link, .mobile-brand-home") ? 6 : 8;
 
   // The viewport may crop part of a control near its edges; frame the
   // entire *visible* control rather than moving the center away and
@@ -64,7 +69,9 @@ function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: numbe
   const bottom = Math.min(window.innerHeight, rect.bottom + padding);
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
   const height = Math.max(1, Math.min(window.innerHeight, Math.max(MIN_LENS_HEIGHT, bottom - top)));
-  const radius = Math.min(height / 2, radiusFromStyle(getComputedStyle(element), rect) + padding);
+  // Liquid-capsule curvature even for buttons with square native corners.
+  const nativeRadius = radiusFromStyle(getComputedStyle(element), rect);
+  const radius = Math.min(height / 2, Math.max(nativeRadius + padding + 4, height * 0.47));
 
   return {
     width,
@@ -683,7 +690,6 @@ export function LiquidGlassCursor() {
     let pointerX = window.innerWidth / 2;
     let pointerY = window.innerHeight / 2;
     let pointerInside = false;
-    let overEditable = false;
     let pressed = false;
     const pressure: SpringValue = { value: 0, velocity: 0, target: 0 };
     let activeTarget: HTMLElement | null = null;
@@ -815,13 +821,9 @@ export function LiquidGlassCursor() {
       let next: HTMLElement | null = null;
       let bestScore = Number.POSITIVE_INFINITY;
       const topElement = document.elementFromPoint(pointerX, pointerY);
-      // Hide the lens over editing surfaces: caret, selection and placeholder
-      // are browser-native, so duplicating them in WebGL is inherently lossy.
-      // The original white-circle pointer remains visible.
-      overEditable = Boolean(topElement?.closest(EDITABLE_SELECTOR) ||
-        topElement?.closest(".table-search") ||
-        (topElement?.closest(".ta-global-search") && !topElement.closest(".ta-search-results")));
-      if (overEditable || topElement?.closest(".brand-home-link")) {
+      // A pointer over an editable field can snap the full control.
+      // Keep native focus/selection hit testing unchanged.
+      if (topElement?.closest("[data-liquid-snap='false']")) {
         activeTarget = null;
         return null;
       }
@@ -1029,16 +1031,21 @@ export function LiquidGlassCursor() {
 
       canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      canvas.style.opacity = pointerInside && textureReady && !overEditable ? "1" : "0";
+      canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
       if (textureReady) {
         const pressWeight = Math.max(0, Math.min(1, deformation));
         const releaseWeight = Math.max(0, -deformation);
-        const strength = (0.95 + (1.14 - 0.95) * snap.value) + 0.62 * pressWeight;
+        const readingSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home, .ta-global-search, input, textarea, select, [contenteditable='true']"));
+        // Lower refraction on typography-rich surfaces: no ghosted search
+        // placeholder or oversized, displaced brand lettering.
+        const strength = readingSurface ? 0.68 + 0.18 * pressWeight
+          : (0.95 + (1.14 - 0.95) * snap.value) + 0.62 * pressWeight;
         const pinch = (7.7 + (7.35 - 7.7) * snap.value) - 0.85 * pressWeight;
-        const aberration = 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
-        const zoom = 1 + 0.055 * snap.value + 0.025 * pressWeight;
+        const aberration = readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
+        const zoom = readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
+          : 1 + 0.055 * snap.value + 0.025 * pressWeight;
         const wobble = 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
 
         gl.viewport(0, 0, canvas.width, canvas.height);
@@ -1115,7 +1122,6 @@ export function LiquidGlassCursor() {
     };
     const handlePointerLeave = () => {
       pointerInside = false;
-      overEditable = false;
       pressed = false;
       pressure.target = 0;
       activeTarget = null;
