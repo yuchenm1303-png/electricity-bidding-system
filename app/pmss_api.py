@@ -34,6 +34,7 @@ from powerbid.pmss_physical_lineage import validate_technical_lineage
 from powerbid.pmss_scene_constraint_evidence import validate_scene_constraint_evidence
 from powerbid.pmss_strategy import optimize_segmented_bid
 from powerbid.pmss_technical_evidence import validate_client_technical_evidence
+from powerbid.pmss_uc_evidence_gaps import audit_pmss_uc_evidence_gaps
 from powerbid.strategy_lab import DemandStress
 
 router = APIRouter(prefix="/api/pmss")
@@ -210,6 +211,13 @@ async def inspect_snapshot(request: Request) -> dict[str, Any]:
         "historical_bid_rule_audit": summarize_bid_rule_audit(snapshot),
         "joint_readiness": asdict(assess_joint_readiness(snapshot, None)),
         "joint_required_technical_fields": sorted(FIELDS),
+        "physical_evidence_gaps": asdict(
+            audit_pmss_uc_evidence_gaps(
+                snapshot,
+                technical_evidence=params.snapshot.get("technicalEvidence"),
+                scene_constraint_evidence=params.snapshot.get("sceneConstraintEvidence"),
+            )
+        ),
         "scene_constraint_evidence": (
             validate_scene_constraint_evidence(
                 params.snapshot["sceneConstraintEvidence"],
