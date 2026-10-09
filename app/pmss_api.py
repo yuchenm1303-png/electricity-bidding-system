@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from powerbid.candidate_dispatch_uncertainty import assess_candidate_dispatch_uncertainty
+from powerbid.joint_candidate_bounds import assess_joint_candidate_mwh_envelope
 from powerbid.network_dispatch import network_from_dict
 from powerbid.network_feedback import compare_dc_baseline_to_pmss
 from powerbid.network_historical_audit import audit_pmss_historical_grid
@@ -81,6 +82,16 @@ class NetworkInput(SnapshotInput):
     recommended_segments: list[SegmentInput] | None = Field(
         default=None, min_length=1, max_length=5
     )
+
+
+class JointRangeInput(NetworkInput):
+    """Technical records are separate, never sourced from PMSS observation fields."""
+
+    technical: dict[str, dict[str, Any]] = Field(min_length=1, max_length=12)
+    technical_source: str = Field(min_length=1, max_length=60)
+    technical_source_description: str = Field(min_length=1, max_length=500)
+    terminal_mode: str = Field(default="carryover", pattern="^(carryover|complete)$")
+
 
 
 async def _read_payload(request: Request) -> dict[str, Any]:
@@ -470,6 +481,64 @@ async def candidate_dc_dispatch_range(request: Request) -> dict[str, Any]:
         **asdict(result),
         "study_only": True,
         "historical_model_training_days": 0,
+        "pmss_write_performed": False,
+        "pmss_clearing_executed": False,
+    }
+
+
+
+@router.post("/network-joint-mwh-range")
+async def candidate_joint_day_mwh_bounds(request: Request) -> dict[str, Any]:
+    """Fully coupled 24h DC+UC *economic-optimum* MWh envelope.
+
+    Requires complete, explicit and source-labelled physical records for EVERY
+    generator. The source label is an upload assertion, not independently
+    verified PMSS technical evidence. Never reconstruct UC from prices,
+    historical power observations or the PMSS technicalEvidence summary.
+    """
+    try:
+        params = JointRangeInput.model_validate(await _read_payload(request))
+        if params.snapshot.get("historicalBacktestOnly") is not True:
+            raise ValueError("仅使用经脱敏、显式声明历史研究用途的原始市场快照")
+        if params.recommended_segments is None:
+            raise ValueError("缺少新的、必须符合当前报价规则的候选曲线")
+        if params.technical_source not in ("synthetic", "course_verified_by_user"):
+            raise ValueError(
+                "只允许显式合成教学技术数据，或用户有课程证据的独立完整参数；"
+                "不接收未知或仅推测的物理参数来源"
+            )
+        snapshot = _parse_snapshot(params.snapshot)
+        grid_data = params.snapshot.get("dcNetwork")
+        if grid_data is None:
+            raise ValueError("24小时联合运行必须提供已核实的节点/线路网架")
+        network = network_from_dict(grid_data)
+        verify_network_inputs(snapshot, network, params.target_unit_id)
+        candidate = tuple(
+            BidSegment(row.start_power, row.end_power, row.price)
+            for row in params.recommended_segments
+        )
+        validate_new_curve(snapshot, params.target_unit_id, candidate)
+        if not _NETWORK_LIMITER.acquire(blocking=False):
+            raise HTTPException(429, "已有一个网络研究计算正在进行，请稍后重试")
+        try:
+            result = await run_in_threadpool(
+                assess_joint_candidate_mwh_envelope,
+                snapshot, network, params.technical, params.target_unit_id, candidate,
+                technical_source=params.technical_source,
+                technical_source_description=params.technical_source_description,
+                terminal_mode=params.terminal_mode,
+            )
+        finally:
+            _NETWORK_LIMITER.release()
+    except (ValidationError, KeyError, TypeError, ValueError, StopIteration) as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            422, detail="完整24小时联合MILP未能证明最优或不可行；不返回猜测区间"
+        ) from exc
+    return {
+        **asdict(result),
+        "study_only": True,
         "pmss_write_performed": False,
         "pmss_clearing_executed": False,
     }

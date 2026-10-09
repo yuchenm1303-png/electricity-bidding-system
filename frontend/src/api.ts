@@ -1,4 +1,4 @@
-import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange } from "./types";
+import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange, PMSSJointMwhRange } from "./types";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -93,6 +93,29 @@ export async function analyzePMSSCandidateDispatch(
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({snapshot, target_unit_id, recommended_segments}),
+    }),
+  );
+}
+
+
+/** Joint 24h DC+UC research only; refuses absent or unverified-source machine data. */
+export async function analyzePMSSJointCandidateMwh(
+  snapshot: Record<string, unknown>,
+  target_unit_id: string,
+  recommended_segments: {start_power: number; end_power: number; price: number}[],
+  technical: Record<string, unknown>,
+  technical_source_description: string,
+): Promise<PMSSJointMwhRange> {
+  return unpack<PMSSJointMwhRange>(
+    await fetch(BASE + "api/pmss/network-joint-mwh-range", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        snapshot, target_unit_id, recommended_segments, technical,
+        technical_source: "course_verified_by_user",
+        technical_source_description,
+        terminal_mode: "carryover",
+      }),
     }),
   );
 }
