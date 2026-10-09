@@ -242,3 +242,34 @@ export type PMSSNetworkComparison = {
   pmss_clearing_executed: false;
   pmss_counterfactual_verified: false;
 };
+
+export type PMSSRankedCurve = {
+  name: string;
+  score: number;
+  expected_margin: number;
+  downside_margin: number;
+  worst_margin: number;
+  expected_accepted_mwh: number;
+  price_blocks: [number, number, number][];
+};
+export type PMSSNetworkRank = {
+  target_unit_id: string;
+  baseline_score: number;
+  baseline_expected_margin: number;
+  baseline_rule_compatible: boolean;
+  eligible_candidates: PMSSRankedCurve[];
+  best_candidate: PMSSRankedCurve;
+  modeled_better_than_baseline: boolean | null;
+  price_floor: number | null;
+  price_ceiling: number | null;
+  historical_units_outside_current_rule: number;
+  synthetic_scenarios: string[];
+  historical_evidence_days: number;
+  validated_for_real_bidding: false;
+  confidence_status: string;
+  assumption: string;
+  pmss_write_performed: false;
+  pmss_clearing_executed: false;
+  pmss_counterfactual_verified: false;
+  safe_for_live_submission: false;
+};
