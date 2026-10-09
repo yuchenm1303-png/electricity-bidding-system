@@ -13,6 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from powerbid.flow_error_attribution import (  # noqa: E402
+    compare_dispatch_and_network_sources,
+)
 from powerbid.historical_validation import (  # noqa: E402
     ValidationPolicy,
     judge_historical_model,
@@ -83,12 +86,15 @@ try:
         holdout_dates=int(holdout),
     )
     days = []
+    raw_by_date = {}
     with st.spinner("正在按原始报价重新计算24小时DC电网出清并比较历史记录"):
         for uploaded in uploads:
             if uploaded.size > 4 * 1024 * 1024:
                 raise ValueError("单个脱敏历史文件不得超过4MiB")
             source = json.loads(uploaded.getvalue().decode("utf-8"))
-            days.append(validate_historical_day(source))
+            checked = validate_historical_day(source)
+            days.append(checked)
+            raw_by_date[checked.case_date] = source
         verdict = judge_historical_model(days, policy)
 except (ValueError, TypeError, KeyError, UnicodeDecodeError, RuntimeError) as exc:
     st.error(f"历史回测被拒绝：{exc}")
@@ -191,6 +197,62 @@ if not line_df.empty:
     )
 else:
     st.info("该网络没有可比较的线路历史数据，不能进行线路模型校准。")
+
+st.subheader("误差归因对照：报价出清 vs 固定真实机组出力")
+st.caption(
+    "同一日、同一网架、相同支路观测：对比独立重新出清和固定PMSS真实发电量后"
+    "进行DC潮流重算的误差。后者使用事后数据，只用于排查网架模型，"
+    "绝不是未来报价的预测能力或实际盈利改善。"
+)
+with st.spinner("正在固定历史机组出力，重新计算DC网络潮流"):
+    diagnostic = compare_dispatch_and_network_sources(raw_by_date[selected_day.case_date])
+comparison = diagnostic.comparison
+c1, c2, c3 = st.columns(3)
+c1.metric(
+    "独立报价出清潮流 MAE",
+    "无观测" if comparison.independent_dispatch_flow_mae_mw is None
+    else f"{comparison.independent_dispatch_flow_mae_mw:,.2f} MW",
+)
+c2.metric(
+    "固定历史机组出力后潮流 MAE",
+    "无观测" if comparison.observed_dispatch_flow_mae_mw is None
+    else f"{comparison.observed_dispatch_flow_mae_mw:,.2f} MW",
+)
+c3.metric(
+    "可比误差差值",
+    "不可直接比较" if comparison.absolute_mae_difference_mw is None
+    else f"{comparison.absolute_mae_difference_mw:+,.2f} MW",
+)
+if not comparison.same_observation_set:
+    st.warning(
+        "部分小时发电量缺失或不满足全网平衡，"
+        "两种计算使用的样本不完全相同，不能直接用差值做结论。"
+    )
+else:
+    st.info(
+        "固定真实出力能帮助判断独立报价出清的误差是否更大，"
+        "但不能证明差异完全由机组组合造成。"
+        "仍需排查交流潮流、线路参数、分接头及PMSS报告口径。"
+    )
+
+fixed_lines = pd.DataFrame([
+    {
+        "线路ID": line.line_id,
+        "固定真实出力潮流MAE(MW)": line.magnitude_mae_mw,
+        "正方向偏差MAE(MW)": line.signed_mae_mw,
+        "反方向偏差MAE(MW)": line.reversed_mae_mw,
+        "有效时段数": line.observed_points,
+        "DC潮流超过额定次数": line.modeled_limit_exceed_count,
+    }
+    for line in diagnostic.observed_dispatch.per_line
+])
+if not fixed_lines.empty:
+    st.dataframe(
+        fixed_lines.sort_values(
+            "固定真实出力潮流MAE(MW)", ascending=False, na_position="last"
+        ).head(20),
+        hide_index=True, use_container_width=True,
+    )
 
 report = {
     "notice": (
