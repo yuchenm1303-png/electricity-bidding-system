@@ -704,7 +704,7 @@ export function LiquidGlassCursor() {
         const baseTop = rect.top - state.appliedY;
         const baseRight = baseLeft + rect.width;
         const baseBottom = baseTop + rect.height;
-        const hoverArea = element.classList.contains("brand") ? 22 : 18;
+        const hoverArea = isBrandSurface(element) || element.matches(".brand-name") ? 12 : 15;
         const inside =
           pointerInside &&
           pointerX >= baseLeft - hoverArea &&
@@ -717,7 +717,7 @@ export function LiquidGlassCursor() {
           const centerY = baseTop + rect.height / 2;
           const normalizedX = Math.max(-1, Math.min(1, (pointerX - centerX) / Math.max(rect.width / 2, 1)));
           const normalizedY = Math.max(-1, Math.min(1, (pointerY - centerY) / Math.max(rect.height / 2, 1)));
-          const distance = element.classList.contains("brand") ? 8 : (activeTarget === element ? 7 : 10);
+          const distance = isBrandSurface(element) || element.matches(".brand-name") ? 3.5 : (activeTarget === element ? 6 : 8);
           state.x.target = normalizedX * distance;
           state.y.target = normalizedY * distance;
         } else {
@@ -761,24 +761,29 @@ export function LiquidGlassCursor() {
     refreshMagneticTargets();
 
     const findSnapTarget = () => {
-      if (activeTarget?.isConnected) {
-        if (rectDistance(activeTarget.getBoundingClientRect(), pointerX, pointerY) <= RELEASE_DISTANCE) return activeTarget;
-      }
-      activeTarget = null;
-      let closest = SNAP_DISTANCE + 0.001;
+      const previous = activeTarget;
+      let next: HTMLElement | null = null;
+      let bestScore = Number.POSITIVE_INFINITY;
       for (const candidate of Array.from(root.querySelectorAll<HTMLElement>(SNAP_SELECTOR))) {
         if (candidate.dataset.powerbidLiquidCursor === "true") continue;
+        if (candidate.matches(":disabled") || candidate.closest("[aria-hidden='true']")) continue;
         const style = getComputedStyle(candidate);
         if (style.pointerEvents === "none" || style.visibility === "hidden" || style.display === "none") continue;
         const rect = candidate.getBoundingClientRect();
         if (rect.width <= 0 || rect.height <= 0) continue;
         const distance = rectDistance(rect, pointerX, pointerY);
-        if (distance <= closest) {
-          closest = distance;
-          activeTarget = candidate;
+        if (distance > (candidate === previous ? RELEASE_DISTANCE : SNAP_DISTANCE)) continue;
+        // When an icon/label lives inside a button, use the smaller surface;
+        // otherwise the broad parent swallows all the detailed magnetic points.
+        const areaScore = Math.log2(1 + Math.min(rect.width * rect.height, 120000));
+        const score = distance * 24 + areaScore - (candidate === previous ? 2.4 : 0);
+        if (score < bestScore) {
+          bestScore = score;
+          next = candidate;
         }
       }
-      return activeTarget;
+      activeTarget = next;
+      return next;
     };
 
     const updateTargets = () => {
@@ -790,9 +795,7 @@ export function LiquidGlassCursor() {
         rasterDirty = true;
         roiLockedTarget = null;
         if (target) {
-          const rect = target.getBoundingClientRect();
-          const finalLensWidth = Math.min(Math.max(38, window.innerWidth - 20), Math.max(38, rect.width + SNAP_PADDING * 2));
-          const finalLensHeight = Math.min(Math.max(34, window.innerHeight - 20), Math.max(34, rect.height + SNAP_PADDING * 2));
+          const { width: finalLensWidth, height: finalLensHeight } = getLensBounds(target, pointerX, pointerY);
           snappedRoiWidth = Math.min(
             MAX_ROI_SIZE,
             Math.max(FREE_ROI_SIZE, Math.ceil((finalLensWidth + SNAP_ROI_PADDING * 2) / 16) * 16),
@@ -804,11 +807,11 @@ export function LiquidGlassCursor() {
         }
       }
       if (target) {
-        const rect = target.getBoundingClientRect();
-        x.target = rect.left + rect.width / 2;
-        y.target = rect.top + rect.height / 2;
-        width.target = Math.min(Math.max(38, window.innerWidth - 20), Math.max(38, rect.width + SNAP_PADDING * 2));
-        height.target = Math.min(Math.max(34, window.innerHeight - 20), Math.max(34, rect.height + SNAP_PADDING * 2));
+        const lens = getLensBounds(target, pointerX, pointerY);
+        x.target = lens.centerX;
+        y.target = lens.centerY;
+        width.target = lens.width;
+        height.target = lens.height;
         snap.target = 1;
       } else {
         x.target = pointerX;
@@ -861,8 +864,9 @@ export function LiquidGlassCursor() {
         const rect = target.getBoundingClientRect();
         // Lock the capture window to the target's non-magnetic base position.
         // The button can still wobble inside this texture without dragging the ROI.
-        const baseCenterX = rect.left + rect.width / 2 - (state?.appliedX ?? 0);
-        const baseCenterY = rect.top + rect.height / 2 - (state?.appliedY ?? 0);
+        const bounds = getLensBounds(target, pointerX, pointerY);
+        const baseCenterX = bounds.centerX - (state?.appliedX ?? 0);
+        const baseCenterY = bounds.centerY - (state?.appliedY ?? 0);
         if (roiLockedTarget !== target || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop)) {
           roiLeft = Math.round(Math.max(0, Math.min(maxLeft, baseCenterX - roiWidth / 2)));
           roiTop = Math.round(Math.max(0, Math.min(maxTop, baseCenterY - roiHeight / 2)));
