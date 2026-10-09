@@ -78,20 +78,23 @@
 :root[data-theme="dark"] .pb-button-main:hover { box-shadow:0 22px 48px rgba(73,96,235,.39); background:linear-gradient(125deg,#8da0ff,#687cee); }
 :root[data-theme="dark"] .pb-text-link { color:#d1def8!important; }
 :root[data-theme="dark"] .pb-hero-orb {
-  width: min(65vw,950px); height:min(68vw,815px); right:-7.5%; top:50%;
+  /* The decorative grid itself stays inside the viewport at desktop sizes. */
+  width: min(57vw,860px); height:min(65vw,790px); right:clamp(20px,3.5vw,64px); top:50%;
   transform:translateY(-47%); opacity: .98;
   filter: drop-shadow(0 12px 74px rgba(74,118,253,.12));
 }
 .pb-hero-hud {
-  position:absolute; display:flex; flex-direction:column; gap:7px;
+  position:absolute; z-index:3; display:flex; flex-direction:column; gap:7px;
   border:1px solid rgba(158,183,255,.25);
   border-radius:14px; padding:14px 17px;
   color:#eef4ff; background:rgba(15,28,53,.77);
   box-shadow:0 16px 52px rgba(3,8,22,.23),inset 0 1px 0 rgba(236,245,255,.075);
   backdrop-filter:blur(18px); pointer-events:none; white-space:nowrap;
 }
-.pb-hero-hud-top { left:12%; top:27%; }
-.pb-hero-hud-bottom { right:10%; bottom:19%; }
+/* Percent/negative positioning on the orb previously pushed the right HUD out of view.
+   Both cards now position against the centered, viewport-safe .pb-hero-inner. */
+.pb-hero-hud-top { right:clamp(270px,24vw,390px); top:30%; }
+.pb-hero-hud-bottom { right:clamp(18px,2.5vw,46px); bottom:20%; }
 .pb-hero-hud-label { font-size:9px; font-weight:700; letter-spacing:.17em; color:#9cb1e5; display:flex; align-items:center; gap:8px; }
 .pb-hero-hud-label i { display:block; width:6px;height:6px;border-radius:50%;background:#9bc4ff;box-shadow:0 0 12px #8cb0ff; }
 .pb-hero-hud strong { font-size:16px;font-weight:680;letter-spacing:-.025em; }
@@ -137,17 +140,17 @@
 :root[data-theme="dark"] .app .nav-entry {transition:background .22s,color .22s,transform .22s;}
 :root[data-theme="dark"] .app .nav-entry:hover {transform:translateX(2px);}
 :root[data-theme="dark"] .app .primary-button {box-shadow:0 7px 20px rgba(72,94,218,.13);}
-@media (max-width:1100px) {
-  .pb-hero-hud-top {left:8%;top:20%;}
-  .pb-hero-hud-bottom {right:3%;bottom:17%;}
+@media (max-width:1180px) {
+  /* On tighter layouts, the information is represented in the page sections.
+     Hiding overlay-only cards prevents overlap with the hero heading. */
+  .pb-hero-hud {display:none;}
 }
 @media (max-width:900px) {
   :root[data-theme="dark"] .pb-site-header {height:80px;}
   :root[data-theme="dark"] .pb-header-links.pb-menu-open {background:rgba(17,27,46,.97);border:1px solid rgba(130,154,218,.23);box-shadow:0 24px 50px rgba(1,6,20,.48);backdrop-filter:blur(22px);}
   :root[data-theme="dark"] .pb-menu-toggle {background:rgba(21,35,61,.85);color:#d3defa;border-color:rgba(151,174,231,.2);}
   :root[data-theme="dark"] .pb-hero-copy {width:72%;}
-  :root[data-theme="dark"] .pb-hero-orb {right:-19%;width:76vw;}
-  .pb-hero-hud {transform:scale(.86);transform-origin:center;}
+  :root[data-theme="dark"] .pb-hero-orb {right:0;width:68vw;}
   .pb-signal-ribbon > div {padding:20px 12px;gap:10px;flex-direction:column;align-items:flex-start;}
   .pb-signal-ribbon strong {font-size:12px;}
   .pb-signal-ribbon small {white-space:normal;}
@@ -162,8 +165,7 @@
   :root[data-theme="dark"] .pb-hero-eyebrow {margin-bottom:22px;font-size:8px;}
   :root[data-theme="dark"] .pb-hero h1 {font-size:clamp(48px,11vw,69px);line-height:1.22;}
   :root[data-theme="dark"] .pb-hero-subtitle {font-size:12px;line-height:1.85;margin:19px 0 23px;}
-  :root[data-theme="dark"] .pb-hero-orb {top:73%;width:112vw;height:101vw;right:-9%;opacity:.82;}
-  .pb-hero-hud {display:none;}
+  :root[data-theme="dark"] .pb-hero-orb {top:73%;width:100vw;height:95vw;right:0;opacity:.82;}
   .pb-hero-proof {margin-top:25px;gap:13px;flex-wrap:wrap;}
   .pb-hero-proof-item {padding-right:14px;margin-right:0;gap:2px;}
   .pb-hero-proof-item strong {font-size:13px;}
