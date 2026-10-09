@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from "react";
 import { Download, FileJson2, ShieldCheck, UploadCloud } from "lucide-react";
 import { reviewManuallyImportedPMSSResult } from "./api";
-import { numeric, type PMSSManualClearingReview, type PMSSOptimization } from "./types";
+import { csvExport, numeric, type PMSSManualClearingReview, type PMSSOptimization } from "./types";
 
 /**
  * Workflow intentionally ends at a HUMAN handoff. We have no authorized PMSS
@@ -20,6 +20,21 @@ export function PMSSManualClearingPanel({
   const [file, setFile] = useState("");
   const [error, setError] = useState("");
   const [review, setReview] = useState<PMSSManualClearingReview | null>(null);
+
+  function exportEntryTable() {
+    // The local solver uses the SAME curve at each hour. A CSV with 24*5
+    // rows is for human transcription and checking, NEVER direct submission.
+    const rows = Array.from({length: 24}, (_, hour) =>
+      analysis.recommended.segments.map((segment, i) => [
+        hour + 1, i + 1, segment.start_power, segment.end_power, segment.price,
+      ]),
+    ).flat();
+    csvExport(
+      "powerbid_manual_24h_five_segment_REVIEW_ONLY.csv",
+      ["时段(1-24)", "段号(1-5)", "起始出力MW", "结束出力MW", "报价", "说明"],
+      rows.map(row => [...row, "24时段共用曲线-仅供人工核对"]),
+    );
+  }
 
   async function loadResult(event: ChangeEvent<HTMLInputElement>) {
     const input = event.target.files?.[0];
@@ -92,6 +107,12 @@ export function PMSSManualClearingPanel({
       <strong> 1–24 时段使用同一条五段曲线</strong>，并不是每小时独立优化的24条曲线。
       请使用上方「下载审核 JSON」记录分段、价格和 MW 边界。
       该文件仅供人工核对，不是老师平台可直接提交的API报文。
+    </div>
+    <div className="pmss-toolbar">
+      <p>需要逐时段核对时，可导出24×5行人工录入检查表。所有24小时重复同一曲线，不代表24个独立最优方案。</p>
+      <button className="pmss-run-button" type="button" onClick={exportEntryTable}>
+        <Download size={16}/> 导出24小时人工核对 CSV
+      </button>
     </div>
     <p className="pmss-footnote">尚未取得老师平台报价写入和执行出清的授权接口，本页面不会替你保存报价或点击出清。
       人工提交前应由你核对该案例的五段规则、申报电量、价格上下限和老师规定的操作权限。</p>
