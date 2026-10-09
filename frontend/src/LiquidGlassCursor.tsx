@@ -6,79 +6,73 @@ const MAX_ROI_SIZE = 1200;
 const BASE_WIDTH = 80;
 const BASE_HEIGHT = 54;
 const FREE_OFFSET_Y = -32;
-const SNAP_DISTANCE = 12;
-const RELEASE_DISTANCE = 17;
-const SNAP_PADDING = 10;
+const SNAP_DISTANCE = 10;
+const RELEASE_DISTANCE = 15;
 const FREE_ROI_PADDING = 64;
 const ROI_DEADZONE = 35;
-// PowerBid-only magnetic mapping: keep Loom Shader / refraction / spring physics.
-const BRAND_TARGET_SELECTOR = ".brand-mark-smirel, .brand-name strong, .brand-name small";
+
+// Only *actions* own a lens. Icons/text inside a button, the brand lockup,
+// metric values, form fields and chart geometry must not compete as targets.
 const SNAP_SELECTOR = [
-  BRAND_TARGET_SELECTOR,
   ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
-  ".nav-entry > svg", ".nav-entry .nav-label-text", ".nav-count",
-  ".ta-menu-toggle svg", ".ta-header-icon svg", ".sidebar-collapse svg",
-  ".primary-button > svg", ".primary-button > span",
-  ".outline-button > svg", ".outline-button > span",
-  ".secondary-button > svg", ".secondary-button > span",
-  ".pmss-run-button > svg", ".pmss-import-button > svg",
-  ".pmss-review-export > svg", ".pmss-hour-buttons svg",
   ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
   ".app a[href]:not(.brand-home-link)",
-  ".ta-global-search", ".table-search",
-  ".ta-stat-icon", ".ta-stat-bottom strong", ".ta-stat-badge",
-  ".ta-gauge-reading strong", ".ta-card-icon", ".ta-card-tag",
-  ".ta-report-complete strong", ".ta-chart-card .ta-card-title h3",
-  ".ta-bars .recharts-bar-rectangle", ".ta-capacity-footer strong",
-  ".recommendation-price > span", ".recommendation-facts strong",
-  ".result-metric strong", ".result-metric-top span", ".chart-tag",
-  ".pmss-metric strong", ".pmss-state-label", ".pmss-unit-avatar",
-  ".pmss-hour-facts strong", ".pmss-review-facts strong",
-  ".pmss-unit-identity strong", ".pmss-review-slider-title span",
-  ".pmss-table tbody .pmss-unit-identity",
-  ".recharts-legend-item", ".recharts-active-dot",
-  ".table-foot-note", ".unit-symbol",
   "[data-liquid-snap='true']",
 ].join(",");
 
-// Move only interactive targets and a few small anchors: not cards, chart
-// bars, axes, inputs or tooltips (translating those breaks visual alignment).
+// Magnetic translation belongs to small buttons, never to form controls,
+// graphics, entire cards or layout containers. Wide controls can still get
+// the lens, but stay in place so text layout and hit areas remain stable.
 const MAGNETIC_SELECTOR = [
-  ".brand-mark-smirel", ".brand-name", ".sidebar-collapse", ".nav-entry",
+  ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
   ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
-  ".app a[href]:not(.brand-home-link)", ".ta-stat-icon", ".ta-card-icon",
-  ".pmss-unit-avatar", ".unit-symbol",
+  ".app a[href]:not(.brand-home-link)",
   "[data-magnetic-hover='true']",
 ].join(",");
 
-const BRAND_LENS_MAX_WIDTH = 132;
-const BRAND_LENS_MAX_HEIGHT = 52;
-const GENERAL_LENS_MAX_WIDTH = 208;
-const GENERAL_LENS_MAX_HEIGHT = 82;
-const MIN_LENS_WIDTH = 44;
+const EDITABLE_SELECTOR = "input, textarea, select, [contenteditable='true'], [role='slider']";
+const EXCLUDED_SURFACE_SELECTOR = ".brand-home-link, .table-search, [data-liquid-snap='false']";
+const GENERAL_LENS_MAX_WIDTH = 186;
+const GENERAL_LENS_MAX_HEIGHT = 68;
+const MIN_LENS_WIDTH = 42;
 const MIN_LENS_HEIGHT = 36;
 
-function isBrandSurface(element: HTMLElement) {
-  return element.matches(BRAND_TARGET_SELECTOR);
+function isEligibleSurface(element: HTMLElement) {
+  if (element.matches(":disabled") || element.closest("[aria-hidden='true']")) return false;
+  if (element.matches(EDITABLE_SELECTOR) || element.closest(EXCLUDED_SURFACE_SELECTOR)) return false;
+  // Search suggestion *buttons* can snap; the surrounding search field cannot.
+  if (element.closest(".ta-global-search") && !element.closest(".ta-search-results")) return false;
+  const style = getComputedStyle(element);
+  if (style.pointerEvents === "none" || style.visibility !== "visible" || style.display === "none") return false;
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 &&
+    rect.right > 0 && rect.bottom > 0 &&
+    rect.left < window.innerWidth && rect.top < window.innerHeight;
 }
 
 function getLensBounds(element: HTMLElement, pointerX: number, pointerY: number) {
   const rect = element.getBoundingClientRect();
-  const brand = isBrandSurface(element);
-  const padding = brand ? 5 : SNAP_PADDING;
-  const maxWidth = brand ? BRAND_LENS_MAX_WIDTH : element.matches(".nav-entry") ? 150 : GENERAL_LENS_MAX_WIDTH;
-  const maxHeight = brand ? BRAND_LENS_MAX_HEIGHT : element.matches(".nav-entry") ? 62 : GENERAL_LENS_MAX_HEIGHT;
-  const width = Math.min(Math.max(MIN_LENS_WIDTH, window.innerWidth - 20), Math.max(MIN_LENS_WIDTH, Math.min(rect.width + 2 * padding, maxWidth)));
-  const height = Math.min(Math.max(MIN_LENS_HEIGHT, window.innerHeight - 20), Math.max(MIN_LENS_HEIGHT, Math.min(rect.height + 2 * padding, maxHeight)));
-  // Large interactive surfaces get a local lens near the cursor, not an
-  // oversized lens anchored to the center of an entire card or long button.
-  const centerX = rect.width > width + 24
+  const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
+  const navigation = element.matches(".nav-entry");
+  const padding = compact ? 6 : 8;
+  const maxWidth = compact ? 66 : navigation ? 186 : GENERAL_LENS_MAX_WIDTH;
+  const maxHeight = compact ? 62 : navigation ? 60 : GENERAL_LENS_MAX_HEIGHT;
+  const width = Math.min(window.innerWidth - 16, Math.max(MIN_LENS_WIDTH, Math.min(rect.width + 2 * padding, maxWidth)));
+  const height = Math.min(window.innerHeight - 16, Math.max(MIN_LENS_HEIGHT, Math.min(rect.height + 2 * padding, maxHeight)));
+  // Very wide interactive rows receive a local lens at the real pointer
+  // position, not a giant glass sheet anchored in the middle of the row.
+  const centerX = rect.width > width + 16
     ? Math.max(rect.left + width / 2, Math.min(rect.right - width / 2, pointerX))
     : rect.left + rect.width / 2;
-  const centerY = rect.height > height + 24
+  const centerY = rect.height > height + 16
     ? Math.max(rect.top + height / 2, Math.min(rect.bottom - height / 2, pointerY))
     : rect.top + rect.height / 2;
-  return { width, height, centerX, centerY };
+  return {
+    width,
+    height,
+    centerX: Math.max(width / 2 + 3, Math.min(window.innerWidth - width / 2 - 3, centerX)),
+    centerY: Math.max(height / 2 + 3, Math.min(window.innerHeight - height / 2 - 3, centerY)),
+  };
 }
 
 type SpringValue = { value: number; velocity: number; target: number };
@@ -156,11 +150,25 @@ function drawImageFit(
   let sw = img.naturalWidth;
   let sh = img.naturalHeight;
 
-  if (fit === "cover" || fit === "contain") {
-    const boxRatio = rect.width / Math.max(rect.height, 1);
-    const imageRatio = img.naturalWidth / Math.max(img.naturalHeight, 1);
-    const cropWidth = fit === "cover" ? imageRatio > boxRatio : imageRatio < boxRatio;
-    if (cropWidth) {
+  let drawX = boxX;
+  let drawY = boxY;
+  let drawWidth = rect.width;
+  let drawHeight = rect.height;
+  const boxRatio = rect.width / Math.max(rect.height, 1);
+  const imageRatio = img.naturalWidth / Math.max(img.naturalHeight, 1);
+
+  if (fit === "contain" || fit === "scale-down") {
+    // contain must LETTERBOX rather than crop: the old rasterizer stretched
+    // the Smirel logo, producing a doubled/misaligned refracted wordmark.
+    const scale = fit === "scale-down"
+      ? Math.min(1, Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight))
+      : Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
+    drawWidth = img.naturalWidth * scale;
+    drawHeight = img.naturalHeight * scale;
+    drawX += (rect.width - drawWidth) / 2;
+    drawY += (rect.height - drawHeight) / 2;
+  } else if (fit === "cover") {
+    if (imageRatio > boxRatio) {
       sw = img.naturalHeight * boxRatio;
       sx = (img.naturalWidth - sw) / 2;
     } else {
@@ -170,7 +178,7 @@ function drawImageFit(
   }
 
   try {
-    ctx.drawImage(img, sx, sy, sw, sh, boxX, boxY, rect.width, rect.height);
+    ctx.drawImage(img, sx, sy, sw, sh, drawX, drawY, drawWidth, drawHeight);
   } catch {
     // Skip any image the browser refuses to expose to canvas.
   }
@@ -398,21 +406,42 @@ function rasterizePortal(
       ctx.restore();
     }
 
-    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    const textInput = el instanceof HTMLTextAreaElement ||
+      (el instanceof HTMLInputElement && !["range", "checkbox", "radio", "button", "submit", "reset", "color", "file", "hidden", "image"].includes(el.type));
+    if (textInput && (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
+      const placeholder = !el.value;
       const text = el instanceof HTMLInputElement && el.type === "password"
         ? (el.value ? "•".repeat(el.value.length) : el.placeholder)
         : el.value || el.placeholder;
-      if (text && visibleColor(style.color)) {
+      // Text inputs clip their own content. fillText(maxWidth) does NOT clip:
+      // it squeezes the entire placeholder until it resembles duplicate text.
+      if (text) {
+        const leftInset = cssNumber(style.borderLeftWidth) + cssNumber(style.paddingLeft);
+        const rightInset = cssNumber(style.borderRightWidth) + cssNumber(style.paddingRight);
+        const clipWidth = Math.max(0, rect.width - leftInset - rightInset);
+        const placeholderColor = placeholder ? getComputedStyle(el, "::placeholder").color : "";
         ctx.save();
+        ctx.beginPath();
+        ctx.rect(localX + leftInset, localY + 1, clipWidth, Math.max(0, rect.height - 2));
+        ctx.clip();
         ctx.globalAlpha = opacity;
-        ctx.fillStyle = style.color;
+        ctx.fillStyle = placeholder && visibleColor(placeholderColor) ? placeholderColor : style.color;
         ctx.font = `${style.fontStyle || "normal"} ${style.fontWeight || "400"} ${style.fontSize || "16px"} ${style.fontFamily || "sans-serif"}`;
         ctx.textBaseline = "middle";
-        ctx.fillText(text, localX + cssNumber(style.paddingLeft), localY + rect.height / 2, Math.max(1, rect.width - cssNumber(style.paddingLeft) - cssNumber(style.paddingRight)));
+        ctx.fillText(text, localX + leftInset - el.scrollLeft, localY + rect.height / 2);
         ctx.restore();
       }
     }
 
+    // Honor native overflow clipping for descendants (search rows, badges,
+    // compact navigation). Otherwise refracted text escapes its actual box.
+    const clipsChildren = ["hidden", "clip", "auto", "scroll"].includes(style.overflowX) ||
+      ["hidden", "clip", "auto", "scroll"].includes(style.overflowY);
+    if (clipsChildren) {
+      ctx.save();
+      roundedRect(ctx, localX, localY, rect.width, rect.height, radius);
+      ctx.clip();
+    }
     for (const child of Array.from(el.childNodes)) {
       if (child.nodeType === Node.TEXT_NODE) {
         drawTextNode(ctx, child as Text, style, roiLeft, roiTop, roiWidth, roiHeight, opacity);
@@ -425,6 +454,7 @@ function rasterizePortal(
         }
       }
     }
+    if (clipsChildren) ctx.restore();
   };
 
   renderElement(content, 1);
@@ -644,6 +674,7 @@ export function LiquidGlassCursor() {
     let pointerX = window.innerWidth / 2;
     let pointerY = window.innerHeight / 2;
     let pointerInside = false;
+    let overEditable = false;
     let pressed = false;
     const pressure: SpringValue = { value: 0, velocity: 0, target: 0 };
     let activeTarget: HTMLElement | null = null;
@@ -679,7 +710,9 @@ export function LiquidGlassCursor() {
     let magneticTargets: HTMLElement[] = [];
 
     const refreshMagneticTargets = () => {
-      const next = Array.from(root.querySelectorAll<HTMLElement>(MAGNETIC_SELECTOR));
+      const next = Array.from(root.querySelectorAll<HTMLElement>(MAGNETIC_SELECTOR))
+        .filter(element => isEligibleSurface(element) && element.getBoundingClientRect().width <= 210 &&
+          element.getBoundingClientRect().height <= 76);
       const nextSet = new Set(next);
       for (const [element] of magneticStates) {
         if (!nextSet.has(element)) {
@@ -711,7 +744,7 @@ export function LiquidGlassCursor() {
         const baseTop = rect.top - state.appliedY;
         const baseRight = baseLeft + rect.width;
         const baseBottom = baseTop + rect.height;
-        const hoverArea = isBrandSurface(element) || element.matches(".brand-name") ? 12 : 15;
+        const hoverArea = element.matches(".nav-entry") ? 9 : 11;
         const inside =
           pointerInside &&
           pointerX >= baseLeft - hoverArea &&
@@ -724,7 +757,7 @@ export function LiquidGlassCursor() {
           const centerY = baseTop + rect.height / 2;
           const normalizedX = Math.max(-1, Math.min(1, (pointerX - centerX) / Math.max(rect.width / 2, 1)));
           const normalizedY = Math.max(-1, Math.min(1, (pointerY - centerY) / Math.max(rect.height / 2, 1)));
-          const distance = isBrandSurface(element) || element.matches(".brand-name") ? 3.5 : (activeTarget === element ? 6 : 8);
+          const distance = activeTarget === element ? 4.5 : 5.5;
           state.x.target = normalizedX * distance;
           state.y.target = normalizedY * distance;
         } else {
@@ -771,19 +804,29 @@ export function LiquidGlassCursor() {
       const previous = activeTarget;
       let next: HTMLElement | null = null;
       let bestScore = Number.POSITIVE_INFINITY;
+      const topElement = document.elementFromPoint(pointerX, pointerY);
+      // Hide the lens over editing surfaces: caret, selection and placeholder
+      // are browser-native, so duplicating them in WebGL is inherently lossy.
+      // The original white-circle pointer remains visible.
+      overEditable = Boolean(topElement?.closest(EDITABLE_SELECTOR) ||
+        topElement?.closest(".table-search") ||
+        (topElement?.closest(".ta-global-search") && !topElement.closest(".ta-search-results")));
+      if (overEditable || topElement?.closest(".brand-home-link")) {
+        activeTarget = null;
+        return null;
+      }
+      const coveringControl = topElement?.closest("button, a, input, textarea, select");
       for (const candidate of Array.from(root.querySelectorAll<HTMLElement>(SNAP_SELECTOR))) {
-        if (candidate.dataset.powerbidLiquidCursor === "true") continue;
-        if (candidate.matches(":disabled") || candidate.closest("[aria-hidden='true']")) continue;
-        const style = getComputedStyle(candidate);
-        if (style.pointerEvents === "none" || style.visibility === "hidden" || style.display === "none") continue;
+        if (candidate.dataset.powerbidLiquidCursor === "true" || !isEligibleSurface(candidate)) continue;
         const rect = candidate.getBoundingClientRect();
-        if (rect.width <= 0 || rect.height <= 0) continue;
         const distance = rectDistance(rect, pointerX, pointerY);
         if (distance > (candidate === previous ? RELEASE_DISTANCE : SNAP_DISTANCE)) continue;
-        // When an icon/label lives inside a button, use the smaller surface;
-        // otherwise the broad parent swallows all the detailed magnetic points.
-        const areaScore = Math.log2(1 + Math.min(rect.width * rect.height, 120000));
-        const score = distance * 24 + areaScore - (candidate === previous ? 2.4 : 0);
+        // Never snap to controls obscured by a popover/backdrop or another
+        // interactive element. This also prevents competing nested anchors.
+        if (distance === 0 && topElement && topElement !== candidate && !candidate.contains(topElement)) continue;
+        if (coveringControl && coveringControl !== candidate && !candidate.contains(coveringControl)) continue;
+        const score = distance * 24 + Math.log2(1 + Math.min(rect.width * rect.height, 120000)) -
+          (candidate === previous ? 2.4 : 0);
         if (score < bestScore) {
           bestScore = score;
           next = candidate;
@@ -821,8 +864,9 @@ export function LiquidGlassCursor() {
         height.target = lens.height;
         snap.target = 1;
       } else {
-        x.target = pointerX;
-        y.target = pointerY + FREE_OFFSET_Y;
+        // Keep the unsnapped lens wholly on-screen near the top/bottom.
+        x.target = Math.max(BASE_WIDTH / 2 + 6, Math.min(window.innerWidth - BASE_WIDTH / 2 - 6, pointerX));
+        y.target = Math.max(BASE_HEIGHT / 2 + 6, Math.min(window.innerHeight - BASE_HEIGHT / 2 - 6, pointerY + FREE_OFFSET_Y));
         width.target = BASE_WIDTH;
         height.target = BASE_HEIGHT;
         snap.target = 0;
@@ -868,14 +912,18 @@ export function LiquidGlassCursor() {
 
       if (target) {
         const state = magneticStates.get(target);
-        // Lock the capture window to the target's non-magnetic base position.
-        // The button can still wobble inside this texture without dragging the ROI.
+        // Lock near the non-magnetic position but RECENTER after scrolling,
+        // layout shifts or moving along a long button. A permanent ROI lock
+        // used to sample pixels from the wrong part of the interface.
         const bounds = getLensBounds(target, pointerX, pointerY);
         const baseCenterX = bounds.centerX - (state?.appliedX ?? 0);
         const baseCenterY = bounds.centerY - (state?.appliedY ?? 0);
-        if (roiLockedTarget !== target || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop)) {
-          roiLeft = Math.round(Math.max(0, Math.min(maxLeft, baseCenterX - roiWidth / 2)));
-          roiTop = Math.round(Math.max(0, Math.min(maxTop, baseCenterY - roiHeight / 2)));
+        const nextLeft = Math.round(Math.max(0, Math.min(maxLeft, baseCenterX - roiWidth / 2)));
+        const nextTop = Math.round(Math.max(0, Math.min(maxTop, baseCenterY - roiHeight / 2)));
+        if (roiLockedTarget !== target || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop) ||
+            Math.abs(nextLeft - roiLeft) > 28 || Math.abs(nextTop - roiTop) > 28) {
+          roiLeft = nextLeft;
+          roiTop = nextTop;
           roiLockedTarget = target;
           rasterDirty = true;
         }
@@ -966,7 +1014,7 @@ export function LiquidGlassCursor() {
 
       canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
+      canvas.style.opacity = pointerInside && textureReady && !overEditable ? "1" : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
       if (textureReady) {
@@ -1049,6 +1097,7 @@ export function LiquidGlassCursor() {
     };
     const handlePointerLeave = () => {
       pointerInside = false;
+      overEditable = false;
       pressed = false;
       pressure.target = 0;
       activeTarget = null;
@@ -1057,7 +1106,7 @@ export function LiquidGlassCursor() {
       wake();
     };
     const handlePointerEnter = () => { pointerInside = true; snapDirty = true; wake(); };
-    const handleScroll = () => { rasterDirty = true; snapDirty = true; wake(); };
+    const handleScroll = () => { roiLockedTarget = null; rasterDirty = true; snapDirty = true; wake(); };
     // Editing changes input.value without mutating DOM text or attributes.
     const handleInput = () => { rasterDirty = true; wake(); };
     const handleResize = () => {
