@@ -10,7 +10,7 @@ from powerbid.candidate_dispatch_uncertainty import (
     assess_candidate_dispatch_uncertainty,
 )
 from powerbid.network_dispatch import network_from_dict
-from powerbid.pmss_integration import BidSegment, snapshot_from_pmss
+from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 
 
 def _input():
@@ -95,3 +95,25 @@ def test_network_mapping_and_hourly_demand_are_validated_before_solving():
         assess_candidate_dispatch_uncertainty(
             snap, changed, "G1", [BidSegment(0, 100, 80)]
         )
+
+
+
+def test_historical_legacy_bid_warning_counts_only_other_generators():
+    snap, net = _input()
+    illegal_legacy = (PeriodBid(1, 24, (BidSegment(0, 100, 7000),)),)
+    changed_target = replace(
+        snap, bids=snap.bids | {"G1": illegal_legacy}
+    )
+    result = assess_candidate_dispatch_uncertainty(
+        changed_target, net, "G1", [BidSegment(0, 100, 80)]
+    )
+    assert result.original_peer_units_over_current_price_rule == 0
+    changed_peer = replace(
+        snap, bids=snap.bids | {
+            "G2": (PeriodBid(1, 24, (BidSegment(0, 150, 7000),)),)
+        }
+    )
+    result = assess_candidate_dispatch_uncertainty(
+        changed_peer, net, "G1", [BidSegment(0, 100, 80)]
+    )
+    assert result.original_peer_units_over_current_price_rule == 1
