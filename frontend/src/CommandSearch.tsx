@@ -40,7 +40,7 @@ export function CommandSearch({ destinations, onNavigate }: {
     setFocused(false);
     ref.current?.blur();
   };
-  return <div className="ta-global-search" data-liquid-snap="false">
+  return <div className="ta-global-search" data-liquid-snap="true">
     <Search size={19}/>
     <input ref={ref} type="search" aria-label="搜索页面" placeholder="搜索页面或输入命令..."
       value={query} onFocus={() => setFocused(true)}
