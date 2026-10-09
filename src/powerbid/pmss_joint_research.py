@@ -178,16 +178,16 @@ def compare_joint_legal_candidates(
         blocks = curve_for_period(evaluated.periods, 1)
         results.append(JointCandidate(
             name=policy.name,
-            model_score=evaluated.risk_score,
-            expected_net_margin=evaluated.expected_net_profit,
-            accepted_mwh=evaluated.expected_accepted_mwh,
-            start_count=sum(hour.unit_started[target_unit_id] for hour in market.hours),
-            stop_count=sum(hour.unit_stopped[target_unit_id] for hour in market.hours),
+            model_score=float(evaluated.risk_score),
+            expected_net_margin=float(evaluated.expected_net_profit),
+            accepted_mwh=float(evaluated.expected_accepted_mwh),
+            start_count=int(sum(bool(hour.unit_started[target_unit_id]) for hour in market.hours)),
+            stop_count=int(sum(bool(hour.unit_stopped[target_unit_id]) for hour in market.hours)),
             segments=tuple(
                 (seg.start_power, seg.end_power, seg.price) for seg in blocks
             ),
             dispatch_24h=tuple(
-                hour.accepted_by_unit[target_unit_id] for hour in market.hours
+                float(hour.accepted_by_unit[target_unit_id]) for hour in market.hours
             ),
         ))
     ranked = tuple(sorted(results, key=lambda x: (-x.model_score, x.name)))
