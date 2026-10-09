@@ -1,19 +1,20 @@
 """Case-attested PMSS evidence only: digest integrity without claiming truth."""
 from __future__ import annotations
 
-from copy import deepcopy
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
+from copy import deepcopy
+from pathlib import Path
 
 import pytest
 from test_pmss_scene_constraint_evidence import fixture as scene_fixture
 from test_pmss_web_api import _synthetic_network_case
 
 from powerbid.pmss_evidence_attachment import (
-    attach_pmss_evidence, verify_pmss_evidence_binding,
+    attach_pmss_evidence,
+    verify_pmss_evidence_binding,
 )
 from powerbid.pmss_scene_constraint_evidence import summarize_scene_constraint_evidence
 
