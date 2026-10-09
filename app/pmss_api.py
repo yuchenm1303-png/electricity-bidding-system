@@ -26,6 +26,7 @@ from powerbid.pmss_bid_rule_safety import (
 )
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
+from powerbid.pmss_network_rank import rank_network_bid_strategies
 from powerbid.pmss_strategy import optimize_segmented_bid
 from powerbid.strategy_lab import DemandStress
 
@@ -54,6 +55,14 @@ class OptimizeInput(SnapshotInput):
     candidate_prices: list[float] = Field(min_length=1, max_length=21)
     iterations: int = Field(default=2, ge=1, le=3)
     quantity_step_mw: float | None = Field(default=None, gt=0, le=50_000)
+
+
+class NetworkRankInput(SnapshotInput):
+    target_unit_id: str = Field(min_length=1, max_length=120)
+    risk_aversion: float = Field(default=0.50, ge=0, le=1, allow_inf_nan=False)
+    peer_price_deviation: float = Field(
+        default=0.05, ge=0, le=0.15, allow_inf_nan=False
+    )
 
 
 class SegmentInput(BaseModel):
@@ -358,4 +367,46 @@ async def evaluate_network_snapshot(request: Request) -> dict[str, Any]:
         "pmss_write_performed": False,
         "pmss_clearing_executed": False,
         "pmss_counterfactual_verified": False,
+    }
+
+
+
+@router.post("/network-rank")
+async def rank_pmss_network_bids(request: Request) -> dict[str, Any]:
+    """Network-first ranking of current-rule-legal bids; research-only result.
+
+    The historical original bids are baseline observations and may be
+    incompatible with today's snapshot rules; never return them as a
+    market-eligible new quote. No direct PMSS platform network access.
+    """
+    try:
+        params = NetworkRankInput.model_validate(await _read_payload(request))
+        raw = params.snapshot
+        if raw.get("historicalBacktestOnly") is not True:
+            raise ValueError("Only explicitly historical read-only snapshots may be ranked")
+        snapshot = _parse_snapshot(raw)
+        grid_raw = raw.get("dcNetwork")
+        if grid_raw is None:
+            raise ValueError("需要真实节点拓扑和线路额定容量才能进行网络优先排序")
+        network = network_from_dict(grid_raw)
+        verify_network_inputs(snapshot, network, params.target_unit_id)
+        if not _NETWORK_LIMITER.acquire(blocking=False):
+            raise HTTPException(429, "已有一个网络策略计算在运行，请稍后重试")
+        try:
+            comparison = await run_in_threadpool(
+                rank_network_bid_strategies,
+                snapshot, network, params.target_unit_id,
+                risk_aversion=params.risk_aversion,
+                peer_price_deviation=params.peer_price_deviation,
+            )
+        finally:
+            _NETWORK_LIMITER.release()
+    except (ValidationError, KeyError, TypeError, ValueError, StopIteration) as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    return {
+        **asdict(comparison),
+        "pmss_write_performed": False,
+        "pmss_clearing_executed": False,
+        "pmss_counterfactual_verified": False,
+        "safe_for_live_submission": False,
     }

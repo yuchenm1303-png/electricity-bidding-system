@@ -1,4 +1,4 @@
-import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison } from "./types";
+import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank } from "./types";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -65,5 +65,18 @@ export async function evaluatePMSSNetwork(
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({snapshot, target_unit_id, recommended_segments}),
+  }));
+}
+
+export async function rankPMSSNetwork(
+  snapshot: Record<string, unknown>,
+  target_unit_id: string,
+  risk_aversion: number,
+  peer_price_deviation: number,
+): Promise<PMSSNetworkRank> {
+  return unpack<PMSSNetworkRank>(await fetch(BASE + "api/pmss/network-rank", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ snapshot, target_unit_id, risk_aversion, peer_price_deviation }),
   }));
 }
