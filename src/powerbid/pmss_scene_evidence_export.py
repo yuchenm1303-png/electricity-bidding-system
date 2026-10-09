@@ -100,6 +100,21 @@ def collect_same_case_scene_evidence(
         context.project.get("projectId") != project_id
     ):
         raise ValueError("PMSS context does not match the explicitly selected project")
+    # Case date alone is not sufficient: another project can use the same
+    # date. All current authorized project units must also match exactly
+    # the original historical bid snapshot, before touching scene APIs.
+    live_ids = [
+        item.get("unitId") or item.get("key")
+        for item in context.units
+        if isinstance(item, Mapping)
+    ]
+    expected_ids = {unit.unit_id for unit in market.units}
+    if (len(live_ids) != len(expected_ids)
+            or not all(type(uid) is str and bool(uid) for uid in live_ids)
+            or set(live_ids) != expected_ids):
+        raise ValueError(
+            "Selected project generator IDs differ from historical case snapshot"
+        )
     matching = [
         item for item in context.cases
         if isinstance(item, Mapping) and item.get("caseDate") == case_date
