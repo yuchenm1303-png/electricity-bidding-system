@@ -149,6 +149,38 @@ def optimize(payload: OptimizationInput) -> dict[str, object]:
     }
 
 
+# The Vite public/ cursor assets are copied into dist/ at its root.
+# Serve these exact known files as assets rather than returning SPA index HTML.
+# Keeping the allowlist explicit avoids exposing other server-side files.
+_CURSOR_ASSETS = {
+    "listing-studio-download-cursor-v2.js": "text/javascript",
+    "listing-studio-cursor-reference-v1.css": "text/css",
+}
+
+
+def _cursor_asset(filename: str) -> FileResponse:
+    if filename not in _CURSOR_ASSETS:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    asset = DIST / filename
+    if not asset.is_file():
+        raise HTTPException(status_code=404, detail="Cursor asset not available")
+    return FileResponse(
+        asset,
+        media_type=_CURSOR_ASSETS[filename],
+        headers={"Cache-Control": "public, max-age=3600"},
+    )
+
+
+@app.get("/listing-studio-download-cursor-v2.js", include_in_schema=False)
+def listing_cursor_script() -> FileResponse:
+    return _cursor_asset("listing-studio-download-cursor-v2.js")
+
+
+@app.get("/listing-studio-cursor-reference-v1.css", include_in_schema=False)
+def listing_cursor_css() -> FileResponse:
+    return _cursor_asset("listing-studio-cursor-reference-v1.css")
+
+
 @app.get("/")
 def index() -> FileResponse:
     return _index()
