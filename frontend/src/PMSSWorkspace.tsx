@@ -8,6 +8,7 @@ import { numeric, type PMSSInspection, type PMSSNetworkComparison, type PMSSNetw
 import "./pmss-studio.css";
 import { MarketExplorer, OptimizationHourReview } from "./PMSSInsights";
 import { PMSSCandidateDispatchPanel } from "./PMSSCandidateDispatchPanel";
+import { PMSSHoldoutGatePanel } from "./PMSSHoldoutGatePanel";
 
 const tooltipStyle = {
   background: "var(--ta-panel)", color: "var(--ta-ink)",
@@ -702,5 +703,6 @@ export function PMSSWorkspace() {
         otherBusy={busy || networkBusy || rankBusy}
       />}
     </>}
+    <PMSSHoldoutGatePanel/>
   </section>;
 }
