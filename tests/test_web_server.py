@@ -71,3 +71,26 @@ def test_no_duplicate_unit_ids():
     payload = example_payload()
     payload["offers"][1]["unit_id"] = payload["offers"][0]["unit_id"]
     assert client.post("/api/optimize", json=payload).status_code == 422
+
+
+def test_listing_download_cursor_assets_serve_correct_mime(tmp_path, monkeypatch):
+    """Vite public/ assets must serve actual JS/CSS, never the SPA HTML shell."""
+    from app import web_server
+
+    monkeypatch.setattr(web_server, "DIST", tmp_path)
+    (tmp_path / "listing-studio-download-cursor-v2.js").write_text(
+        "window.__cursor_loaded = true;", encoding="utf-8"
+    )
+    (tmp_path / "listing-studio-cursor-reference-v1.css").write_text(
+        ".cursor-follow { opacity: .25; }", encoding="utf-8"
+    )
+
+    script = client.get("/listing-studio-download-cursor-v2.js")
+    assert script.status_code == 200
+    assert script.headers["content-type"].startswith("text/javascript")
+    assert script.text == "window.__cursor_loaded = true;"
+
+    css = client.get("/listing-studio-cursor-reference-v1.css")
+    assert css.status_code == 200
+    assert css.headers["content-type"].startswith("text/css")
+    assert ".cursor-follow" in css.text
