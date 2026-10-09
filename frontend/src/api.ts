@@ -1,4 +1,4 @@
-import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank } from "./types";
+import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange } from "./types";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -79,4 +79,20 @@ export async function rankPMSSNetwork(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ snapshot, target_unit_id, risk_aversion, peer_price_deviation }),
   }));
+}
+
+
+/** Local DC optimal-face bounds, not a PMSS clearing or price prediction. */
+export async function analyzePMSSCandidateDispatch(
+  snapshot: Record<string, unknown>,
+  target_unit_id: string,
+  recommended_segments: {start_power: number; end_power: number; price: number}[],
+): Promise<PMSSCandidateDispatchRange> {
+  return unpack<PMSSCandidateDispatchRange>(
+    await fetch(BASE + "api/pmss/network-dispatch-range", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({snapshot, target_unit_id, recommended_segments}),
+    }),
+  );
 }
