@@ -11,7 +11,7 @@ PMSS outputs are NEVER used as price inputs or dispatch constraints.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import isfinite
 
@@ -34,6 +34,10 @@ class OptimalDispatchRanges:
     allowed_offer_cost_delta: float
     unit_ranges: tuple[OptimalUnitRange, ...]
     unique_dispatch_within_tolerance: bool
+    observed_jointly_network_feasible: bool | None = None
+    observed_minimum_offer_cost: float | None = None
+    observed_bid_cost_gap: float | None = None
+    observed_on_optimal_cost_face: bool | None = None
     label: str = (
         "Each range is an independent DC-LP optimum-face projection; "
         "NOT a unique PMSS settlement, nor a joint feasible box"
@@ -49,6 +53,7 @@ def optimal_unit_dispatch_ranges(
     cost_tolerance_rel: float = 1e-10,
     interval_uniqueness_mw: float = 1e-3,
     forced_off_units: frozenset[str] | None = None,
+    observed_unit_mw: Mapping[str, float] | None = None,
 ) -> OptimalDispatchRanges:
     """Find *separate* minimum and maximum output at nearly identical bid cost.
 
@@ -69,7 +74,7 @@ def optimal_unit_dispatch_ranges(
     try:
         import numpy as np
         from scipy.optimize import linprog
-        from scipy.sparse import lil_matrix
+        from scipy.sparse import lil_matrix, vstack
     except ImportError as exc:
         raise RuntimeError("Optimal-face LP requires optional SciPy strategy dependency") from exc
 
@@ -158,6 +163,42 @@ def optimal_unit_dispatch_ranges(
                 baseline_mw=mid,
             )
         )
+    observed_feasible: bool | None = None
+    observed_cost: float | None = None
+    observed_gap: float | None = None
+    observed_optimal: bool | None = None
+    if observed_unit_mw is not None:
+        if set(observed_unit_mw) != set(unit_columns):
+            raise ValueError("Observed dispatch must include every mapped generator")
+        if any(
+            isinstance(value, bool) or not isfinite(value) or value < 0
+            for value in observed_unit_mw.values()
+        ):
+            raise ValueError("Observed generator MW values must be finite nonnegative")
+        observed_rows = lil_matrix((len(unit_columns), size), dtype=float)
+        observed_targets = np.zeros(len(unit_columns))
+        for idx, uid in enumerate(sorted(unit_columns)):
+            observed_targets[idx] = observed_unit_mw[uid]
+            for col in unit_columns[uid]:
+                observed_rows[idx, col] = 1.0
+        observed_result = linprog(
+            prices,
+            A_eq=vstack([aeq, observed_rows.tocsr()], format="csr"),
+            b_eq=np.concatenate([rhs, observed_targets]),
+            bounds=limits,
+            method="highs",
+        )
+        observed_feasible = observed_result.status == 0
+        if observed_feasible and observed_result.fun is not None:
+            observed_cost = float(observed_result.fun)
+            observed_gap = max(0.0, observed_cost-baseline.clearing_offer_cost)
+            observed_optimal = observed_gap <= tolerance + 1e-5
+        elif observed_result.status != 2:
+            raise RuntimeError(
+                "Could not verify observed dispatch against network: "
+                + str(observed_result.message)
+            )
+
     return OptimalDispatchRanges(
         period=period,
         minimum_offer_cost=baseline.clearing_offer_cost,
@@ -166,4 +207,8 @@ def optimal_unit_dispatch_ranges(
         unique_dispatch_within_tolerance=all(
             unit.width_mw <= interval_uniqueness_mw for unit in ranges
         ),
+        observed_jointly_network_feasible=observed_feasible,
+        observed_minimum_offer_cost=observed_cost,
+        observed_bid_cost_gap=observed_gap,
+        observed_on_optimal_cost_face=observed_optimal,
     )
