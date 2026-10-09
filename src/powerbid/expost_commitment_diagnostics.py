@@ -40,6 +40,14 @@ class ExpostHour:
     baseline_nodal_price_mae: float | None
     masked_nodal_price_mae: float | None
     status: str
+    # If true, the original LP dispatch was already feasible under the
+    # observed-zero restriction to the numerical MW tolerance. A changed
+    # result can reflect LP tie-selection or numerical sensitivity, not a
+    # verified physical availability / unit-commitment constraint.
+    baseline_already_satisfies_mask: bool | None = None
+    nonbinding_redispatch: bool | None = None
+    maximum_unit_redispatch_mw: float | None = None
+    masked_minus_baseline_offer_cost: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,9 +77,18 @@ class ExpostAvailabilityReport:
     masked_paired_nodal_price_mae: float | None
     hours: tuple[ExpostHour, ...]
     units: tuple[ExpostUnit, ...]
+    nonbinding_mask_hours: int = 0
+    no_zero_mask_hours: int = 0
+    nonbinding_redispatch_hours: int = 0
+    binding_mask_hours: int = 0
+    nonbinding_redispatch_mean_mae_gain_mw: float | None = None
+    nonbinding_maximum_unit_redispatch_mw: float | None = None
+    max_absolute_primary_cost_difference: float | None = None
     disclaimer: str = (
         "EX-POST zero-MW restriction using SAME-DAY observed PMSS data. "
-        "Zero output does not prove offline status; no causal attribution, "
+        "Zero output does not prove offline status; nonbinding mask changes "
+        "may reflect tie-break/solver-selection or numerical sensitivity; "
+        "no causal attribution, "
         "no genuine PMSS commitment reconstruction, no candidate-bid "
         "profit forecast and no PMSS write/execute."
     )
@@ -158,6 +175,10 @@ def replay_zero_output_restriction(
     paired_baseline_price: list[float] = []
     paired_masked_price: list[float] = []
     missing = infeasible = pairs = 0
+    nonbinding_hours = no_mask_hours = nonbinding_redispatch_hours = binding_hours = 0
+    nonbinding_gain: list[float] = []
+    nonbinding_peak_delta: list[float] = []
+    primary_cost_differences: list[float] = []
 
     for t in range(24):
         if any(values[t] is None for values in power.values()):
@@ -229,6 +250,28 @@ def replay_zero_output_restriction(
             continue
         pairs += 1
         mask_unit, mask_line, mask_price = errors(masked)
+        already_feasible = missed == 0
+        maximum_delta = max(
+            abs(masked.accepted_by_unit[uid] - baseline.accepted_by_unit[uid])
+            for uid in unit_ids
+        )
+        cost_delta = masked.clearing_offer_cost - baseline.clearing_offer_cost
+        primary_cost_differences.append(abs(cost_delta))
+        redispatched_with_nonbinding_mask = (
+            bool(observed_off) and already_feasible and maximum_delta > 1e-6
+        )
+        if not observed_off:
+            no_mask_hours += 1
+        elif already_feasible:
+            nonbinding_hours += 1
+            if redispatched_with_nonbinding_mask:
+                nonbinding_redispatch_hours += 1
+                nonbinding_peak_delta.append(maximum_delta)
+                nonbinding_gain.append(
+                    _mae(list(orig_unit.values())) - _mae(list(mask_unit.values()))
+                )
+        else:
+            binding_hours += 1
         for uid in unit_ids:
             unit_base_errors[uid].append(orig_unit[uid])
             unit_mask_errors[uid].append(mask_unit[uid])
@@ -245,6 +288,10 @@ def replay_zero_output_restriction(
             _mae(orig_line), _mae(mask_line),
             _mae(orig_price), _mae(mask_price),
             "PAIRED",
+            baseline_already_satisfies_mask=already_feasible,
+            nonbinding_redispatch=redispatched_with_nonbinding_mask,
+            maximum_unit_redispatch_mw=maximum_delta,
+            masked_minus_baseline_offer_cost=cost_delta,
         ))
     return ExpostAvailabilityReport(
         case_date=case_date,
@@ -261,6 +308,20 @@ def replay_zero_output_restriction(
         baseline_paired_nodal_price_mae=_mae(paired_baseline_price),
         masked_paired_nodal_price_mae=_mae(paired_masked_price),
         hours=tuple(observations),
+        nonbinding_mask_hours=nonbinding_hours,
+        no_zero_mask_hours=no_mask_hours,
+        nonbinding_redispatch_hours=nonbinding_redispatch_hours,
+        binding_mask_hours=binding_hours,
+        nonbinding_redispatch_mean_mae_gain_mw=(
+            sum(nonbinding_gain) / len(nonbinding_gain)
+            if nonbinding_gain else None
+        ),
+        nonbinding_maximum_unit_redispatch_mw=(
+            max(nonbinding_peak_delta, default=None)
+        ),
+        max_absolute_primary_cost_difference=(
+            max(primary_cost_differences, default=None)
+        ),
         units=tuple(
             ExpostUnit(
                 unit_id=uid,

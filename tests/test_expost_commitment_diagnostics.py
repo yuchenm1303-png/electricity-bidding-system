@@ -91,3 +91,94 @@ def test_history_provenance_and_market_identity_fail_closed():
     case = _fixture()
     with pytest.raises(ValueError, match="between"):
         replay_zero_output_restriction(case, zero_tolerance_mw=2.0)
+
+
+def test_nonbinding_mask_without_redispatch_never_claims_improvement():
+    case = _fixture()
+    case["demandForecastMw"] = [80.0] * 24
+    case["dcNetwork"]["hourlyDemandMw"]["B"] = [80.0] * 24
+    case["dcNetwork"]["lines"][0]["limitMw"] = 100.0
+    case["results"]["unitResults"][0]["accepted_mw"] = [80.0] * 24
+    case["results"]["unitResults"][1]["accepted_mw"] = [0.0] * 24
+    report = replay_zero_output_restriction(case)
+    assert report.observed_zero_unit_hours == 24
+    assert report.baseline_positive_on_observed_zero_unit_hours == 0
+    assert report.nonbinding_mask_hours == 24
+    assert report.no_zero_mask_hours == 0
+    assert report.binding_mask_hours == 0
+    assert report.nonbinding_redispatch_hours == 0
+    assert report.nonbinding_redispatch_mean_mae_gain_mw is None
+    assert report.baseline_paired_dispatch_mae_mw == pytest.approx(0)
+    assert report.masked_paired_dispatch_mae_mw == pytest.approx(0)
+    assert all(row.baseline_already_satisfies_mask for row in report.hours)
+    assert all(row.nonbinding_redispatch is False for row in report.hours)
+
+
+def test_expost_mask_binding_when_original_dispatches_observed_zero_unit():
+    case = _fixture()
+    case["demandForecastMw"] = [80.0] * 24
+    case["dcNetwork"]["hourlyDemandMw"]["B"] = [80.0] * 24
+    case["results"]["unitResults"][0]["accepted_mw"] = [0.0] * 24
+    case["results"]["unitResults"][1]["accepted_mw"] = [80.0] * 24
+    report = replay_zero_output_restriction(case)
+    assert report.binding_mask_hours == 24
+    assert report.nonbinding_mask_hours == 0
+    assert report.nonbinding_redispatch_hours == 0
+    assert all(row.baseline_already_satisfies_mask is False for row in report.hours)
+
+
+def test_nonbinding_mask_with_synthetic_redispatch_not_claimed_as_uc_evidence(
+    monkeypatch,
+):
+    """The constrained LP can select another allocation even if mask is slack.
+
+    The stub is intentionally a solver-selection example; it does not claim
+    teacher-observed commitment or physically measured ramp constraints.
+    """
+    from dataclasses import replace
+
+    import powerbid.expost_commitment_diagnostics as module
+
+    case = _fixture()
+    case["unitTree"].append({
+        "key": "G3", "title": "synthetic", "leaf": True,
+        "pdAdjustMin": 0, "pdAdjustMax": 120,
+        "mvarate": 120, "runningCost": 1000, "unitType": "gas",
+    })
+    case["unitBids"]["G3"] = {"datas": [{
+        "startPeriod": 1, "endPeriod": 24,
+        "segmentDatas": [{"startPower": 0, "endPower": 120,
+                          "price": 1000, "segmentOrder": 1}],
+    }]}
+    case["dcNetwork"]["unitBus"]["G3"] = "A"
+    case["results"]["unitResults"].append({
+        "unit_id": "G3", "market_type": "DA",
+        "accepted_mw": [0.0] * 24,
+    })
+    original = module.dc_clear_hour
+
+    def swapped(network, offers, period, **kwargs):
+        solved = original(network, offers, period, **kwargs)
+        if kwargs.get("forced_off_units") == frozenset({"G3"}):
+            # Change only other generators, keeping all zero-mask targets at
+            # zero. This is a synthetic tie-selection stub.
+            return replace(
+                solved,
+                accepted_by_unit={
+                    "G1": solved.accepted_by_unit["G1"] + 1.0,
+                    "G2": solved.accepted_by_unit["G2"] - 1.0,
+                    "G3": 0.0,
+                },
+                clearing_offer_cost=solved.clearing_offer_cost,
+            )
+        return solved
+
+    monkeypatch.setattr(module, "dc_clear_hour", swapped)
+    report = module.replay_zero_output_restriction(case)
+    assert report.nonbinding_mask_hours == 24
+    assert report.no_zero_mask_hours == 0
+    assert report.nonbinding_redispatch_hours == 24
+    assert report.binding_mask_hours == 0
+    assert report.nonbinding_maximum_unit_redispatch_mw == pytest.approx(1)
+    assert report.max_absolute_primary_cost_difference == pytest.approx(0)
+    assert "solver-selection" in report.disclaimer
