@@ -7,7 +7,11 @@ from unittest.mock import patch
 import pytest
 
 from scripts.diagnose_pmss_connectivity import (
-    Probe, _head, diagnose, validate_proxy, validate_target,
+    Probe,
+    _head,
+    diagnose,
+    validate_proxy,
+    validate_target,
 )
 
 
