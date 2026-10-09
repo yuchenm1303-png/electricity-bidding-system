@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from scripts.diagnose_pmss_connectivity import (
+from powerbid.pmss_connectivity_diagnostics import (
     Probe,
     _head,
     diagnose,
@@ -43,17 +43,17 @@ def test_reject_remote_or_authenticated_proxy():
 
 def test_proxy_works_for_public_but_private_pmss_unreachable(monkeypatch):
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity.shutil.which", lambda _: "/usr/bin/curl"
+        "powerbid.pmss_connectivity_diagnostics.shutil.which", lambda _: "/usr/bin/curl"
     )
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity._check_proxy_local",
+        "powerbid.pmss_connectivity_diagnostics._check_proxy_local",
         lambda *_: True,
     )
     def head(url, *, proxy, timeout):
         if url == "https://example.com":
             return probe(True)
         return probe(False)
-    monkeypatch.setattr("scripts.diagnose_pmss_connectivity._head", head)
+    monkeypatch.setattr("powerbid.pmss_connectivity_diagnostics._head", head)
     report = diagnose("http://private.example.test/pmss/main.html")
     assert report["state"] == "PUBLIC_PROXY_OK_PRIVATE_TARGET_UNREACHABLE"
     assert report["public_via_proxy"]["transport_reachable"] is True
@@ -65,16 +65,16 @@ def test_proxy_works_for_public_but_private_pmss_unreachable(monkeypatch):
 
 def test_no_proxy_short_circuits_private_proxy_but_checks_direct(monkeypatch):
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity.shutil.which", lambda _: "/usr/bin/curl"
+        "powerbid.pmss_connectivity_diagnostics.shutil.which", lambda _: "/usr/bin/curl"
     )
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity._check_proxy_local",
+        "powerbid.pmss_connectivity_diagnostics._check_proxy_local",
         lambda *_: False,
     )
     def head(url, *, proxy, timeout):
         assert proxy is None
         return probe(True)
-    monkeypatch.setattr("scripts.diagnose_pmss_connectivity._head", head)
+    monkeypatch.setattr("powerbid.pmss_connectivity_diagnostics._head", head)
     report = diagnose("http://private.example.test/")
     assert report["state"] == "LOCAL_PROXY_UNAVAILABLE"
     assert report["pmss_via_proxy"]["curl_exit_code"] == 7
@@ -82,14 +82,14 @@ def test_no_proxy_short_circuits_private_proxy_but_checks_direct(monkeypatch):
 
 def test_reachable_private_endpoint_is_not_authentication_verification(monkeypatch):
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity.shutil.which", lambda _: "/usr/bin/curl"
+        "powerbid.pmss_connectivity_diagnostics.shutil.which", lambda _: "/usr/bin/curl"
     )
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity._check_proxy_local",
+        "powerbid.pmss_connectivity_diagnostics._check_proxy_local",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity._head",
+        "powerbid.pmss_connectivity_diagnostics._head",
         lambda *_args, **_kwargs: probe(True),
     )
     report = diagnose("https://private.example.test/")
@@ -102,7 +102,7 @@ def test_uses_head_without_following_redirects_or_logging_remote_address():
     def fake_run(argv, **kwargs):
         calls.append(argv)
         return subprocess.CompletedProcess(argv, 0, "302", "")
-    with patch("scripts.diagnose_pmss_connectivity.subprocess.run", fake_run):
+    with patch("powerbid.pmss_connectivity_diagnostics.subprocess.run", fake_run):
         result = _head(
             "https://private.example.test/pmss/main.html",
             proxy="socks5h://127.0.0.1:11080", timeout=7,
@@ -119,7 +119,7 @@ def test_uses_head_without_following_redirects_or_logging_remote_address():
 def test_proxy_gateway_http_502_does_not_mean_private_vpn_is_reachable():
     def fake_run(argv, **kwargs):
         return subprocess.CompletedProcess(argv, 0, "502", "")
-    with patch("scripts.diagnose_pmss_connectivity.subprocess.run", fake_run):
+    with patch("powerbid.pmss_connectivity_diagnostics.subprocess.run", fake_run):
         result = _head(
             "http://private.example.test/pmss/main.html",
             proxy="socks5h://127.0.0.1:11080", timeout=7,
@@ -132,7 +132,7 @@ def test_proxy_gateway_http_502_does_not_mean_private_vpn_is_reachable():
 def test_network_timeout_has_stable_diagnostic_code():
     def timed_out(*args, **kwargs):
         raise subprocess.TimeoutExpired("curl", 10)
-    with patch("scripts.diagnose_pmss_connectivity.subprocess.run", timed_out):
+    with patch("powerbid.pmss_connectivity_diagnostics.subprocess.run", timed_out):
         result = _head("https://example.com", proxy=None, timeout=7)
     assert result.curl_exit_code == 28
     assert result.fault_category == "network_timeout"
@@ -141,14 +141,14 @@ def test_network_timeout_has_stable_diagnostic_code():
 
 def test_json_schema_is_credential_free(monkeypatch):
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity.shutil.which", lambda _: "/usr/bin/curl"
+        "powerbid.pmss_connectivity_diagnostics.shutil.which", lambda _: "/usr/bin/curl"
     )
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity._check_proxy_local",
+        "powerbid.pmss_connectivity_diagnostics._check_proxy_local",
         lambda *_: True,
     )
     monkeypatch.setattr(
-        "scripts.diagnose_pmss_connectivity._head",
+        "powerbid.pmss_connectivity_diagnostics._head",
         lambda *_args, **_kwargs: probe(False),
     )
     report = diagnose("http://private.example.test/")
