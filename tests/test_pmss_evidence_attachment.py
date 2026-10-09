@@ -175,6 +175,7 @@ def test_cli_writes_only_new_0600_snapshot_and_never_overwrites(tmp_path):
 
 def test_inspect_rejects_tampered_casebound_evidence_without_disclosing_source():
     from fastapi.testclient import TestClient
+
     from app.web_server import app
     client = TestClient(app)
     file = _attach(
