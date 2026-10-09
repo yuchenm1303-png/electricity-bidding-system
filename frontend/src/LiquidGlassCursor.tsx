@@ -9,6 +9,9 @@ const SNAP_DISTANCE = 10;
 const RELEASE_DISTANCE = 15;
 const FREE_ROI_PADDING = 64;
 const ROI_DEADZONE = 35;
+const DYNAMIC_SCENE_CHECK_MS = 85;
+// Elements whose CSS transforms/animations can change without DOM text updates.
+const DYNAMIC_SCENE_SELECTOR = ".recharts-tooltip-wrapper, .recharts-tooltip-cursor, .recharts-active-dot, [role='tooltip'], [role='dialog'], [data-state='open'], .ta-search-results";
 
 // One lens per meaningful surface: both Smirel and PowerBid share the
 // brand-home-link magnetic target, not independent nested icon/text targets.
@@ -699,6 +702,9 @@ export function LiquidGlassCursor() {
     let textureReady = false;
     let snapDirty = true;
     let running = false;
+    let sceneTimer = 0;
+    let lastSceneSignature = "";
+    let animationWatchUntil = 0;
 
     const x: SpringValue = { value: pointerX, velocity: 0, target: pointerX };
     const y: SpringValue = { value: pointerY + FREE_OFFSET_Y, velocity: 0, target: pointerY + FREE_OFFSET_Y };
@@ -973,10 +979,10 @@ export function LiquidGlassCursor() {
       const minCaptureInterval = activeTarget ? 16 : 32;
       if (now - lastCapture < minCaptureInterval) return;
       lastCapture = now;
-      lastRoiLeft = roiLeft;
-      lastRoiTop = roiTop;
-      rasterDirty = false;
-      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roiWidth, roiHeight, dpr)) return;
+      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roiWidth, roiHeight, dpr)) {
+        textureReady = false;
+        return;
+      }
       try {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         if (!textureReady) {
@@ -985,9 +991,14 @@ export function LiquidGlassCursor() {
         } else {
           gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, capture);
         }
+        // Never mark the frame clean until the fresh pixels reached WebGL.
+        lastRoiLeft = roiLeft;
+        lastRoiTop = roiTop;
+        rasterDirty = false;
       } catch (error) {
         console.warn("PowerBid liquid cursor texture upload failed:", error);
         textureReady = false;
+        rasterDirty = true;
       }
     };
 
@@ -1077,13 +1088,65 @@ export function LiquidGlassCursor() {
       raf = window.requestAnimationFrame(frame);
     };
 
+    // Tooltip movement is often a compositor-only CSS transform. Track the
+    // actual on-screen rectangles as well as DOM mutations. The timer checks
+    // at ~12Hz but uploads a new texture only when the scene has changed.
+    const dynamicSignature = () => {
+      if (!pointerInside || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop)) return "";
+      const parts: string[] = [];
+      for (const node of root.querySelectorAll<Element>(DYNAMIC_SCENE_SELECTOR)) {
+        if (node.closest("[data-powerbid-liquid-cursor='true']")) continue;
+        const st = getComputedStyle(node);
+        if (st.display === "none" || st.visibility === "hidden" || Number(st.opacity) < 0.01) continue;
+        const r = node.getBoundingClientRect();
+        if (!intersects(r, roiLeft, roiTop, roiWidth, roiHeight)) continue;
+        parts.push([node.tagName, node.getAttribute("class") || "",
+          Math.round(r.left * 4), Math.round(r.top * 4),
+          Math.round(r.width * 4), Math.round(r.height * 4),
+          st.opacity, st.fill, st.stroke, st.backgroundColor, st.color,
+          (node.textContent || "").slice(0, 72)].join("|"));
+      }
+      return parts.join("\\n");
+    };
+    const checkDynamicScene = () => {
+      sceneTimer = 0;
+      if (!pointerInside) return;
+      const now = performance.now();
+      const signature = dynamicSignature();
+      const animating = now < animationWatchUntil;
+      if (signature !== lastSceneSignature || (animating && now - lastCapture >= DYNAMIC_SCENE_CHECK_MS)) {
+        lastSceneSignature = signature;
+        rasterDirty = true;
+        ensureFrame();
+      }
+      if (signature || animating) sceneTimer = window.setTimeout(checkDynamicScene, DYNAMIC_SCENE_CHECK_MS);
+    };
+    const watchScene = () => {
+      if (pointerInside && !sceneTimer) sceneTimer = window.setTimeout(checkDynamicScene, DYNAMIC_SCENE_CHECK_MS);
+    };
+    const onSceneAnimation = (event: Event) => {
+      if (!(event.target instanceof Element) ||
+          event.target.closest("[data-powerbid-liquid-cursor='true']")) return;
+      animationWatchUntil = Math.max(animationWatchUntil, performance.now() + 1400);
+      rasterDirty = true;
+      ensureFrame();
+      watchScene();
+    };
+    const sceneAnimationEvents = [
+      "transitionrun", "transitionend", "transitioncancel",
+      "animationstart", "animationiteration", "animationend", "animationcancel",
+    ];
+
     const wake = () => ensureFrame();
     const handlePointerMove = (event: PointerEvent) => {
       pointerX = event.clientX;
       pointerY = event.clientY;
       pointerInside = true;
       snapDirty = true;
+      // A floating tooltip can move even when the ROI itself stays fixed.
+      rasterDirty = true;
       wake();
+      watchScene();
     };
     const handlePointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
@@ -1112,10 +1175,18 @@ export function LiquidGlassCursor() {
       activeTarget = null;
       snap.target = 0;
       snapDirty = true;
+      lastSceneSignature = "";
+      animationWatchUntil = 0;
+      window.clearTimeout(sceneTimer);
+      sceneTimer = 0;
       wake();
     };
-    const handlePointerEnter = () => { pointerInside = true; snapDirty = true; wake(); };
-    const handleScroll = () => { roiLockedTarget = null; rasterDirty = true; snapDirty = true; wake(); };
+    const handlePointerEnter = () => {
+      pointerInside = true; snapDirty = true; rasterDirty = true; wake(); watchScene();
+    };
+    const handleScroll = () => {
+      roiLockedTarget = null; rasterDirty = true; snapDirty = true; wake(); watchScene();
+    };
     // Editing changes input.value without mutating DOM text or attributes.
     const handleInput = () => { rasterDirty = true; wake(); };
     const handleResize = () => {
@@ -1127,13 +1198,28 @@ export function LiquidGlassCursor() {
       wake();
     };
 
-    const observer = new MutationObserver(() => {
-      refreshMagneticTargets();
+    const observer = new MutationObserver((records) => {
+      const updates = records.filter(record => {
+        const el = record.target instanceof Element
+          ? record.target : record.target.parentElement;
+        return !el?.closest("[data-powerbid-liquid-cursor='true']");
+      });
+      if (!updates.length) return;
+      if (updates.some(record => record.type === "childList" ||
+          (record.type === "attributes" && ["class", "type", "aria-hidden", "data-state"].includes(record.attributeName || "")))) {
+        refreshMagneticTargets();
+        snapDirty = true;
+      }
       rasterDirty = true;
-      snapDirty = true;
       wake();
+      watchScene();
     });
-    observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["type", "value", "placeholder"] });
+    observer.observe(root, {
+      childList: true, subtree: true, characterData: true, attributes: true,
+      attributeFilter: ["type", "value", "placeholder", "style", "class", "transform",
+        "opacity", "fill", "stroke", "d", "x", "y", "cx", "cy", "r",
+        "width", "height", "aria-hidden", "data-state"],
+    });
     const resizeObserver = new ResizeObserver(() => { rasterDirty = true; snapDirty = true; wake(); });
     resizeObserver.observe(root);
 
@@ -1152,12 +1238,14 @@ export function LiquidGlassCursor() {
     window.addEventListener("blur", handlePointerLeave);
     window.addEventListener("pointerup", handlePointerUp);
     window.addEventListener("pointercancel", handlePointerUp);
+    for (const event of sceneAnimationEvents) root.addEventListener(event, onSceneAnimation, true);
     document.documentElement.classList.add("powerbid-liquid-cursor-active");
 
     ensureFrame();
 
     return () => {
       window.cancelAnimationFrame(raf);
+      window.clearTimeout(sceneTimer);
       observer.disconnect();
       resizeObserver.disconnect();
       root.removeEventListener("pointermove", handlePointerMove);
@@ -1173,6 +1261,7 @@ export function LiquidGlassCursor() {
       window.removeEventListener("blur", handlePointerLeave);
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerUp);
+      for (const event of sceneAnimationEvents) root.removeEventListener(event, onSceneAnimation, true);
       document.documentElement.classList.remove("powerbid-liquid-cursor-active");
       for (const element of magneticTargets) element.style.removeProperty("translate");
       magneticStates.clear();
