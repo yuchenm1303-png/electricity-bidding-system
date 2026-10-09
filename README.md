@@ -19,6 +19,17 @@
 
 > 当前版本是课程研讨 MVP，不是生产级交易系统。`data/sample_market.json` 明确标记为仿真数据。
 
+## 网页首页与工作台
+
+本项目的 React 网站使用同一个构建产物、两个独立入口：
+
+- `/`：PowerBid Lab 数字艺术首页（品牌展示、原创 Canvas 能量场、交互式报价示意）。
+- `/app`：原有报价研究工作台，继续调用 FastAPI `/api/*` 接口。
+
+首页的报价探索器仅用于交互视觉演示，**不构成真实优化、实时交易或交易建议**；实际模拟需进入 `/app`。桌面端 Streamlit 启动器与策略、PMSS 接口无需改变。
+
+本地前端开发：`cd frontend && npm ci && npm run dev`，打开 `http://localhost:5173/` 查看首页、`http://localhost:5173/app` 查看工作台。构建时通过 `VITE_BASE` 适配子路径部署。首页与工作台按需分包，并支持 `prefers-reduced-motion`。
+
 ## 已完成
 
 - [x] 统一的机组报价 / 市场场景数据模型
