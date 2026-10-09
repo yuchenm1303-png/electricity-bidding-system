@@ -9,11 +9,11 @@ Do not turn anonymous statistics into generator-specific UC parameters.
 """
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from copy import deepcopy
 from datetime import date
 from hashlib import sha256
-import json
 from typing import Any
 
 from powerbid.network_dispatch import network_from_dict
