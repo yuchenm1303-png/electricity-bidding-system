@@ -53,8 +53,8 @@ def _immutable_grid(raw: Mapping[str, Any]) -> tuple[Any, ...]:
         tuple(sorted(network.buses)),
         tuple(sorted(network.unit_bus.items())),
         tuple(sorted((
-            l.line_id, l.from_bus, l.to_bus, l.reactance_pu, l.limit_mw
-        ) for l in network.lines)),
+            line.line_id, line.from_bus, line.to_bus, line.reactance_pu, line.limit_mw
+        ) for line in network.lines)),
         network.base_mva,
         network.slack_bus,
     )
