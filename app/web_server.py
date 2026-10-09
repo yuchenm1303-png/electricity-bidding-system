@@ -14,8 +14,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.account_auth import protect_api
+from app.account_auth import router as auth_router
 from app.pmss_api import router as pmss_router
-from app.account_auth import router as auth_router, protect_api
 from powerbid.adapters.pypsa_engine import PyPSAClearingEngine
 from powerbid.clearing.uniform_price import UniformPriceClearingEngine
 from powerbid.models import MarketScenario, Offer
