@@ -97,12 +97,13 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
     <main>
       <section className="pb-hero" aria-labelledby="pb-hero-title">
         <div className="pb-hero-grid" aria-hidden="true"/>
-        <div className="pb-hero-orb">
+        <div className="pb-hero-orb" aria-hidden="true">
           <PowerConstellation/>
-          <div className="pb-hero-hud pb-hero-hud-top" aria-hidden="true"><span className="pb-hero-hud-label"><i/> NETWORK / VISUAL</span><strong>电网潮流 · 可视化</strong><small>拓扑与能量轨迹示意</small></div>
-          <div className="pb-hero-hud pb-hero-hud-bottom" aria-hidden="true"><span className="pb-hero-hud-label"><i/> STRATEGY / LAB</span><strong>报价决策空间</strong><small>从市场数据到情景分析</small></div>
         </div>
         <div className="pb-container pb-hero-inner">
+          {/* Keep HUDs anchored to the safe hero content area, not the decorative orb. */}
+          <div className="pb-hero-hud pb-hero-hud-top" aria-hidden="true"><span className="pb-hero-hud-label"><i/> NETWORK / VISUAL</span><strong>电网潮流 · 可视化</strong><small>拓扑与能量轨迹示意</small></div>
+          <div className="pb-hero-hud pb-hero-hud-bottom" aria-hidden="true"><span className="pb-hero-hud-label"><i/> STRATEGY / LAB</span><strong>报价决策空间</strong><small>从市场数据到情景分析</small></div>
           <div className="pb-hero-copy">
             <div className="pb-hero-eyebrow"><span className="pb-eyebrow-line"/>POWER MARKET INTELLIGENCE<span className="pb-eyebrow-number">© 2026</span></div>
             <h1 id="pb-hero-title">电力报价系统<br/><em>小组作业</em></h1>
