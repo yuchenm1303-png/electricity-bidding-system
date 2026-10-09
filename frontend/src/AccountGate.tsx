@@ -6,6 +6,7 @@ import {
   UserX, X,
 } from "lucide-react";
 import smirelLogo from "./assets/smirel-logo.png";
+import AdminActivation from "./AdminActivation";
 import Workspace from "./WorkspaceEntry";
 import "./account.css";
 
@@ -365,6 +366,7 @@ export default function AccountGate() {
       setError(cause instanceof Error ? cause.message : "退出失败");
     }
   };
+  if (window.location.pathname.endsWith("/setup-admin")) return <AdminActivation/>;
   if (loading) return <div className="pb-identity-loading"><Fingerprint size={36}/><span>正在验证账号状态</span><span className="pb-identity-spinner"/></div>;
   if (!config) return <div className="pb-identity-loading"><Shield size={33}/><span>{error||"账号服务暂时不可用"}</span><button type="button" onClick={()=>window.location.reload()}>重新连接 <ArrowRight size={15}/></button></div>;
   const authPath = window.location.pathname.endsWith("/login") || window.location.pathname.endsWith("/register");

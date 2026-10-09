@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app import admin_setup  # noqa: F401 - registers the one-time setup endpoint
 from app.account_auth import protect_api
 from app.account_auth import router as auth_router
 from app.pmss_api import router as pmss_router
