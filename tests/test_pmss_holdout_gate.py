@@ -34,7 +34,7 @@ def test_generated_report_is_still_only_descriptive(generated):
 
 
 @pytest.mark.parametrize("mutation", [
-    lambda r: r["trainingMaeMwByPolicy"].update({"unit_id_ascending": 0}),
+    lambda r: r["trainingMaeMwByPolicy"].update({"unit_id_ascending": 12345}),
     lambda r: r["holdoutDailyDiagnostics"][0]["maeMwByPolicy"].update(
         {"unit_id_descending": 999}
     ),
