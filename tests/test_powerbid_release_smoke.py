@@ -96,13 +96,8 @@ def test_never_fetch_from_unsafe_origin(unsafe):
     "/assets/../secret.js",
 ])
 def test_only_same_origin_build_assets_are_considered(asset):
-    if not asset.startswith(("../../", "/assets/../")):
-        with pytest.raises(ValueError):
-            _js_path(asset, "/assets/index.js")
-    else:
-        # Parent hops are not trusted as-is even if normalization stays local.
-        resulting = _js_path(asset, "/assets/index.js")
-        assert resulting.startswith("/assets/") if asset == "/assets/../secret.js" else True
+    with pytest.raises(ValueError):
+        _js_path(asset, "/assets/index.js")
 
 
 def test_single_js_entry_is_not_proof_of_missing_lazy_feature():
