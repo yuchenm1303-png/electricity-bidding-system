@@ -1,17 +1,10 @@
-/* The original Loom Portal Liquid Cursor, scoped to the PowerBid React app.
-   Never hide system cursors on coarse pointers / reduced motion. */
+html.powerbid-liquid-cursor-active.powerbid-liquid-cursor-active body .app.app,
+html.powerbid-liquid-cursor-active.powerbid-liquid-cursor-active body .app.app *,
 html.powerbid-liquid-cursor-active body #root .app,
-html.powerbid-liquid-cursor-active body #root .app *:not(input):not(textarea):not(select):not([contenteditable="true"]),
+html.powerbid-liquid-cursor-active body #root .app *,
 html.powerbid-liquid-cursor-active body #root .app *::before,
 html.powerbid-liquid-cursor-active body #root .app *::after {
   cursor: none !important;
-}
-
-html.powerbid-liquid-cursor-active body #root .app :is(input:not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]) {
-  cursor: text !important;
-}
-html.powerbid-liquid-cursor-active body #root .app select {
-  cursor: pointer !important;
 }
 
 .powerbid-liquid-cursor-canvas {
@@ -42,12 +35,6 @@ html.powerbid-liquid-cursor-active body #root .app select {
   box-shadow: 0 0 0 1px rgba(8, 18, 28, .2), 0 0 7px rgba(255, 255, 255, .36);
   will-change: transform, opacity;
   transition: opacity 90ms linear;
-}
-
-/* Preserve the physical lens and motion; adjust only the tracking point's contrast. */
-:root:not([data-theme="dark"]) .powerbid-liquid-cursor-dot {
-  background: rgba(38, 56, 90, .95);
-  box-shadow: 0 0 0 1px rgba(255,255,255,.82), 0 0 7px rgba(70,95,255,.32);
 }
 
 @media (pointer: coarse), (prefers-reduced-motion: reduce) {

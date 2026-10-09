@@ -1,12 +1,3 @@
-/**
- * PowerBid liquid-glass cursor: faithfully ported from the user's Loom
- * PortalLiquidCursor.tsx. Same WebGL lens/shader, spring dynamics, magnetic
- * targeting, ROI capture and pressure/release animation.
- *
- * Product-specific adjustments: capture PowerBid's app instead of Loom's
- * wallpaper, and snap to PowerBid actions rather than authentication controls.
- * Intentionally scoped to the React web app only.
- */
 import { useEffect, useRef } from "react";
 
 const FREE_ROI_SIZE = 420;
@@ -20,40 +11,27 @@ const RELEASE_DISTANCE = 17;
 const SNAP_PADDING = 10;
 const FREE_ROI_PADDING = 64;
 const ROI_DEADZONE = 35;
+// Product-only selector mapping. All optical, ROI and spring logic below is Loom's original.
 const SNAP_SELECTOR = [
-  ".brand",
-  ".nav-entry",
-  ".ta-menu-toggle",
-  ".ta-header-icon",
-  ".primary-button:not(:disabled)",
-  ".outline-button:not(:disabled)",
-  ".secondary-button:not(:disabled)",
-  ".subtle-button:not(:disabled)",
-  ".ghost-cta:not(:disabled)",
-  ".guide-action:not(:disabled)",
-  ".ta-report-link:not(:disabled)",
-  ".pmss-import-button:not(:disabled)",
-  ".pmss-run-button:not(:disabled)",
-  ".pmss-review-export:not(:disabled)",
+  ".brand", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
+  ".primary-button:not(:disabled)", ".outline-button:not(:disabled)",
+  ".secondary-button:not(:disabled)", ".subtle-button:not(:disabled)",
+  ".ghost-cta:not(:disabled)", ".guide-action:not(:disabled)",
+  ".ta-report-link:not(:disabled)", ".pmss-import-button:not(:disabled)",
+  ".pmss-run-button:not(:disabled)", ".pmss-review-export:not(:disabled)",
   ".pmss-hour-buttons button:not(:disabled)",
   ".pmss-hour-track button:not(:disabled)",
   ".pmss-review-tabs button:not(:disabled)",
-  ".mode-switch button:not(:disabled)",
-  ".target-radio:not(:disabled)",
+  ".mode-switch button:not(:disabled)", ".target-radio:not(:disabled)",
   "[data-liquid-snap='true']",
 ].join(",");
 
 const MAGNETIC_SELECTOR = [
-  ".brand",
-  ".primary-button:not(:disabled)",
-  ".secondary-button:not(:disabled)",
-  ".outline-button:not(:disabled)",
-  ".ghost-cta:not(:disabled)",
-  ".guide-action:not(:disabled)",
-  ".ta-report-link:not(:disabled)",
-  ".pmss-import-button:not(:disabled)",
-  ".pmss-run-button:not(:disabled)",
-  ".pmss-review-export:not(:disabled)",
+  ".brand", ".primary-button:not(:disabled)",
+  ".secondary-button:not(:disabled)", ".outline-button:not(:disabled)",
+  ".ghost-cta:not(:disabled)", ".guide-action:not(:disabled)",
+  ".ta-report-link:not(:disabled)", ".pmss-import-button:not(:disabled)",
+  ".pmss-run-button:not(:disabled)", ".pmss-review-export:not(:disabled)",
   "[data-magnetic-hover='true']",
 ].join(",");
 
@@ -152,6 +130,8 @@ function drawImageFit(
   }
 }
 
+// PowerBid-only background adapter. The original Loom background image
+// has no counterpart here; the original shader and raster traversal follow.
 function drawWallpaper(
   ctx: CanvasRenderingContext2D,
   _image: HTMLImageElement | null,
@@ -162,13 +142,10 @@ function drawWallpaper(
   roiWidth: number,
   roiHeight: number,
 ) {
-  // PowerBid uses a flat light/dark background instead of the Loom beach image.
-  // The recursive DOM rasterizer then paints the real panels, buttons and text.
-  // Never request external images or draw Loom's dark vignette over these controls.
   const app = document.querySelector<HTMLElement>(".app");
-  const background = app ? getComputedStyle(app).backgroundColor : "";
+  const appBackground = app ? getComputedStyle(app).backgroundColor : "";
   const bodyBackground = getComputedStyle(document.body).backgroundColor;
-  ctx.fillStyle = visibleColor(background) ? background :
+  ctx.fillStyle = visibleColor(appBackground) ? appBackground :
     visibleColor(bodyBackground) ? bodyBackground : "#f9fafb";
   ctx.fillRect(0, 0, roiWidth, roiHeight);
 }
@@ -292,7 +269,6 @@ function rasterizePortal(
   roiWidth: number,
   roiHeight: number,
   dpr: number,
-  snapTarget: HTMLElement | null,
 ) {
   const ctx = canvas.getContext("2d", { alpha: true });
   const scratchCtx = scratch.getContext("2d", { alpha: true });
@@ -393,15 +369,10 @@ function rasterizePortal(
 
     for (const child of Array.from(el.childNodes)) {
       if (child.nodeType === Node.TEXT_NODE) {
-        // Keep labels crisp while the refracted glass morphs around a control:
-        // the browser paints the real text beneath the translucent lens.
-        if (!snapTarget?.contains(el)) {
-          drawTextNode(ctx, child as Text, style, roiLeft, roiTop, roiWidth, roiHeight, opacity);
-        }
+        drawTextNode(ctx, child as Text, style, roiLeft, roiTop, roiWidth, roiHeight, opacity);
       } else if (child instanceof HTMLElement) {
         renderElement(child, opacity);
       } else if (child instanceof SVGSVGElement) {
-        if (snapTarget?.contains(child)) continue;
         const svgStyle = getComputedStyle(child);
         if (svgStyle.display !== "none" && svgStyle.visibility !== "hidden" && intersects(child.getBoundingClientRect(), roiLeft, roiTop, roiWidth, roiHeight)) {
           drawSvgIcon(ctx, child, roiLeft, roiTop, opacity * cssNumber(svgStyle.opacity, 1));
@@ -450,7 +421,6 @@ function createProgram(gl: WebGLRenderingContext) {
     uniform float u_aberration;
     uniform float u_zoom;
     uniform float u_wobble;
-    uniform float u_snap;
     uniform float u_time;
 
     float sdRoundBox(vec2 p, vec2 b, float r) {
@@ -500,11 +470,7 @@ function createProgram(gl: WebGLRenderingContext) {
       float edgeSafety = smoothstep(0.012, 0.075, textureEdgeDistance);
       displacement *= edgeSafety;
 
-      // A free lens bends toward its center as in Loom. When attached to a
-      // button, bend OUTWARD: otherwise every ray lands on the button's flat
-      // fill and optical refraction becomes invisible.
-      float outwardBend = mix(-1.0, 1.0, smoothstep(0.1, 0.82, u_snap));
-      vec2 sampleUv = screenUv + normal * (displacement / u_resolution) * outwardBend;
+      vec2 sampleUv = screenUv - normal * (displacement / u_resolution);
 
       vec2 centerUv = u_lensCenter / u_resolution;
       sampleUv = (sampleUv - centerUv) / max(u_zoom, 1.0) + centerUv;
@@ -516,34 +482,19 @@ function createProgram(gl: WebGLRenderingContext) {
       color.g = texture2D(u_texture, sampleUv).g;
       color.b = texture2D(u_texture, clamp(sampleUv - chroma, 0.0, 1.0)).b;
 
-      // Fresnel reflection makes the refracting edge visible even on a
-      // featureless, single-color CTA. Keep the lens optically clear in its
-      // center so the browser's native button labels remain sharp underneath.
-      float edge = smoothstep(0.54, 1.0, distNorm);
-      float fresnel = edge * edge;
-      vec3 reflected = texture2D(
-        u_texture,
-        clamp(sampleUv + normal * (0.008 + 0.018 * u_snap) * edge, 0.0, 1.0)
-      ).rgb;
-      color = mix(color, reflected, edge * (0.035 + 0.18 * u_snap));
+      // Keep the surface almost optically clear.
+      float edge = smoothstep(0.76, 1.0, distNorm);
+      vec3 reflected = texture2D(u_texture, clamp(sampleUv + normal * 0.008 * edge, 0.0, 1.0)).rgb;
+      color = mix(color, reflected, edge * 0.035);
 
       vec2 lightDir = normalize(vec2(-0.62, -0.78));
       float directional = pow(max(dot(normal, lightDir), 0.0), 7.0);
-      float trailingLight = pow(max(dot(normal, -lightDir), 0.0), 4.0);
       float rim = edge * (0.008 + directional * 0.070);
-      float caustic = fresnel * u_snap *
-        (0.055 + 0.16 * directional + 0.055 * trailingLight);
-      color += vec3(0.62, 0.78, 0.88) * rim +
-        vec3(0.78, 0.9, 1.0) * caustic;
+      color += vec3(0.62, 0.78, 0.88) * rim;
 
       float mask = 1.0 - smoothstep(-1.15, 0.9, d);
-      float edgeGlass = smoothstep(0.90, 1.0, distNorm) * (0.015 + 0.035 * u_snap);
-      // An opaque WebGL overlay hides the real label, but lowering opacity
-      // of the WHOLE canvas also erases refraction. Instead use per-pixel
-      // transparency: clear center, strong optical rim and outside sampling.
-      float snapAlpha = mix(0.075, 0.96, pow(distNorm, 3.0));
-      float lensAlpha = mask * mix(1.0, snapAlpha, u_snap);
-      gl_FragColor = vec4((color + vec3(edgeGlass)) * lensAlpha, lensAlpha);
+      float edgeGlass = smoothstep(0.90, 1.0, distNorm) * 0.015;
+      gl_FragColor = vec4((color + vec3(edgeGlass)) * mask, mask);
     }
   `);
   if (!vertex || !fragment) return null;
@@ -641,7 +592,6 @@ export function LiquidGlassCursor() {
       aberration: gl.getUniformLocation(program, "u_aberration"),
       zoom: gl.getUniformLocation(program, "u_zoom"),
       wobble: gl.getUniformLocation(program, "u_wobble"),
-      snap: gl.getUniformLocation(program, "u_snap"),
       time: gl.getUniformLocation(program, "u_time"),
     };
 
@@ -924,7 +874,7 @@ export function LiquidGlassCursor() {
       lastRoiLeft = roiLeft;
       lastRoiTop = roiTop;
       rasterDirty = false;
-      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roiWidth, roiHeight, dpr, activeTarget)) return;
+      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roiWidth, roiHeight, dpr)) return;
       try {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         if (!textureReady) {
@@ -967,8 +917,6 @@ export function LiquidGlassCursor() {
 
       canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      // Shader manages snapped alpha per pixel, preserving real refraction
-      // at the rim and readability at the center.
       canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
@@ -995,7 +943,6 @@ export function LiquidGlassCursor() {
         gl.uniform1f(uniforms.aberration, aberration);
         gl.uniform1f(uniforms.zoom, zoom);
         gl.uniform1f(uniforms.wobble, wobble);
-        gl.uniform1f(uniforms.snap, snap.value);
         gl.uniform1f(uniforms.time, now / 1000);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       }
