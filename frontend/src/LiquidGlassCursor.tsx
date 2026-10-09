@@ -16,6 +16,13 @@ const BRAND_TARGET_SELECTOR = ".brand-mark-smirel, .brand-name strong, .brand-na
 const SNAP_SELECTOR = [
   BRAND_TARGET_SELECTOR,
   ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
+  ".nav-entry > svg", ".nav-entry > span", ".nav-count",
+  ".ta-menu-toggle svg", ".ta-header-icon svg", ".sidebar-collapse svg",
+  ".primary-button > svg", ".primary-button > span",
+  ".outline-button > svg", ".outline-button > span",
+  ".secondary-button > svg", ".secondary-button > span",
+  ".pmss-run-button > svg", ".pmss-import-button > svg",
+  ".pmss-review-export > svg", ".pmss-hour-buttons svg",
   ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
   ".app a[href]:not(.brand-home-link)",
   ".ta-global-search", ".table-search",
