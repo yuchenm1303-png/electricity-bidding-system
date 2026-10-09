@@ -27,6 +27,7 @@ from powerbid.pmss_bid_rule_safety import (
     validate_new_curve,
 )
 from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseline_to_pmss
+from powerbid.pmss_evidence_attachment import verify_pmss_evidence_binding
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
 from powerbid.pmss_joint_research import FIELDS, assess_joint_readiness
 from powerbid.pmss_network_rank import rank_network_bid_strategies
@@ -49,7 +50,7 @@ ALLOWED_ROOT_KEYS = {
     "unitTree", "unitBids", "marketSystem", "demandForecastMw",
     "forecastSource", "historicalBacktestOnly", "caseDate",
     "results", "loadSourceKind", "loadNodeCount", "dcNetwork",
-    "technicalEvidence", "sceneConstraintEvidence",
+    "technicalEvidence", "sceneConstraintEvidence", "evidenceBinding",
 }
 
 
@@ -156,6 +157,7 @@ def _parse_snapshot(raw: dict[str, Any]):
     )
     if len(snapshot.units) > 30:
         raise ValueError("在线演示最多分析 30 台机组")
+    verify_pmss_evidence_binding(raw)
     if raw.get("technicalEvidence") is not None:
         validate_client_technical_evidence(raw["technicalEvidence"], snapshot=snapshot)
     if raw.get("sceneConstraintEvidence") is not None:
@@ -211,6 +213,7 @@ async def inspect_snapshot(request: Request) -> dict[str, Any]:
         "historical_bid_rule_audit": summarize_bid_rule_audit(snapshot),
         "joint_readiness": asdict(assess_joint_readiness(snapshot, None)),
         "joint_required_technical_fields": sorted(FIELDS),
+        "evidence_binding": verify_pmss_evidence_binding(params.snapshot),
         "physical_evidence_gaps": asdict(
             audit_pmss_uc_evidence_gaps(
                 snapshot,
