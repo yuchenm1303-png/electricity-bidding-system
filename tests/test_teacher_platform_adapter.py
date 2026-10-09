@@ -4,6 +4,7 @@ from powerbid.adapters.teacher_platform import (
     TeacherPlatformAdapter,
     TeacherPlatformContext,
     TeacherPlatformError,
+    TeacherPlatformAuthenticationExpired,
 )
 
 
@@ -141,3 +142,59 @@ def test_result_selectors_are_read_only_and_da_ids_are_not_reused_for_rt():
 
     adapter.get_branch_flows(case_id="case-1", da_ids=["line-DA"])
     assert calls[-1][2]["json_body"]["rtIds"] == []
+
+
+def test_http_200_pmss_t000_means_expired_login_not_success_or_empty_data():
+    from types import SimpleNamespace
+
+    class FakeResponse:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"retCode": "T000", "retMsg": "登录超时", "data": None}
+
+    calls = []
+    adapter = object.__new__(TeacherPlatformAdapter)
+    adapter.api_base = "https://pmss.test.invalid/pmss/web"
+    adapter.timeout = 5
+    adapter.session = SimpleNamespace(
+        request=lambda method, url, **kwargs: (
+            calls.append((method, url)), FakeResponse()
+        )[1]
+    )
+    with pytest.raises(
+        TeacherPlatformAuthenticationExpired, match="login has expired"
+    ):
+        adapter.list_projects()
+
+    # HTTP 200 is not sufficient; do not retry authentication failures.
+    assert len(calls) == 1
+    assert calls[0][0] == "GET"
+
+
+def test_pmss_readonly_auth_success_requires_t200_not_http_200():
+    from types import SimpleNamespace
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "retCode": "T200",
+                "retMsg": "OK",
+                "data": {"datas": [{"projectId": "fixture-only"}]},
+            }
+
+    adapter = object.__new__(TeacherPlatformAdapter)
+    adapter.api_base = "https://pmss.test.invalid/pmss/web"
+    adapter.timeout = 5
+    adapter.session = SimpleNamespace(
+        request=lambda method, url, **kwargs: FakeResponse()
+    )
+    result = adapter.list_projects()
+    assert len(result) == 1
+    assert result[0]["projectId"] == "fixture-only"
