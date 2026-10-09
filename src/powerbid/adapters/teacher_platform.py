@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 try:
     import requests
@@ -16,6 +17,30 @@ class TeacherPlatformError(RuntimeError):
 
 class TeacherPlatformAuthenticationExpired(TeacherPlatformError):
     """PMSS application session has expired; transport/VPN may still be healthy."""
+
+
+class TeacherPlatformRedirectBlocked(TeacherPlatformError):
+    """A login/SSO redirect must never forward a cookie-bearing request."""
+
+
+def validate_pmss_base_url(raw: str) -> str:
+    """Require an explicit unambiguous destination before loading credentials."""
+    if (type(raw) is not str or not raw or len(raw) > 1024
+            or any(ord(ch) <= 32 or ord(ch) == 127 for ch in raw)):
+        raise ValueError("PMSS base URL must be a short unambiguous HTTP(S) URL")
+    try:
+        url = urlsplit(raw)
+        port = url.port
+    except ValueError as exc:
+        raise ValueError("Invalid PMSS base URL") from exc
+    if (url.scheme not in ("http", "https") or not url.hostname
+            or url.username is not None or url.password is not None
+            or url.query or url.fragment or "\\" in raw
+            or any(segment in (".", "..") for segment in url.path.split("/"))):
+        raise ValueError("PMSS base URL cannot contain credentials, query, or fragment")
+    if port is not None and not (1 <= port <= 65535):
+        raise ValueError("Invalid PMSS destination port")
+    return raw.rstrip("/")
 
 
 @dataclass(frozen=True)
@@ -84,9 +109,12 @@ class TeacherPlatformAdapter:
                 "pip install -e '.[platform]'"
             )
 
-        self.api_base = base_url.rstrip("/") + "/pmss/web"
+        self.api_base = validate_pmss_base_url(base_url) + "/pmss/web"
         self.timeout = timeout
         self.session = requests.Session()
+        # Do not inherit arbitrary HTTP_PROXY/NO_PROXY environment routing:
+        # user-authorized PMSS cookies must use the explicitly selected path.
+        self.session.trust_env = False
         if proxy_url:
             self.session.proxies.update({"http": proxy_url, "https": proxy_url})
         if cookies:
@@ -134,7 +162,17 @@ class TeacherPlatformAdapter:
                     params=params,
                     json=json_body,
                     timeout=self.timeout,
+                    allow_redirects=False,
                 )
+                status = getattr(response, "status_code", 200)
+                if 300 <= status < 400:
+                    # requests.Session cookies inserted without a domain can
+                    # otherwise escape on a cross-origin login redirect.
+                    # Redirect Location is NEVER read or surfaced in errors.
+                    raise TeacherPlatformRedirectBlocked(
+                        "PMSS response redirected; login/SSO status unverified. "
+                        "Refusing to forward authentication cookies."
+                    )
                 response.raise_for_status()
                 break
             except requests.RequestException as exc:
@@ -154,9 +192,12 @@ class TeacherPlatformAdapter:
             payload = response.json()
         except ValueError as exc:
             raise TeacherPlatformError(
-                f"PMSS returned non-JSON data for {path}: {response.text[:300]}"
+                "PMSS returned non-JSON data; application login is not verified. "
+                "No response text is disclosed."
             ) from exc
 
+        if not isinstance(payload, dict):
+            raise TeacherPlatformError("PMSS returned non-object JSON")
         if payload.get("retCode") == "T000":
             # PMSS frontend maps T000 to the application's own expired
             # session. HTTP 200 and a working campus VPN are NOT evidence
@@ -167,9 +208,13 @@ class TeacherPlatformAdapter:
                 "reading projects, market rules or historical results."
             )
         if payload.get("retCode") != "T200":
+            raw_code = payload.get("retCode")
+            code = (raw_code if isinstance(raw_code, str)
+                    and len(raw_code) <= 16 and raw_code.isalnum()
+                    else "UNRECOGNIZED")
             raise TeacherPlatformError(
-                f"{path} failed: retCode={payload.get('retCode')!r}, "
-                f"retMsg={payload.get('retMsg')!r}"
+                f"PMSS rejected read request (code={code}); "
+                "private retMsg was deliberately not disclosed."
             )
         return payload.get("data")
 
@@ -243,19 +288,41 @@ class TeacherPlatformAdapter:
                 queue[0:0] = children
         return units
 
-    def get_context(self, project_id: str | None = None) -> TeacherPlatformContext:
-        projects = self.list_projects()
-        if not projects:
-            raise TeacherPlatformError("No accessible PMSS project was found.")
+    def find_accessible_project(
+        self, project_id: str, *, max_pages: int = 10
+    ) -> dict[str, Any]:
+        """Read-only bounded pagination; never default to the first project."""
+        if type(project_id) is not str or not project_id:
+            raise ValueError("An explicit nonempty project ID is required")
+        if type(max_pages) is not int or not 1 <= max_pages <= 10:
+            raise ValueError("Project search is limited to 1..10 pages")
+        for page in range(1, max_pages + 1):
+            rows = self.list_projects(page_no=page, page_size=50)
+            if not isinstance(rows, list):
+                raise TeacherPlatformError("Unexpected PMSS project page format")
+            found = [
+                row for row in rows if isinstance(row, dict)
+                and row.get("projectId") == project_id
+            ]
+            if len(found) > 1:
+                raise TeacherPlatformError("Ambiguous PMSS project identity")
+            if found:
+                return found[0]
+            if len(rows) < 50:
+                break
+        raise TeacherPlatformError(
+            "The explicitly selected PMSS project is not accessible "
+            "within the bounded project listing"
+        )
 
-        project = projects[0]
-        if project_id is not None:
-            project = next(
-                (item for item in projects if item.get("projectId") == project_id),
-                None,
-            )
-            if project is None:
-                raise TeacherPlatformError(f"Project not found: {project_id}")
+    def get_context(self, project_id: str | None = None) -> TeacherPlatformContext:
+        if project_id is None:
+            projects = self.list_projects()
+            if not projects:
+                raise TeacherPlatformError("No accessible PMSS project was found.")
+            project = projects[0]
+        else:
+            project = self.find_accessible_project(project_id)
 
         cases = self.list_cases(str(project["projectId"]))
         market_system = self.get_market_system(str(project["tmSceneId"]))
