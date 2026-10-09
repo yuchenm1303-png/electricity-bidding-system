@@ -1,8 +1,7 @@
 """Security and functionality smoke tests for the isolated PowerBid account service."""
+
 from __future__ import annotations
 
-import importlib
-import os
 import sqlite3
 
 import pytest
@@ -26,14 +25,16 @@ def client(tmp_path, monkeypatch):
 
 def register(client, name="tester01", email="tester@example.com"):
     return client.post(
-        "/api/auth/register", headers=HEADERS,
+        "/api/auth/register",
+        headers=HEADERS,
         json={"username": name, "email": email, "password": "Good-Passphrase-2026"},
     )
 
 
 def test_register_login_me_and_logout(client, tmp_path):
     assert client.get("/api/auth/config").json() == {
-        "enabled": True, "registration_open": True,
+        "enabled": True,
+        "registration_open": True,
     }
     assert client.get("/api/scenario").status_code == 401
     assert client.post("/api/optimize", json={}).status_code == 403
@@ -47,11 +48,17 @@ def test_register_login_me_and_logout(client, tmp_path):
     assert client.get("/api/scenario").status_code == 200
     assert client.post("/api/auth/logout", headers=HEADERS).json() == {"ok": True}
     assert client.get("/api/auth/me").status_code == 401
-    fail = client.post("/api/auth/login", headers=HEADERS,
-                       json={"username": "tester01", "password": "bad-password-123"})
+    fail = client.post(
+        "/api/auth/login",
+        headers=HEADERS,
+        json={"username": "tester01", "password": "bad-password-123"},
+    )
     assert fail.status_code == 401
-    good = client.post("/api/auth/login", headers=HEADERS,
-                       json={"username": "tester01", "password": "Good-Passphrase-2026"})
+    good = client.post(
+        "/api/auth/login",
+        headers=HEADERS,
+        json={"username": "tester01", "password": "Good-Passphrase-2026"},
+    )
     assert good.status_code == 200
     assert good.json()["username"] == "tester01"
     path = tmp_path / "accounts" / "users.sqlite3"
@@ -65,60 +72,110 @@ def test_register_login_me_and_logout(client, tmp_path):
 def test_registration_validation_and_duplicate(client):
     assert register(client).status_code == 201
     assert register(client).status_code == 409
-    bad = client.post("/api/auth/register", headers=HEADERS, json={
-        "username": "a-","email": "bad-email","password": "Good-Passphrase-2026",
-    })
+    bad = client.post(
+        "/api/auth/register",
+        headers=HEADERS,
+        json={
+            "username": "a-",
+            "email": "bad-email",
+            "password": "Good-Passphrase-2026",
+        },
+    )
     assert bad.status_code == 422
-    assert client.post("/api/auth/register", json={
-        "username":"other42","email":"other@example.com","password":"Good-Passphrase-2026",
-    }).status_code == 403
+    assert (
+        client.post(
+            "/api/auth/register",
+            json={
+                "username": "other42",
+                "email": "other@example.com",
+                "password": "Good-Passphrase-2026",
+            },
+        ).status_code
+        == 403
+    )
 
 
 def test_disabled_registration_and_csrf(client, monkeypatch):
     monkeypatch.setenv("POWERBID_REGISTRATION_OPEN", "0")
     assert register(client).status_code == 403
-    assert client.post("/api/auth/login", headers={**HEADERS,"Origin":"https://malicious.example"}, json={
-        "username": "tester01", "password": "Good-Passphrase-2026",
-    }).status_code == 403
+    assert (
+        client.post(
+            "/api/auth/login",
+            headers={**HEADERS, "Origin": "https://malicious.example"},
+            json={
+                "username": "tester01",
+                "password": "Good-Passphrase-2026",
+            },
+        ).status_code
+        == 403
+    )
 
 
 def test_admin_can_disable_user_and_revoke_sessions(client):
     assert register(client).status_code == 201
-    normal_cookie=client.cookies.get(account_auth.COOKIE)
+    normal_cookie = client.cookies.get(account_auth.COOKIE)
     assert normal_cookie
     assert client.get("/api/auth/users").status_code == 403
     # Offline provisioning is the only route to administrator role.
     with account_auth.connection() as db:
         db.execute(
-            "INSERT INTO users(username,email,password_hash,role,active,created_at) VALUES(?,?,?,'admin',1,?)",
+            (
+                "INSERT INTO users(username,email,password_hash,role,active,created_at) "
+                "VALUES(?,?,?,'admin',1,?)"
+            ),
             ("owner01", "owner@example.com", account_auth.HASHER.hash("Owner-Passphrase-2026"), 1),
         )
-    admin_client=TestClient(app)
-    assert admin_client.post("/api/auth/login", headers=HEADERS,json={
-        "username":"owner01", "password":"Owner-Passphrase-2026",
-    }).status_code == 200
-    users=admin_client.get("/api/auth/users").json()
-    assert len(users)==2
-    uid=next(item["id"] for item in users if item["username"]=="tester01")
-    result=admin_client.post("/api/auth/users/"+str(uid)+"/enabled", headers=HEADERS, json={"enabled":False})
+    admin_client = TestClient(app)
+    assert (
+        admin_client.post(
+            "/api/auth/login",
+            headers=HEADERS,
+            json={
+                "username": "owner01",
+                "password": "Owner-Passphrase-2026",
+            },
+        ).status_code
+        == 200
+    )
+    users = admin_client.get("/api/auth/users").json()
+    assert len(users) == 2
+    uid = next(item["id"] for item in users if item["username"] == "tester01")
+    result = admin_client.post(
+        "/api/auth/users/" + str(uid) + "/enabled", headers=HEADERS, json={"enabled": False}
+    )
     assert result.status_code == 200, result.text
     assert client.get("/api/auth/me").status_code == 401
     assert client.get("/api/scenario").status_code == 401
     assert admin_client.get("/api/auth/me").status_code == 200
-    assert admin_client.post("/api/auth/users/2/enabled", headers=HEADERS, json={"enabled": False}).status_code == 400
-    assert admin_client.post("/api/auth/users/"+str(uid)+"/enabled", headers=HEADERS, json={"enabled": True}).status_code == 200
+    assert (
+        admin_client.post(
+            "/api/auth/users/2/enabled", headers=HEADERS, json={"enabled": False}
+        ).status_code
+        == 400
+    )
+    assert (
+        admin_client.post(
+            "/api/auth/users/" + str(uid) + "/enabled", headers=HEADERS, json={"enabled": True}
+        ).status_code
+        == 200
+    )
     assert client.get("/api/auth/me").status_code == 401
 
 
 def test_failed_login_rate_limited(client):
     assert register(client).status_code == 201
     client.post("/api/auth/logout", headers=HEADERS)
-    wrong={"username":"tester01", "password":"incorrectpass-999"}
-    for i in range(5):
-        assert client.post("/api/auth/login",headers=HEADERS,json=wrong).status_code==401
-    locked=client.post("/api/auth/login",headers=HEADERS,json={
-        "username":"tester01","password":"Good-Passphrase-2026",
-    })
+    wrong = {"username": "tester01", "password": "incorrectpass-999"}
+    for _i in range(5):
+        assert client.post("/api/auth/login", headers=HEADERS, json=wrong).status_code == 401
+    locked = client.post(
+        "/api/auth/login",
+        headers=HEADERS,
+        json={
+            "username": "tester01",
+            "password": "Good-Passphrase-2026",
+        },
+    )
     assert locked.status_code == 429
 
 

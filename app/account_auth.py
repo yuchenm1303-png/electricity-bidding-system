@@ -5,6 +5,7 @@
 - First admin is provisioned ONLY from the console, never by public signup.
 - SQLite file MUST live in a mounted persistent directory in production.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -20,7 +21,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError, VerificationError
+from argon2.exceptions import VerificationError, VerifyMismatchError
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -179,7 +180,10 @@ def register(data: SignUp, response: Response) -> dict:
     with connection() as db:
         try:
             cursor = db.execute(
-                "INSERT INTO users(username,email,password_hash,role,active,created_at) VALUES(?,?,?,'member',1,?)",
+                (
+                    "INSERT INTO users(username,email,password_hash,role,active,created_at) "
+                    "VALUES(?,?,?,'member',1,?)"
+                ),
                 (username, email, password_hash, int(time.time())),
             )
         except sqlite3.IntegrityError as exc:
@@ -197,7 +201,8 @@ def login(data: Credentials, response: Response) -> dict:
     timestamp = int(time.time())
     with connection() as db:
         lock = db.execute(
-            "SELECT fail_count, locked_until, updated_at FROM login_attempts WHERE username=?", (name,)
+            "SELECT fail_count, locked_until, updated_at FROM login_attempts WHERE username=?",
+            (name,),
         ).fetchone()
         if lock and lock["locked_until"] > timestamp:
             raise HTTPException(429, detail="尝试次数过多，请稍后重试")
@@ -218,9 +223,12 @@ def login(data: Credentials, response: Response) -> dict:
             count = (lock["fail_count"] + 1) if lock and timestamp - lock["updated_at"] < 900 else 1
             until = timestamp + 900 if count >= 5 else 0
             db.execute(
-                """INSERT INTO login_attempts(username,fail_count,locked_until,updated_at) VALUES(?,?,?,?)
-                ON CONFLICT(username) DO UPDATE SET fail_count=excluded.fail_count,
-                locked_until=excluded.locked_until,updated_at=excluded.updated_at""",
+                (
+                    "INSERT INTO login_attempts(username,fail_count,locked_until,updated_at) "
+                    "VALUES(?,?,?,?) ON CONFLICT(username) DO UPDATE SET "
+                    "fail_count=excluded.fail_count, locked_until=excluded.locked_until, "
+                    "updated_at=excluded.updated_at"
+                ),
                 (name, count, until, timestamp),
             )
             db.commit()  # Persist the failed-attempt counter before returning an error.
@@ -250,8 +258,11 @@ def logout(request: Request, response: Response) -> dict:
                 (hashlib.sha256(token.encode("ascii", "ignore")).hexdigest(),),
             )
     response.delete_cookie(
-        COOKIE, path="/", secure=os.getenv("POWERBID_COOKIE_SECURE", "1") == "1",
-        httponly=True, samesite="lax",
+        COOKIE,
+        path="/",
+        secure=os.getenv("POWERBID_COOKIE_SECURE", "1") == "1",
+        httponly=True,
+        samesite="lax",
     )
     return {"ok": True}
 
@@ -260,7 +271,9 @@ def logout(request: Request, response: Response) -> dict:
 def users(request: Request) -> list[dict]:
     require_user(request, admin=True)
     with connection() as db:
-        return [serialize(row) for row in db.execute("SELECT * FROM users ORDER BY id DESC LIMIT 200")]
+        return [
+            serialize(row) for row in db.execute("SELECT * FROM users ORDER BY id DESC LIMIT 200")
+        ]
 
 
 @router.post("/users/{user_id}/enabled")
@@ -283,12 +296,18 @@ async def protect_api(request: Request, call_next):
     if request.url.path.startswith("/api/") and auth_enabled():
         path = request.url.path
         publicly_accessible = path in {
-            "/api/health", "/api/auth/config", "/api/auth/login",
-            "/api/auth/register", "/api/auth/logout",
+            "/api/health",
+            "/api/auth/config",
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/logout",
         }
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             origin = request.headers.get("origin")
-            if origin and urlsplit(origin).netloc.lower() != request.headers.get("host", "").lower():
+            if (
+                origin
+                and urlsplit(origin).netloc.lower() != request.headers.get("host", "").lower()
+            ):
                 return JSONResponse({"detail": "跨站请求被拒绝"}, status_code=403)
             if request.headers.get("x-powerbid-request") != "1":
                 return JSONResponse({"detail": "请求缺少安全标记"}, status_code=403)
@@ -308,7 +327,10 @@ def bootstrap_admin(username: str, email: str) -> None:
         if db.execute("SELECT id FROM users WHERE role='admin' LIMIT 1").fetchone():
             raise RuntimeError("Admin already exists; refusing a second automatic bootstrap")
         db.execute(
-            "INSERT INTO users(username,email,password_hash,role,active,created_at) VALUES(?,?,?,'admin',1,?)",
+            (
+                "INSERT INTO users(username,email,password_hash,role,active,created_at) "
+                "VALUES(?,?,?,'admin',1,?)"
+            ),
             (username, email.lower(), password_hash, int(time.time())),
         )
     print("Administrator created. No password was printed or logged.")

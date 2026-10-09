@@ -2,6 +2,7 @@
 
 The original powerbid algorithms remain the single source of truth.
 """
+
 from __future__ import annotations
 
 import math
@@ -113,9 +114,7 @@ def optimize(payload: OptimizationInput) -> dict[str, object]:
             data_source="synthetic",
         )
         engine = (
-            PyPSAClearingEngine()
-            if payload.engine == "pypsa"
-            else UniformPriceClearingEngine()
+            PyPSAClearingEngine() if payload.engine == "pypsa" else UniformPriceClearingEngine()
         )
         prices = price_grid(payload.start, payload.stop, payload.step)
         if payload.mode == "risk":
@@ -202,8 +201,7 @@ def listing_anime_license() -> FileResponse:
 def reject_wrong_pmss_method(operation: str) -> None:
     target = "/api/pmss/" + operation
     if any(
-        route.path == target and "POST" in (route.methods or set())
-        for route in pmss_router.routes
+        route.path == target and "POST" in (route.methods or set()) for route in pmss_router.routes
     ):
         raise HTTPException(status_code=405, detail="Method Not Allowed")
     raise HTTPException(status_code=404, detail="API route not found")
