@@ -50,7 +50,7 @@ html.powerbid-liquid-cursor-active body #root .app select {
   box-shadow: 0 0 0 1px rgba(255,255,255,.82), 0 0 7px rgba(70,95,255,.32);
 }
 
-@media (pointer: coarse), (hover: none), (prefers-reduced-motion: reduce) {
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
   .powerbid-liquid-cursor-canvas,
   .powerbid-liquid-cursor-dot {
     display: none !important;
