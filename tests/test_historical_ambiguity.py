@@ -1,7 +1,6 @@
 """Historical optimal-face analysis never treats fitted original bids as new-bid evidence."""
-from test_historical_validation import _fixture
-
 import pytest
+from test_historical_validation import _fixture
 
 from powerbid.historical_ambiguity import audit_historical_optimal_ambiguity
 
