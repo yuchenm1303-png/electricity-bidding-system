@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
+import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, Activity, BarChart3, Check, ChevronRight, CircleDot, Compass, Gauge, Layers3, Menu, MousePointer2, MoveUpRight, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import "./landing.css";
+import PowerConstellation from "./PowerConstellation";
 
 type LandingProps = { workspaceHref: string };
 const flowSteps = [
@@ -9,121 +10,6 @@ const flowSteps = [
   { id: "03", name: "模拟出清", en: "SIMULATE", note: "把不确定的市场反应转化为可分析的情景。" },
   { id: "04", name: "评估收益", en: "REFINE", note: "对比结果、理解风险，继续改进策略。" },
 ];
-
-function FieldCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d", { alpha: true });
-    if (!ctx) return;
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let frame = 0;
-    let raf = 0;
-    let width = 0;
-    let height = 0;
-    let visible = true;
-    let pointerX = 0;
-    let pointerY = 0;
-    const resize = () => {
-      const box = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      width = box.width;
-      height = box.height;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      draw();
-    };
-    const project = (x: number, y: number, z: number, yaw: number, pitch: number, scale: number) => {
-      const nx = x * Math.cos(yaw) - z * Math.sin(yaw);
-      const nz = x * Math.sin(yaw) + z * Math.cos(yaw);
-      const ny = y * Math.cos(pitch) - nz * Math.sin(pitch);
-      const depth = y * Math.sin(pitch) + nz * Math.cos(pitch);
-      const perspective = 4.7 / (4.7 + depth * 0.31);
-      return [width * 0.51 + nx * scale * perspective, height * 0.52 + ny * scale * perspective, depth] as const;
-    };
-    function draw() {
-      if (!ctx || !canvas || !width || !height) return;
-      ctx.clearRect(0, 0, width, height);
-      const scale = Math.min(width * 0.267, height * 0.365);
-      const yaw = -0.38 + frame * 0.0019 + pointerX * 0.17;
-      const pitch = -0.38 + Math.sin(frame * 0.006) * 0.075 + pointerY * 0.14;
-      const halo = ctx.createRadialGradient(width * 0.49, height * 0.52, scale * 0.04, width * 0.5, height * 0.52, scale * 1.75);
-      halo.addColorStop(0, "rgba(176, 191, 255, .24)");
-      halo.addColorStop(0.56, "rgba(204, 213, 255, .15)");
-      halo.addColorStop(1, "rgba(233, 239, 255, 0)");
-      ctx.fillStyle = halo;
-      ctx.fillRect(0, 0, width, height);
-      const major = 1.31;
-      const tube = 0.64;
-      const mobile = width < 700;
-      const stripes = mobile ? 52 : 76;
-      const samples = mobile ? 108 : 200;
-      for (let line = 0; line < stripes; line++) {
-        const v = (line / stripes) * Math.PI * 2;
-        const brightness = .43 + Math.cos(v - frame * .002) * .16;
-        const shade = line % 9 === 0 ? "rgba(64, 78, 242, " : line % 3 === 0 ? "rgba(118, 106, 236, " : "rgba(84, 147, 239, ";
-        ctx.strokeStyle = shade + brightness.toFixed(3) + ")";
-        ctx.lineWidth = line % 9 === 0 ? 1.25 : .72;
-        ctx.beginPath();
-        for (let i = 0; i <= samples; i++) {
-          const u = (i / samples) * Math.PI * 2;
-          const ripple = Math.sin(u * 6 + v * 2 - frame * .008) * .047;
-          const rad = major + (tube + ripple) * Math.cos(v);
-          const x = rad * Math.cos(u);
-          const z = rad * Math.sin(u);
-          const y = (tube + ripple) * Math.sin(v) + Math.sin(u * 3 + frame * .006) * .032;
-          const p = project(x, y, z, yaw, pitch, scale);
-          if (!i) ctx.moveTo(p[0], p[1]); else ctx.lineTo(p[0], p[1]);
-        }
-        ctx.stroke();
-      }
-      for (let point = 0; point < (mobile ? 85 : 155); point++) {
-        const u = (point * 2.39996 + frame * .001) % (2 * Math.PI);
-        const v = point * .7822;
-        const rad = major + tube * Math.cos(v);
-        const p = project(rad * Math.cos(u), tube * Math.sin(v), rad * Math.sin(u), yaw, pitch, scale);
-        const opacity = .25 + ((Math.sin(point * 17.3 + frame * .028) + 1) / 2) * .55;
-        ctx.beginPath();
-        ctx.arc(p[0], p[1], point % 11 === 0 ? 1.75 : .85, 0, 2 * Math.PI);
-        ctx.fillStyle = "rgba(51, 86, 237, " + opacity.toFixed(3) + ")";
-        ctx.fill();
-      }
-    }
-    let lastPaint = 0;
-    const tick = (time: number) => {
-      if (visible && !media.matches && time - lastPaint > (width < 700 ? 33 : 24)) {
-        frame++;
-        draw();
-        lastPaint = time;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    const move = (e: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      pointerX = Math.max(-1, Math.min(1, (e.clientX - rect.left - width * .5) / Math.max(width * .5, 1)));
-      pointerY = Math.max(-1, Math.min(1, (e.clientY - rect.top - height * .5) / Math.max(height * .5, 1)));
-      if (media.matches) draw();
-    };
-    const observer = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false; }, { threshold: 0.01 });
-    observer.observe(canvas);
-    window.addEventListener("resize", resize);
-    window.addEventListener("pointermove", move, { passive: true });
-    const onMotion = () => draw();
-    media.addEventListener("change", onMotion);
-    resize();
-    raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      observer.disconnect();
-      window.removeEventListener("resize", resize);
-      window.removeEventListener("pointermove", move);
-      media.removeEventListener("change", onMotion);
-    };
-  }, []);
-  return <canvas ref={canvasRef} className="pb-field-canvas" aria-hidden="true" />;
-}
 
 function Brand({ inverse = false }: { inverse?: boolean }) {
   return <span className={"pb-brand" + (inverse ? " pb-brand-inverse" : "")}>
@@ -201,7 +87,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
     <main>
       <section className="pb-hero" aria-labelledby="pb-hero-title">
         <div className="pb-hero-grid" aria-hidden="true"/>
-        <div className="pb-hero-orb"><FieldCanvas/><span className="pb-orb-coordinate pb-orb-left">FIELD / 001<br/>ENERGY IN MOTION</span><span className="pb-orb-coordinate pb-orb-right">DRAG TO INTERACT ↗</span></div>
+        <div className="pb-hero-orb"><PowerConstellation/></div>
         <div className="pb-container pb-hero-inner">
           <div className="pb-hero-copy">
             <div className="pb-hero-eyebrow"><span className="pb-eyebrow-line"/>POWER MARKET INTELLIGENCE<span className="pb-eyebrow-number">© 2026</span></div>
