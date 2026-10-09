@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
+from hashlib import sha256
+import json
 from math import isfinite, sqrt
 from typing import Any
 
@@ -40,6 +42,7 @@ class UnitError:
 @dataclass(frozen=True, slots=True)
 class DayValidation:
     case_date: str
+    grid_fingerprint: str
     unit_count: int
     bus_count: int
     branch_count: int
@@ -253,8 +256,18 @@ def validate_historical_day(raw: Mapping[str, Any]) -> DayValidation:
                     result.accepted_by_unit[uid] - observed_power
                 )
 
+    grid_parameters = {
+        "buses": sorted(network.buses),
+        "lines": sorted((x.line_id, x.from_bus, x.to_bus,
+                         x.reactance_pu, x.limit_mw) for x in network.lines),
+        "unit_bus": sorted(network.unit_bus.items()),
+    }
+    fingerprint = sha256(
+        json.dumps(grid_parameters, sort_keys=True).encode("utf-8")
+    ).hexdigest()
     return DayValidation(
         case_date=day,
+        grid_fingerprint=fingerprint,
         unit_count=len(unit_ids),
         bus_count=len(network.buses),
         branch_count=len(network.lines),
@@ -312,12 +325,10 @@ def judge_historical_model(
         reasons.append("Unit dispatch MAE exceeds user-defined tolerance or is missing")
     if price_mae is None or price_mae > policy.max_nodal_price_mae:
         reasons.append("Nodal price MAE exceeds user-defined tolerance or is missing")
-    if any(
-        (day.unit_count, day.bus_count, day.branch_count)
-        != (ordered[0].unit_count, ordered[0].bus_count, ordered[0].branch_count)
-        for day in ordered
-    ):
-        reasons.append("Historical cases use different grid sizes; compare distinct grids separately")
+    if any(day.grid_fingerprint != ordered[0].grid_fingerprint for day in ordered):
+        reasons.append(
+            "Historical topology or line parameters differ; validate each grid separately"
+        )
     # A pass is only a historical baseline fit against entered tolerances.
     # It NEVER validates a new bid's outcome under PMSS.
     return ValidationVerdict(
