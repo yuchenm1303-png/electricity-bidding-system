@@ -332,3 +332,37 @@ export type PMSSCandidateDispatchRange = {
   pmss_write_performed: false;
   pmss_clearing_executed: false;
 };
+
+export type PMSSJointMwhRange = {
+  target_unit_id: string;
+  minimum_accepted_mwh: number;
+  maximum_accepted_mwh: number;
+  minimum_24h_dispatch_mw: number[];
+  maximum_24h_dispatch_mw: number[];
+  minimum_24h_online: boolean[];
+  maximum_24h_online: boolean[];
+  minimum_primary_cost: number;
+  maximum_primary_cost: number;
+  minimum_schedule_cost: number;
+  maximum_schedule_cost: number;
+  allowed_primary_cost_increase: number;
+  terminal_mode: "carryover" | "complete";
+  technical_source: string;
+  technical_source_description: string;
+  readiness: {
+    ready: boolean;
+    independently_verified: false;
+    source: string;
+    total_units: number;
+    supplied_units: number;
+  };
+  model_status: string;
+  safe_for_live_submission: false;
+  independent_pmss_technical_verification: false;
+  counterfactual_pmss_verified: false;
+  uses_historical_outcomes_as_forecast: false;
+  disclaimer: string;
+  study_only: true;
+  pmss_write_performed: false;
+  pmss_clearing_executed: false;
+};
