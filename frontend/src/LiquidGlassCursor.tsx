@@ -87,14 +87,9 @@ function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: numbe
   }
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
   const height = Math.max(1, Math.min(window.innerHeight, Math.max(MIN_LENS_HEIGHT, bottom - top)));
-  // Liquid-capsule curvature even for buttons with square native corners.
-  const nativeRadius = radiusFromStyle(getComputedStyle(element), rect);
-  const radius = Math.min(height / 2, Math.max(nativeRadius + padding + 4, height * 0.47));
-
   return {
     width,
     height,
-    radius,
     centerX: Math.max(width / 2, Math.min(window.innerWidth - width / 2, (left + right) / 2)),
     centerY: Math.max(height / 2, Math.min(window.innerHeight - height / 2, (top + bottom) / 2)),
   };
@@ -517,8 +512,6 @@ function createProgram(gl: WebGLRenderingContext) {
     uniform vec2 u_resolution;
     uniform vec2 u_lensCenter;
     uniform vec2 u_lensSize;
-    uniform float u_cornerRadius;
-    uniform float u_brandFrame;
     uniform float u_strength;
     uniform float u_pinch;
     uniform float u_aberration;
@@ -548,32 +541,16 @@ function createProgram(gl: WebGLRenderingContext) {
       vec2 pixel = screenUv * u_resolution;
       vec2 halfSize = max(u_lensSize * 0.5, vec2(2.0));
       float radius = max(2.0, min(halfSize.x, halfSize.y));
-      float corner = clamp(u_cornerRadius, 2.0, radius);
       vec2 local = warpPoint(pixel - u_lensCenter, radius);
-      float d = sdRoundBox(local, halfSize, corner);
+      float d = sdRoundBox(local, halfSize, radius);
       if (d > 1.5) {
         gl_FragColor = vec4(0.0);
         return;
       }
 
-      // Transparent centre, restrained neutral glass only along the outer rim.
-      // Premultiplied colour avoids the cyan solid-fill regression.
-      if (u_brandFrame > 0.5) {
-        float innerBand = smoothstep(-18.0, -2.0, d);
-        float outerMask = 1.0 - smoothstep(-0.9, 1.3, d);
-        vec2 lightVector = normalize(vec2(-0.68, -0.73));
-        vec2 edgeVector = normalize(local + vec2(0.0001));
-        float highlight = pow(max(dot(edgeVector, lightVector), 0.0), 4.0);
-        float alpha = innerBand * outerMask * (0.12 + 0.14 * highlight);
-        vec3 background = texture2D(u_texture, screenUv).rgb;
-        vec3 glass = mix(background, vec3(0.9, 0.94, 1.0), 0.16 + 0.16 * highlight);
-        gl_FragColor = vec4(glass * alpha, alpha);
-        return;
-      }
-
       float e = 1.0;
-      float dx = sdRoundBox(local + vec2(e, 0.0), halfSize, corner) - sdRoundBox(local - vec2(e, 0.0), halfSize, corner);
-      float dy = sdRoundBox(local + vec2(0.0, e), halfSize, corner) - sdRoundBox(local - vec2(0.0, e), halfSize, corner);
+      float dx = sdRoundBox(local + vec2(e, 0.0), halfSize, radius) - sdRoundBox(local - vec2(e, 0.0), halfSize, radius);
+      float dy = sdRoundBox(local + vec2(0.0, e), halfSize, radius) - sdRoundBox(local - vec2(0.0, e), halfSize, radius);
       vec2 normal = normalize(vec2(dx, dy) + vec2(0.00001));
       float distNorm = clamp(1.0 + d / radius, 0.0, 1.0);
       float effectivePinch = u_pinch * (radius / 100.0);
@@ -712,8 +689,6 @@ export function LiquidGlassCursor() {
       resolution: gl.getUniformLocation(program, "u_resolution"),
       lensCenter: gl.getUniformLocation(program, "u_lensCenter"),
       lensSize: gl.getUniformLocation(program, "u_lensSize"),
-      cornerRadius: gl.getUniformLocation(program, "u_cornerRadius"),
-      brandFrame: gl.getUniformLocation(program, "u_brandFrame"),
       strength: gl.getUniformLocation(program, "u_strength"),
       pinch: gl.getUniformLocation(program, "u_pinch"),
       aberration: gl.getUniformLocation(program, "u_aberration"),
@@ -747,7 +722,6 @@ export function LiquidGlassCursor() {
     const y: SpringValue = { value: pointerY + FREE_OFFSET_Y, velocity: 0, target: pointerY + FREE_OFFSET_Y };
     const width: SpringValue = { value: BASE_WIDTH, velocity: 0, target: BASE_WIDTH };
     const height: SpringValue = { value: BASE_HEIGHT, velocity: 0, target: BASE_HEIGHT };
-    const cornerRadius: SpringValue = { value: BASE_HEIGHT / 2, velocity: 0, target: BASE_HEIGHT / 2 };
     const snap: SpringValue = { value: 0, velocity: 0, target: 0 };
 
     type MagneticState = {
@@ -916,7 +890,6 @@ export function LiquidGlassCursor() {
         y.target = lens.centerY;
         width.target = lens.width;
         height.target = lens.height;
-        cornerRadius.target = lens.radius;
         snap.target = 1;
       } else {
         // Keep the unsnapped lens wholly on-screen near the top/bottom.
@@ -924,7 +897,6 @@ export function LiquidGlassCursor() {
         y.target = Math.max(BASE_HEIGHT / 2 + 6, Math.min(window.innerHeight - BASE_HEIGHT / 2 - 6, pointerY + FREE_OFFSET_Y));
         width.target = BASE_WIDTH;
         height.target = BASE_HEIGHT;
-        cornerRadius.target = BASE_HEIGHT / 2;
         snap.target = 0;
       }
     };
@@ -1060,7 +1032,6 @@ export function LiquidGlassCursor() {
       stepSpring(y, dt, snapping ? 300 : 500, snapping ? 25 : 60);
       stepSpring(width, dt, snapping ? 235 : 310, snapping ? 19 : 32);
       stepSpring(height, dt, snapping ? 235 : 310, snapping ? 19 : 32);
-      stepSpring(cornerRadius, dt, snapping ? 235 : 310, snapping ? 19 : 32);
       stepSpring(snap, dt, 220, 18);
       // Firm compression on contact, then one softer elastic release.
       stepSpring(pressure, dt, pressed ? 620 : 400, pressed ? 38 : 23);
@@ -1071,29 +1042,20 @@ export function LiquidGlassCursor() {
 
       canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      const brandSnapped = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home"));
-      const hoveringBrandText = Boolean(document.elementFromPoint(pointerX, pointerY)?.closest(".brand-name"));
-      // Blend some of the original (crisp) SVG through the already-existing
-      // refraction. No shader/texture capture change is needed.
-      canvas.style.opacity = pointerInside && textureReady && !hoveringBrandText
-        ? (brandSnapped ? ".58" : "1") : "0";
+      canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
       if (textureReady) {
         const pressWeight = Math.max(0, Math.min(1, deformation));
         const releaseWeight = Math.max(0, -deformation);
-        const isBrandSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home"));
-        const readingSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home, .ta-global-search, input, textarea, select, [contenteditable='true']"));
+        const readingSurface = Boolean(activeTarget?.matches(".ta-global-search, input, textarea, select, [contenteditable='true']"));
         // Lower refraction on typography-rich surfaces: no ghosted search
         // placeholder or oversized, displaced brand lettering.
-        const strength = isBrandSurface ? 0.23 + 0.07 * pressWeight
-          : readingSurface ? 0.68 + 0.18 * pressWeight
+        const strength = readingSurface ? 0.68 + 0.18 * pressWeight
           : (0.95 + (1.14 - 0.95) * snap.value) + 0.62 * pressWeight;
         const pinch = (7.7 + (7.35 - 7.7) * snap.value) - 0.85 * pressWeight;
-        const aberration = isBrandSurface ? 0.015
-          : readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
-        const zoom = isBrandSurface ? 1
-          : readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
+        const aberration = readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
+        const zoom = readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
           : 1 + 0.055 * snap.value + 0.025 * pressWeight;
         const wobble = 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
 
@@ -1106,15 +1068,11 @@ export function LiquidGlassCursor() {
         gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
         gl.uniform2f(uniforms.lensCenter, (x.value - roiLeft) * dpr, (y.value - roiTop) * dpr);
         gl.uniform2f(uniforms.lensSize, width.value * dpr * (1 + 0.025 * deformation), height.value * dpr * (1 - 0.085 * deformation));
-        gl.uniform1f(uniforms.cornerRadius, cornerRadius.value * dpr);
-        // Existing default WebGL refraction path; the custom brand frame
-        // was the reason the centre never refracted.
-        gl.uniform1f(uniforms.brandFrame, 0);
         gl.uniform1f(uniforms.strength, strength);
         gl.uniform1f(uniforms.pinch, pinch);
         gl.uniform1f(uniforms.aberration, aberration);
         gl.uniform1f(uniforms.zoom, zoom);
-        gl.uniform1f(uniforms.wobble, isBrandSurface ? 0.025 : wobble);
+        gl.uniform1f(uniforms.wobble, wobble);
         gl.uniform1f(uniforms.time, now / 1000);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       }
@@ -1124,13 +1082,11 @@ export function LiquidGlassCursor() {
         Math.abs(y.target - y.value) < 0.08 &&
         Math.abs(width.target - width.value) < 0.08 &&
         Math.abs(height.target - height.value) < 0.08 &&
-        Math.abs(cornerRadius.target - cornerRadius.value) < 0.08 &&
         Math.abs(snap.target - snap.value) < 0.002 &&
         Math.abs(x.velocity) < 0.08 &&
         Math.abs(y.velocity) < 0.08 &&
         Math.abs(width.velocity) < 0.08 &&
         Math.abs(height.velocity) < 0.08 &&
-        Math.abs(cornerRadius.velocity) < 0.08 &&
         Math.abs(pressure.target - pressure.value) < 0.001 &&
         Math.abs(pressure.velocity) < 0.01 &&
         magneticSettled;
