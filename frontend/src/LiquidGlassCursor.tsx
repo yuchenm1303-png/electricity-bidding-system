@@ -1127,6 +1127,14 @@ export function LiquidGlassCursor() {
     const onSceneAnimation = (event: Event) => {
       if (!(event.target instanceof Element) ||
           event.target.closest("[data-powerbid-liquid-cursor='true']")) return;
+      const bounds = event.target.getBoundingClientRect();
+      // Decorative animations elsewhere in the dashboard must not trigger
+      // endless ROI redraws. Include a generous outer margin so transitions
+      // entering the sampled region are still observed.
+      const margin = 120;
+      if (Number.isFinite(roiLeft) && Number.isFinite(roiTop) &&
+          !intersects(bounds, roiLeft - margin, roiTop - margin,
+            roiWidth + margin * 2, roiHeight + margin * 2)) return;
       animationWatchUntil = Math.max(animationWatchUntil, performance.now() + 1400);
       rasterDirty = true;
       ensureFrame();
