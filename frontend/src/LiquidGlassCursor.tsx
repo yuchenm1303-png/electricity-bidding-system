@@ -1,630 +1,20 @@
-import { useEffect, useRef } from "react";
-
-const FREE_ROI_SIZE = 420;
-const SNAP_ROI_PADDING = 160;
-const BASE_WIDTH = 80;
-const BASE_HEIGHT = 54;
-// The existing optical lens becomes a larger, perfectly circular viewport over charts.
-const CHART_LENS_SIZE = 118;
-const CHART_LENS_SELECTOR = ".ta-gauge-wrap, .ta-bars, .ta-supply-chart, .recharts-wrapper, .pmss-chart";
-const FREE_OFFSET_Y = -32;
-const SNAP_DISTANCE = 10;
-const RELEASE_DISTANCE = 15;
-const FREE_ROI_PADDING = 64;
-const ROI_DEADZONE = 35;
-const DYNAMIC_SCENE_CHECK_MS = 85;
-// Elements whose CSS transforms/animations can change without DOM text updates.
-const DYNAMIC_SCENE_SELECTOR = ".recharts-tooltip-wrapper, .recharts-tooltip-cursor, .recharts-active-dot, [role='tooltip'], [role='dialog'], [data-state='open'], .ta-search-results";
-
-// One lens per meaningful surface: both Smirel and PowerBid share the
-// brand-home-link magnetic target, not independent nested icon/text targets.
-const SNAP_SELECTOR = [
-  ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
-  ".brand-home-link", ".mobile-brand-home", ".ta-global-search",
-  ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
-  ".app a[href]",
-  ".app input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='password'])",
-  ".app textarea", ".app select", ".app [contenteditable='true']",
-  "[data-liquid-snap='true']",
-].join(",");
-
-// Magnetic translation belongs to small buttons, never to form controls,
-// graphics, entire cards or layout containers. Wide controls can still get
-// the lens, but stay in place so text layout and hit areas remain stable.
-const MAGNETIC_SELECTOR = [
-  ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
-  ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
-  ".app a[href]:not(.brand-home-link)",
-  "[data-magnetic-hover='true']",
-].join(",");
-
-const EDITABLE_SELECTOR = "input, textarea, select, [contenteditable='true']";
-const EXCLUDED_SURFACE_SELECTOR = "[data-liquid-snap='false']";
-const MIN_LENS_WIDTH = 42;
-const MIN_LENS_HEIGHT = 36;
-
-function isEligibleSurface(element: HTMLElement) {
-  if (element.matches(":disabled") || element.closest("[aria-hidden='true']")) return false;
-  if (element.closest(EXCLUDED_SURFACE_SELECTOR)) return false;
-  // The full search shell owns the lens, not the text input inside it.
-  if (element.matches(EDITABLE_SELECTOR) && element.closest(".ta-global-search")) return false;
-  if (element.matches("input") && ["button", "submit", "reset", "image", "password"].includes((element as HTMLInputElement).type)) return false;
-  if (element.matches("[role='slider']")) return false;
-  const style = getComputedStyle(element);
-  if (style.pointerEvents === "none" || style.visibility !== "visible" || style.display === "none") return false;
-  const rect = element.getBoundingClientRect();
-  return rect.width > 0 && rect.height > 0 &&
-    rect.right > 0 && rect.bottom > 0 &&
-    rect.left < window.innerWidth && rect.top < window.innerHeight;
-}
-
-// Keep Smirel + PowerBid as one optical surface. The brand needs more breathing
-// room than an ordinary button so the refractive rim cannot cut through the
-// wordmark; no extra mount or second lens is created.
-function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
-  const rect = element.getBoundingClientRect();
-  const brand = element.matches(".brand-home-link, .mobile-brand-home");
-  const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
-  const paddingX = brand ? 18 : compact ? 6 : 8;
-  const paddingY = brand ? 15 : compact ? 6 : 8;
-
-  // The viewport may crop part of a control near its edges; frame the
-  // entire *visible* control rather than moving the center away and
-  // leaving its first/last letters outside the lens.
-  const left = Math.max(0, rect.left - paddingX);
-  const right = Math.min(window.innerWidth, rect.right + paddingX);
-  const top = Math.max(0, rect.top - paddingY);
-  const bottom = Math.min(window.innerHeight, rect.bottom + paddingY);
-  const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
-  const height = Math.max(1, Math.min(window.innerHeight, Math.max(brand ? 60 : MIN_LENS_HEIGHT, bottom - top)));
-  return {
-    width,
-    height,
-    centerX: Math.max(width / 2, Math.min(window.innerWidth - width / 2, (left + right) / 2)),
-    centerY: Math.max(height / 2, Math.min(window.innerHeight - height / 2, (top + bottom) / 2)),
-  };
-}
-
-type SpringValue = { value: number; velocity: number; target: number };
-
-function stepSpring(spring: SpringValue, dt: number, stiffness: number, damping: number) {
-  const acceleration = (spring.target - spring.value) * stiffness;
-  spring.velocity += acceleration * dt;
-  spring.velocity *= Math.exp(-damping * dt);
-  spring.value += spring.velocity * dt;
-}
-
-function rectDistance(rect: DOMRect, x: number, y: number) {
-  const dx = Math.max(rect.left - x, 0, x - rect.right);
-  const dy = Math.max(rect.top - y, 0, y - rect.bottom);
-  return Math.hypot(dx, dy);
-}
-
-function intersects(rect: DOMRect, left: number, top: number, width: number, height: number) {
-  return rect.right >= left && rect.left <= left + width && rect.bottom >= top && rect.top <= top + height;
-}
-
-function cssNumber(value: string, fallback = 0) {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function radiusFromStyle(style: CSSStyleDeclaration, rect: DOMRect) {
-  const raw = style.borderTopLeftRadius || "0";
-  if (raw.includes("%")) return Math.min(rect.width, rect.height) * cssNumber(raw) / 100;
-  return Math.min(cssNumber(raw), Math.min(rect.width, rect.height) / 2);
-}
-
-function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
-  const r = Math.max(0, Math.min(radius, width / 2, height / 2));
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + width - r, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
-  ctx.lineTo(x + width, y + height - r);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
-  ctx.lineTo(x + r, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function visibleColor(value: string) {
-  return value !== "transparent" && value !== "rgba(0, 0, 0, 0)" && value !== "rgba(0,0,0,0)";
-}
-
-function safeImageForCanvas(img: HTMLImageElement) {
-  if (!img.complete || img.naturalWidth <= 0 || img.naturalHeight <= 0) return false;
-  try {
-    const url = new URL(img.currentSrc || img.src, window.location.href);
-    return url.origin === window.location.origin || img.crossOrigin === "anonymous";
-  } catch {
-    return false;
-  }
-}
-
-function drawImageFit(
-  ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
-  rect: DOMRect,
-  style: CSSStyleDeclaration,
-  roiLeft: number,
-  roiTop: number,
-) {
-  const fit = style.objectFit || "fill";
-  const boxX = rect.left - roiLeft;
-  const boxY = rect.top - roiTop;
-  let sx = 0;
-  let sy = 0;
-  let sw = img.naturalWidth;
-  let sh = img.naturalHeight;
-
-  let drawX = boxX;
-  let drawY = boxY;
-  let drawWidth = rect.width;
-  let drawHeight = rect.height;
-  const boxRatio = rect.width / Math.max(rect.height, 1);
-  const imageRatio = img.naturalWidth / Math.max(img.naturalHeight, 1);
-
-  if (fit === "contain" || fit === "scale-down") {
-    // contain must LETTERBOX rather than crop: the old rasterizer stretched
-    // the Smirel logo, producing a doubled/misaligned refracted wordmark.
-    const scale = fit === "scale-down"
-      ? Math.min(1, Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight))
-      : Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight);
-    drawWidth = img.naturalWidth * scale;
-    drawHeight = img.naturalHeight * scale;
-    drawX += (rect.width - drawWidth) / 2;
-    drawY += (rect.height - drawHeight) / 2;
-  } else if (fit === "cover") {
-    if (imageRatio > boxRatio) {
-      sw = img.naturalHeight * boxRatio;
-      sx = (img.naturalWidth - sw) / 2;
-    } else {
-      sh = img.naturalWidth / boxRatio;
-      sy = (img.naturalHeight - sh) / 2;
-    }
-  }
-
-  try {
-    ctx.drawImage(img, sx, sy, sw, sh, drawX, drawY, drawWidth, drawHeight);
-  } catch {
-    // Skip any image the browser refuses to expose to canvas.
-  }
-}
-
-// PowerBid-only background adapter. The original Loom background image
-// has no counterpart here; the original shader and raster traversal follow.
-function drawWallpaper(
-  ctx: CanvasRenderingContext2D,
-  _image: HTMLImageElement | null,
-  _roiLeft: number,
-  _roiTop: number,
-  _viewportWidth: number,
-  _viewportHeight: number,
-  roiWidth: number,
-  roiHeight: number,
-) {
-  const app = document.querySelector<HTMLElement>(".app");
-  const appBackground = app ? getComputedStyle(app).backgroundColor : "";
-  const bodyBackground = getComputedStyle(document.body).backgroundColor;
-  ctx.fillStyle = visibleColor(appBackground) ? appBackground :
-    visibleColor(bodyBackground) ? bodyBackground : "#f9fafb";
-  ctx.fillRect(0, 0, roiWidth, roiHeight);
-}
-
-function drawTextNode(
-  ctx: CanvasRenderingContext2D,
-  node: Text,
-  style: CSSStyleDeclaration,
-  roiLeft: number,
-  roiTop: number,
-  roiWidth: number,
-  roiHeight: number,
-  inheritedOpacity: number,
-) {
-  const value = node.data;
-  if (!value.trim()) return;
-  const color = style.color;
-  if (!visibleColor(color)) return;
-  const matches = Array.from(value.matchAll(/\S+\s*/g)).slice(0, 80);
-  if (!matches.length) return;
-
-  ctx.save();
-  ctx.globalAlpha = inheritedOpacity;
-  ctx.fillStyle = color;
-  ctx.font = `${style.fontStyle || "normal"} ${style.fontWeight || "400"} ${style.fontSize || "16px"} ${style.fontFamily || "sans-serif"}`;
-  ctx.textBaseline = "alphabetic";
-  const letterAware = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
-  if ("letterSpacing" in letterAware) letterAware.letterSpacing = style.letterSpacing;
-
-  const transform = style.textTransform;
-  for (const match of matches) {
-    const index = match.index ?? 0;
-    const end = Math.min(value.length, index + match[0].length);
-    const range = document.createRange();
-    try {
-      range.setStart(node, index);
-      range.setEnd(node, end);
-      for (const rect of Array.from(range.getClientRects())) {
-        if (!intersects(rect, roiLeft, roiTop, roiWidth, roiHeight)) continue;
-        let text = match[0].replace(/\s+$/g, "");
-        if (!text) continue;
-        if (transform === "uppercase") text = text.toUpperCase();
-        if (transform === "lowercase") text = text.toLowerCase();
-        if (transform === "capitalize") text = text.replace(/\b\w/g, (part) => part.toUpperCase());
-        ctx.fillText(text, rect.left - roiLeft, rect.top - roiTop + rect.height * 0.8, Math.max(rect.width + 2, 1));
-      }
-    } catch {
-      // React may update a text node between range reads.
-    } finally {
-      range.detach();
-    }
-  }
-  ctx.restore();
-}
-
-function drawSvgIcon(ctx: CanvasRenderingContext2D, svg: SVGSVGElement, roiLeft: number, roiTop: number, opacity: number) {
-  for (const shape of Array.from(svg.querySelectorAll<SVGGeometryElement>("path, rect, circle, ellipse, line, polyline, polygon"))) {
-    const style = getComputedStyle(shape);
-    const matrix = shape.getScreenCTM();
-    if (!matrix || style.display === "none" || style.visibility === "hidden") continue;
-    const number = (name: string) => cssNumber(shape.getAttribute(name) ?? "0");
-    const path = new Path2D(shape.tagName === "path" ? shape.getAttribute("d") ?? "" : undefined);
-    switch (shape.tagName) {
-      case "rect": path.roundRect(number("x"), number("y"), number("width"), number("height"), { x: number("rx"), y: shape.hasAttribute("ry") ? number("ry") : number("rx") }); break;
-      case "circle": path.arc(number("cx"), number("cy"), number("r"), 0, Math.PI * 2); break;
-      case "ellipse": path.ellipse(number("cx"), number("cy"), number("rx"), number("ry"), 0, 0, Math.PI * 2); break;
-      case "line": path.moveTo(number("x1"), number("y1")); path.lineTo(number("x2"), number("y2")); break;
-      case "polyline":
-      case "polygon": {
-        const points = (shape as SVGPolylineElement).points;
-        for (let i = 0; i < points.numberOfItems; i++) {
-          const point = points.getItem(i);
-          if (i === 0) path.moveTo(point.x, point.y);
-          else path.lineTo(point.x, point.y);
-        }
-        if (shape.tagName === "polygon") path.closePath();
-        break;
-      }
-    }
-    ctx.save();
-    ctx.translate(-roiLeft, -roiTop);
-    ctx.transform(matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f);
-    let alpha = opacity;
-    for (let element: Element | null = shape; element && element !== svg; element = element.parentElement) {
-      alpha *= cssNumber(getComputedStyle(element).opacity, 1);
-    }
-    ctx.globalAlpha = alpha * cssNumber(style.fillOpacity, 1);
-    if (style.fill !== "none") {
-      ctx.fillStyle = style.fill === "currentcolor" ? style.color : style.fill;
-      ctx.fill(path, style.fillRule === "evenodd" ? "evenodd" : "nonzero");
-    }
-    if (style.stroke !== "none") {
-      ctx.globalAlpha = alpha * cssNumber(style.strokeOpacity, 1);
-      ctx.strokeStyle = style.stroke === "currentcolor" ? style.color : style.stroke;
-      ctx.lineWidth = cssNumber(style.strokeWidth, 1);
-      ctx.lineCap = style.strokeLinecap as CanvasLineCap;
-      ctx.lineJoin = style.strokeLinejoin as CanvasLineJoin;
-      ctx.miterLimit = cssNumber(style.strokeMiterlimit, 4);
-      ctx.setLineDash(style.strokeDasharray === "none" ? [] : style.strokeDasharray.split(/[ ,]+/).map(value => cssNumber(value)));
-      ctx.lineDashOffset = cssNumber(style.strokeDashoffset);
-      ctx.stroke(path);
-    }
-    ctx.restore();
-  }
-}
-
-function parseBackdropBlur(style: CSSStyleDeclaration) {
-  const extended = style as CSSStyleDeclaration & { webkitBackdropFilter?: string };
-  const raw = style.backdropFilter || extended.webkitBackdropFilter || "";
-  const match = raw.match(/blur\(([\d.]+)px\)/i);
-  return match ? Math.min(24, cssNumber(match[1])) : 0;
-}
-
-function rasterizePortal(
-  root: HTMLElement,
-  canvas: HTMLCanvasElement,
-  scratch: HTMLCanvasElement,
-  wallpaper: HTMLImageElement | null,
-  roiLeft: number,
-  roiTop: number,
-  roiWidth: number,
-  roiHeight: number,
-  dpr: number,
-) {
-  const ctx = canvas.getContext("2d", { alpha: true });
-  const scratchCtx = scratch.getContext("2d", { alpha: true });
-  if (!ctx || !scratchCtx) return false;
-
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawWallpaper(ctx, wallpaper, roiLeft, roiTop, window.innerWidth, window.innerHeight, roiWidth, roiHeight);
-
-  const content = root.querySelector<HTMLElement>(".app") ?? root;
-
-  const renderElement = (el: HTMLElement, parentOpacity: number) => {
-    if (el.dataset.powerbidLiquidCursor === "true" || el.closest("[data-powerbid-liquid-cursor='true']")) return;
-    if (el.closest(".cosmos") || el.classList.contains("beach-wallpaper")) return;
-    const style = getComputedStyle(el);
-    if (style.display === "none" || style.visibility === "hidden") return;
-    const ownOpacity = Math.max(0, Math.min(1, cssNumber(style.opacity, 1)));
-    const opacity = parentOpacity * ownOpacity;
-    if (opacity <= 0.002) return;
-
-    const rect = el.getBoundingClientRect();
-    if (!intersects(rect, roiLeft, roiTop, roiWidth, roiHeight)) return;
-
-    const localX = rect.left - roiLeft;
-    const localY = rect.top - roiTop;
-    const radius = radiusFromStyle(style, rect);
-    const blur = parseBackdropBlur(style);
-
-    if (blur > 0 && (el.classList.contains("cards") || el.classList.contains("loom-host-onboarding"))) {
-      scratchCtx.setTransform(1, 0, 0, 1, 0, 0);
-      scratchCtx.clearRect(0, 0, scratch.width, scratch.height);
-      scratchCtx.filter = `blur(${Math.max(1, blur * dpr)}px)`;
-      scratchCtx.drawImage(canvas, 0, 0);
-      scratchCtx.filter = "none";
-      ctx.save();
-      roundedRect(ctx, localX, localY, rect.width, rect.height, radius);
-      ctx.clip();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalAlpha = opacity;
-      ctx.drawImage(scratch, 0, 0);
-      ctx.restore();
-    }
-
-    if (visibleColor(style.backgroundColor)) {
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.fillStyle = style.backgroundColor;
-      roundedRect(ctx, localX, localY, rect.width, rect.height, radius);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    const borderWidth = Math.max(
-      cssNumber(style.borderTopWidth),
-      cssNumber(style.borderRightWidth),
-      cssNumber(style.borderBottomWidth),
-      cssNumber(style.borderLeftWidth),
-    );
-    if (borderWidth > 0 && style.borderTopStyle !== "none" && visibleColor(style.borderTopColor)) {
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      ctx.strokeStyle = style.borderTopColor;
-      ctx.lineWidth = borderWidth;
-      roundedRect(
-        ctx,
-        localX + borderWidth / 2,
-        localY + borderWidth / 2,
-        Math.max(0, rect.width - borderWidth),
-        Math.max(0, rect.height - borderWidth),
-        Math.max(0, radius - borderWidth / 2),
-      );
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    if (el instanceof HTMLImageElement && safeImageForCanvas(el)) {
-      ctx.save();
-      ctx.globalAlpha = opacity;
-      drawImageFit(ctx, el, rect, style, roiLeft, roiTop);
-      ctx.restore();
-    }
-
-    const textInput = el instanceof HTMLTextAreaElement ||
-      (el instanceof HTMLInputElement && !["range", "checkbox", "radio", "button", "submit", "reset", "color", "file", "hidden", "image"].includes(el.type));
-    if (textInput && (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) {
-      const placeholder = !el.value;
-      const text = el instanceof HTMLInputElement && el.type === "password"
-        ? (el.value ? "•".repeat(el.value.length) : el.placeholder)
-        : el.value || el.placeholder;
-      // Text inputs clip their own content. fillText(maxWidth) does NOT clip:
-      // it squeezes the entire placeholder until it resembles duplicate text.
-      if (text) {
-        const leftInset = cssNumber(style.borderLeftWidth) + cssNumber(style.paddingLeft);
-        const rightInset = cssNumber(style.borderRightWidth) + cssNumber(style.paddingRight);
-        const clipWidth = Math.max(0, rect.width - leftInset - rightInset);
-        const placeholderColor = placeholder ? getComputedStyle(el, "::placeholder").color : "";
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(localX + leftInset, localY + 1, clipWidth, Math.max(0, rect.height - 2));
-        ctx.clip();
-        ctx.globalAlpha = opacity;
-        ctx.fillStyle = placeholder && visibleColor(placeholderColor) ? placeholderColor : style.color;
-        ctx.font = `${style.fontStyle || "normal"} ${style.fontWeight || "400"} ${style.fontSize || "16px"} ${style.fontFamily || "sans-serif"}`;
-        ctx.textBaseline = "middle";
-        // Numeric inputs may right-align their value. The old left-aligned
-        // Canvas sample drew "220" on the opposite side of the input.
-        const rtl = style.direction === "rtl";
-        const align = style.textAlign;
-        ctx.direction = rtl ? "rtl" : "ltr";
-        ctx.textAlign = align === "center" ? "center"
-          : align === "right" || (align === "start" && rtl) || (align === "end" && !rtl)
-            ? "right" : "left";
-        const textX = ctx.textAlign === "right"
-          ? localX + rect.width - rightInset
-          : ctx.textAlign === "center"
-            ? localX + leftInset + clipWidth / 2
-            : localX + leftInset;
-        ctx.fillText(text, textX - el.scrollLeft, localY + rect.height / 2);
-        ctx.restore();
-      }
-    }
-
-    // Honor native overflow clipping for descendants (search rows, badges,
-    // compact navigation). Otherwise refracted text escapes its actual box.
-    const clipsChildren = ["hidden", "clip", "auto", "scroll"].includes(style.overflowX) ||
-      ["hidden", "clip", "auto", "scroll"].includes(style.overflowY);
-    if (clipsChildren) {
-      ctx.save();
-      roundedRect(ctx, localX, localY, rect.width, rect.height, radius);
-      ctx.clip();
-    }
-    // Sticky header is a positive z-index stacking layer. Native browser
-    // paint order places it ABOVE the scrolling content, even though React
-    // mounts it first. Repainting children in raw DOM order let offscreen
-    // charts bleed through the header in the refracted ROI texture.
-    const childNodes = Array.from(el.childNodes);
-    if (el.classList.contains("app-main")) {
-      childNodes.sort((a, b) =>
-        Number(a instanceof HTMLElement && a.classList.contains("global-header")) -
-        Number(b instanceof HTMLElement && b.classList.contains("global-header")));
-    }
-    for (const child of childNodes) {
-      if (child.nodeType === Node.TEXT_NODE) {
-        drawTextNode(ctx, child as Text, style, roiLeft, roiTop, roiWidth, roiHeight, opacity);
-      } else if (child instanceof HTMLElement) {
-        renderElement(child, opacity);
-      } else if (child instanceof SVGSVGElement) {
-        const svgStyle = getComputedStyle(child);
-        if (svgStyle.display !== "none" && svgStyle.visibility !== "hidden" && intersects(child.getBoundingClientRect(), roiLeft, roiTop, roiWidth, roiHeight)) {
-          drawSvgIcon(ctx, child, roiLeft, roiTop, opacity * cssNumber(svgStyle.opacity, 1));
-        }
-      }
-    }
-    if (clipsChildren) ctx.restore();
-  };
-
-  renderElement(content, 1);
-  return true;
-}
-
-function createShader(gl: WebGLRenderingContext, type: number, source: string) {
-  const shader = gl.createShader(type);
-  if (!shader) return null;
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.warn("PowerBid liquid cursor shader failed:", gl.getShaderInfoLog(shader));
-    gl.deleteShader(shader);
-    return null;
-  }
-  return shader;
-}
-
-
-function createProgram(gl: WebGLRenderingContext) {
-  const vertex = createShader(gl, gl.VERTEX_SHADER, `
-    attribute vec2 a_position;
-    attribute vec2 a_uv;
-    varying vec2 v_uv;
-    void main() {
-      v_uv = a_uv;
-      gl_Position = vec4(a_position, 0.0, 1.0);
-    }
-  `);
-  const fragment = createShader(gl, gl.FRAGMENT_SHADER, `
-    precision highp float;
-    varying vec2 v_uv;
-    uniform sampler2D u_texture;
-    uniform vec2 u_resolution;
-    uniform vec2 u_lensCenter;
-    uniform vec2 u_lensSize;
-    uniform float u_strength;
-    uniform float u_pinch;
-    uniform float u_aberration;
-    uniform float u_zoom;
-    uniform float u_wobble;
-    uniform float u_time;
-
-    float sdRoundBox(vec2 p, vec2 b, float r) {
-      vec2 q = abs(p) - b + vec2(r);
-      return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
-    }
-
-    vec2 warpPoint(vec2 p, float radius) {
-      float angle = atan(p.y, p.x);
-      float wave =
-        sin(angle * 3.0 + u_time * 1.7) * 0.46 +
-        cos(angle * 5.0 - u_time * 2.3) * 0.28 +
-        sin(angle * 7.0 + u_time * 3.1) * 0.16;
-      vec2 radial = normalize(p + vec2(0.0001));
-      vec2 tangent = vec2(-radial.y, radial.x);
-      return p - radial * wave * u_wobble * radius * 0.055
-               + tangent * sin(angle * 2.0 + u_time * 1.25) * u_wobble * radius * 0.012;
-    }
-
-    void main() {
-      vec2 screenUv = vec2(v_uv.x, 1.0 - v_uv.y);
-      vec2 pixel = screenUv * u_resolution;
-      vec2 halfSize = max(u_lensSize * 0.5, vec2(2.0));
-      float radius = max(2.0, min(halfSize.x, halfSize.y));
-      vec2 local = warpPoint(pixel - u_lensCenter, radius);
-      float d = sdRoundBox(local, halfSize, radius);
-      if (d > 1.5) {
-        gl_FragColor = vec4(0.0);
-        return;
-      }
-
-      float e = 1.0;
-      float dx = sdRoundBox(local + vec2(e, 0.0), halfSize, radius) - sdRoundBox(local - vec2(e, 0.0), halfSize, radius);
-      float dy = sdRoundBox(local + vec2(0.0, e), halfSize, radius) - sdRoundBox(local - vec2(0.0, e), halfSize, radius);
-      vec2 normal = normalize(vec2(dx, dy) + vec2(0.00001));
-      float distNorm = clamp(1.0 + d / radius, 0.0, 1.0);
-      float effectivePinch = u_pinch * (radius / 100.0);
-      float displacement = pow(distNorm, max(0.12, effectivePinch)) * u_strength * 40.0;
-
-      // When the lens is physically close to a viewport/capture boundary there is
-      // no real off-screen texture to refract. Fade the displacement there instead
-      // of CLAMP_TO_EDGE stretching one texture column into a blank-looking slab.
-      float textureEdgeDistance = min(
-        min(screenUv.x, 1.0 - screenUv.x),
-        min(screenUv.y, 1.0 - screenUv.y)
-      );
-      float edgeSafety = smoothstep(0.012, 0.075, textureEdgeDistance);
-      displacement *= edgeSafety;
-
-      vec2 sampleUv = screenUv - normal * (displacement / u_resolution);
-
-      vec2 centerUv = u_lensCenter / u_resolution;
-      sampleUv = (sampleUv - centerUv) / max(u_zoom, 1.0) + centerUv;
-      sampleUv = clamp(sampleUv, vec2(0.001), vec2(0.999));
-
-      vec2 chroma = normal * u_aberration * 0.02 * distNorm * edgeSafety;
-      vec3 color;
-      color.r = texture2D(u_texture, clamp(sampleUv + chroma, 0.0, 1.0)).r;
-      color.g = texture2D(u_texture, sampleUv).g;
-      color.b = texture2D(u_texture, clamp(sampleUv - chroma, 0.0, 1.0)).b;
-
-      // Keep the surface almost optically clear.
-      float edge = smoothstep(0.76, 1.0, distNorm);
-      vec3 reflected = texture2D(u_texture, clamp(sampleUv + normal * 0.008 * edge, 0.0, 1.0)).rgb;
-      color = mix(color, reflected, edge * 0.035);
-
-      vec2 lightDir = normalize(vec2(-0.62, -0.78));
-      float directional = pow(max(dot(normal, lightDir), 0.0), 7.0);
-      float rim = edge * (0.008 + directional * 0.070);
-      color += vec3(0.62, 0.78, 0.88) * rim;
-
-      float mask = 1.0 - smoothstep(-1.15, 0.9, d);
-      float edgeGlass = smoothstep(0.90, 1.0, distNorm) * 0.015;
-      gl_FragColor = vec4((color + vec3(edgeGlass)) * mask, mask);
-    }
-  `);
-  if (!vertex || !fragment) return null;
-  const program = gl.createProgram();
-  if (!program) return null;
-  gl.attachShader(program, vertex);
-  gl.attachShader(program, fragment);
-  gl.linkProgram(program);
-  gl.deleteShader(vertex);
-  gl.deleteShader(fragment);
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    console.warn("PowerBid liquid cursor program failed:", gl.getProgramInfoLog(program));
-    gl.deleteProgram(program);
-    return null;
-  }
-  return program;
-}
+import { useEffect, useRef, useState } from "react";
+import {
+  BASE_WIDTH, BASE_HEIGHT, CHART_LENS_SIZE, CHART_LENS_SELECTOR,
+  DYNAMIC_SCENE_CHECK_MS, DYNAMIC_SCENE_SELECTOR,
+  FREE_ROI_SIZE, FREE_OFFSET_Y,
+  getLensBounds, intersects, resolveSnapTarget
+} from "./liquidGlass/targets";
+import { stepSpring, type SpringValue } from "./liquidGlass/motion";
+import { createMagneticController, affectsMagneticTargets } from "./liquidGlass/magnetism";
+import { rasterizePortal } from "./liquidGlass/sceneRaster";
+import { createGlassRenderer } from "./liquidGlass/renderer";
+import { createRoiManager } from "./liquidGlass/roi";
 
 export function LiquidGlassCursor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
+  const [contextVersion, setContextVersion] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -636,79 +26,27 @@ export function LiquidGlassCursor() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!finePointer || reducedMotion) return;
 
-    const gl = canvas.getContext("webgl", {
-      alpha: true,
-      antialias: false,
-      premultipliedAlpha: true,
-      preserveDrawingBuffer: false,
-    });
-    if (!gl) return;
-    const program = createProgram(gl);
-    if (!program) return;
-
+    const renderer = createGlassRenderer(canvas);
+    if (!renderer) return;
     const capture = document.createElement("canvas");
     const scratch = document.createElement("canvas");
-    // Keep the full button inside the captured texture, including very
-    // wide rows. Adapt DPR when the GPU has a smaller texture limit.
-    const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
     const dpr = Math.min(
       Math.max(1, Math.min(window.devicePixelRatio || 1, 1.75)),
-      maxTextureSize / Math.max(window.innerWidth, window.innerHeight, 1),
+      renderer.maxTextureSize / Math.max(window.innerWidth, window.innerHeight, 1),
     );
-    let roiWidth = FREE_ROI_SIZE;
-    let roiHeight = FREE_ROI_SIZE;
-
     const resizeSurfaces = (cssWidth: number, cssHeight: number) => {
       const nextWidth = Math.max(1, Math.round(cssWidth * dpr));
       const nextHeight = Math.max(1, Math.round(cssHeight * dpr));
       if (canvas.width === nextWidth && canvas.height === nextHeight) return false;
       for (const target of [canvas, capture, scratch]) {
-        target.width = nextWidth;
-        target.height = nextHeight;
+        target.width = nextWidth; target.height = nextHeight;
       }
-      canvas.style.width = `${cssWidth}px`;
-      canvas.style.height = `${cssHeight}px`;
+      canvas.style.width = String(cssWidth)+"px";
+      canvas.style.height = String(cssHeight)+"px";
+      renderer.resetTexture();
       return true;
     };
-
-    resizeSurfaces(roiWidth, roiHeight);
-
-    const position = gl.createBuffer();
-    const uv = gl.createBuffer();
-    const texture = gl.createTexture();
-    if (!position || !uv || !texture) return;
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, position);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
-    const positionLocation = gl.getAttribLocation(program, "a_position");
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, uv);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0,0, 1,0, 0,1, 0,1, 1,0, 1,1]), gl.STATIC_DRAW);
-    const uvLocation = gl.getAttribLocation(program, "a_uv");
-    gl.enableVertexAttribArray(uvLocation);
-    gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
-
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-    const uniforms = {
-      texture: gl.getUniformLocation(program, "u_texture"),
-      resolution: gl.getUniformLocation(program, "u_resolution"),
-      lensCenter: gl.getUniformLocation(program, "u_lensCenter"),
-      lensSize: gl.getUniformLocation(program, "u_lensSize"),
-      strength: gl.getUniformLocation(program, "u_strength"),
-      pinch: gl.getUniformLocation(program, "u_pinch"),
-      aberration: gl.getUniformLocation(program, "u_aberration"),
-      zoom: gl.getUniformLocation(program, "u_zoom"),
-      wobble: gl.getUniformLocation(program, "u_wobble"),
-      time: gl.getUniformLocation(program, "u_time"),
-    };
+    resizeSurfaces(FREE_ROI_SIZE, FREE_ROI_SIZE);
 
     let pointerX = window.innerWidth / 2;
     let pointerY = window.innerHeight / 2;
@@ -722,11 +60,6 @@ export function LiquidGlassCursor() {
     let lastCapture = 0;
     let lastRoiLeft = Number.NaN;
     let lastRoiTop = Number.NaN;
-    let roiLeft = Number.NaN;
-    let roiTop = Number.NaN;
-    let roiLockedTarget: HTMLElement | null = null;
-    let snappedRoiWidth = FREE_ROI_SIZE;
-    let snappedRoiHeight = FREE_ROI_SIZE;
     let rasterDirty = true;
     let textureReady = false;
     let snapDirty = true;
@@ -734,6 +67,12 @@ export function LiquidGlassCursor() {
     let sceneTimer = 0;
     let lastSceneSignature = "";
     let animationWatchUntil = 0;
+    let urgentCapture = true;
+    const roi = createRoiManager(
+      resizeSurfaces,
+      () => {rasterDirty=true;},
+      () => {textureReady=false;lastRoiLeft=Number.NaN;lastRoiTop=Number.NaN;},
+    );
 
     const x: SpringValue = { value: pointerX, velocity: 0, target: pointerX };
     const y: SpringValue = { value: pointerY + FREE_OFFSET_Y, velocity: 0, target: pointerY + FREE_OFFSET_Y };
@@ -741,107 +80,12 @@ export function LiquidGlassCursor() {
     const height: SpringValue = { value: BASE_HEIGHT, velocity: 0, target: BASE_HEIGHT };
     const snap: SpringValue = { value: 0, velocity: 0, target: 0 };
 
-    type MagneticState = {
-      x: SpringValue;
-      y: SpringValue;
-      appliedX: number;
-      appliedY: number;
-    };
-
-    const magneticStates = new Map<HTMLElement, MagneticState>();
-    let magneticTargets: HTMLElement[] = [];
-
-    const refreshMagneticTargets = () => {
-      const next = Array.from(root.querySelectorAll<HTMLElement>(MAGNETIC_SELECTOR))
-        .filter(element => isEligibleSurface(element) && element.getBoundingClientRect().width <= 210 &&
-          element.getBoundingClientRect().height <= 76);
-      const nextSet = new Set(next);
-      for (const [element] of magneticStates) {
-        if (!nextSet.has(element)) {
-          element.style.removeProperty("translate");
-          magneticStates.delete(element);
-        }
-      }
-      magneticTargets = next;
-      for (const element of magneticTargets) {
-        if (!magneticStates.has(element)) {
-          magneticStates.set(element, {
-            x: { value: 0, velocity: 0, target: 0 },
-            y: { value: 0, velocity: 0, target: 0 },
-            appliedX: 0,
-            appliedY: 0,
-          });
-        }
-      }
-    };
-
-    const updateMagneticTargets = (dt: number) => {
-      let settled = true;
-      for (const element of magneticTargets) {
-        const state = magneticStates.get(element);
-        if (!state || !element.isConnected) continue;
-
-        const rect = element.getBoundingClientRect();
-        // Pointer hit testing uses the actual, transformed visual bounds.
-        // The untransformed center is retained below only to calculate a
-        // stable magnetic spring target (avoids translation feedback).
-        const baseLeft = rect.left - state.appliedX;
-        const baseTop = rect.top - state.appliedY;
-        const hoverArea = element.matches(".nav-entry") ? 9 : 11;
-        const inside =
-          pointerInside &&
-          pointerX >= rect.left - hoverArea &&
-          pointerX <= rect.right + hoverArea &&
-          pointerY >= rect.top - hoverArea &&
-          pointerY <= rect.bottom + hoverArea;
-
-        if (inside) {
-          const centerX = baseLeft + rect.width / 2;
-          const centerY = baseTop + rect.height / 2;
-          const normalizedX = Math.max(-1, Math.min(1, (pointerX - centerX) / Math.max(rect.width / 2, 1)));
-          const normalizedY = Math.max(-1, Math.min(1, (pointerY - centerY) / Math.max(rect.height / 2, 1)));
-          const distance = activeTarget === element ? 4.5 : 5.5;
-          state.x.target = normalizedX * distance;
-          state.y.target = normalizedY * distance;
-        } else {
-          state.x.target = 0;
-          state.y.target = 0;
-        }
-
-        // Slightly under-damped on purpose: the target follows the pointer and
-        // gives one restrained elastic swing when it is released.
-        stepSpring(state.x, dt, 250, 21);
-        stepSpring(state.y, dt, 250, 21);
-
-        const nextX = Math.round(state.x.value * 2) / 2;
-        const nextY = Math.round(state.y.value * 2) / 2;
-        if (Math.abs(nextX - state.appliedX) >= 0.49 || Math.abs(nextY - state.appliedY) >= 0.49) {
-          state.appliedX = nextX;
-          state.appliedY = nextY;
-          if (Math.abs(nextX) < 0.125 && Math.abs(nextY) < 0.125 && state.x.target === 0 && state.y.target === 0) {
-            element.style.removeProperty("translate");
-            state.appliedX = 0;
-            state.appliedY = 0;
-          } else {
-            element.style.setProperty("translate", `${nextX}px ${nextY}px`);
-          }
-          rasterDirty = true;
-          snapDirty = true;
-        }
-
-        if (
-          Math.abs(state.x.target - state.x.value) >= 0.08 ||
-          Math.abs(state.y.target - state.y.value) >= 0.08 ||
-          Math.abs(state.x.velocity) >= 0.08 ||
-          Math.abs(state.y.velocity) >= 0.08
-        ) {
-          settled = false;
-        }
-      }
-      return settled;
-    };
-
-    refreshMagneticTargets();
+    const magnetism = createMagneticController(
+      root,
+      () => ({x:pointerX,y:pointerY,inside:pointerInside}),
+      () => activeTarget,
+      () => {rasterDirty=true;snapDirty=true;},
+    );
 
     // Chart mode changes the original glass geometry, not its rendering layer.
     // Keep native graph hit-testing intact and prioritize actual controls.
@@ -855,59 +99,20 @@ export function LiquidGlassCursor() {
       rasterDirty = true;
     };
 
-    const findSnapTarget = () => {
-      if (chartLens) { activeTarget = null; return null; }
-      const previous = activeTarget;
-      let next: HTMLElement | null = null;
-      let bestScore = Number.POSITIVE_INFINITY;
-      const topElement = document.elementFromPoint(pointerX, pointerY);
-      // A pointer over an editable field can snap the full control.
-      // Keep native focus/selection hit testing unchanged.
-      if (topElement?.closest("[data-liquid-snap='false']")) {
-        activeTarget = null;
-        return null;
-      }
-      const coveringControl = topElement?.closest("button, a, input, textarea, select");
-      for (const candidate of Array.from(root.querySelectorAll<HTMLElement>(SNAP_SELECTOR))) {
-        if (candidate.dataset.powerbidLiquidCursor === "true" || !isEligibleSurface(candidate)) continue;
-        const rect = candidate.getBoundingClientRect();
-        const distance = rectDistance(rect, pointerX, pointerY);
-        if (distance > (candidate === previous ? RELEASE_DISTANCE : SNAP_DISTANCE)) continue;
-        // Never snap to controls obscured by a popover/backdrop or another
-        // interactive element. This also prevents competing nested anchors.
-        if (distance === 0 && topElement && topElement !== candidate && !candidate.contains(topElement)) continue;
-        if (coveringControl && coveringControl !== candidate && !candidate.contains(coveringControl)) continue;
-        const score = distance * 24 + Math.log2(1 + Math.min(rect.width * rect.height, 120000)) -
-          (candidate === previous ? 2.4 : 0);
-        if (score < bestScore) {
-          bestScore = score;
-          next = candidate;
-        }
-      }
-      activeTarget = next;
-      return next;
-    };
-
     const updateTargets = () => {
       if (!snapDirty && !activeTarget) return;
       snapDirty = false;
       const previousTarget = activeTarget;
-      const target = findSnapTarget();
+      const target = resolveSnapTarget(root,previousTarget,pointerX,pointerY,chartLens);
+      activeTarget = target;
       if (target !== previousTarget) {
         rasterDirty = true;
-        roiLockedTarget = null;
+        roi.clearLock();
         if (target) {
           const { width: finalLensWidth, height: finalLensHeight } = getLensBounds(target, pointerX, pointerY);
           // Full-width controls require a full-width capture. A fixed 1200px
           // cap clipped large buttons even after the lens geometry was fixed.
-          snappedRoiWidth = Math.min(
-            window.innerWidth,
-            Math.max(FREE_ROI_SIZE, Math.ceil((finalLensWidth + SNAP_ROI_PADDING * 2) / 16) * 16),
-          );
-          snappedRoiHeight = Math.min(
-            window.innerHeight,
-            Math.max(FREE_ROI_SIZE, Math.ceil((finalLensHeight + SNAP_ROI_PADDING * 2) / 16) * 16),
-          );
+          roi.setSnapDimensions(finalLensWidth,finalLensHeight);
         }
       }
       if (target) {
@@ -935,123 +140,26 @@ export function LiquidGlassCursor() {
       }
     };
 
-    const updateRoi = (lensX: number, lensY: number, lensWidth: number, lensHeight: number) => {
-      const target = activeTarget?.isConnected ? activeTarget : null;
-      // Hold the snapped ROI at its final size for the entire morph and release.
-      // Resizing the backing canvas while width/height springs are moving invalidates
-      // the WebGL texture and was the source of the visible flashing.
-      const holdSnappedRoi =
-        Boolean(target) ||
-        snap.value > 0.025 ||
-        lensWidth > BASE_WIDTH + 4 ||
-        lensHeight > BASE_HEIGHT + 4;
-      const desiredWidth = holdSnappedRoi ? snappedRoiWidth : FREE_ROI_SIZE;
-      const desiredHeight = holdSnappedRoi ? snappedRoiHeight : FREE_ROI_SIZE;
-
-      if (!holdSnappedRoi) {
-        snappedRoiWidth = FREE_ROI_SIZE;
-        snappedRoiHeight = FREE_ROI_SIZE;
-      }
-
-      const boundedWidth = Math.max(1, Math.min(window.innerWidth, desiredWidth));
-      const boundedHeight = Math.max(1, Math.min(window.innerHeight, desiredHeight));
-      if (boundedWidth !== roiWidth || boundedHeight !== roiHeight) {
-        roiWidth = boundedWidth;
-        roiHeight = boundedHeight;
-        if (resizeSurfaces(roiWidth, roiHeight)) {
-          textureReady = false;
-          lastRoiLeft = Number.NaN;
-          lastRoiTop = Number.NaN;
-        }
-        roiLeft = Number.NaN;
-        roiTop = Number.NaN;
-        roiLockedTarget = null;
-        rasterDirty = true;
-      }
-
-      const maxLeft = Math.max(0, window.innerWidth - roiWidth);
-      const maxTop = Math.max(0, window.innerHeight - roiHeight);
-
-      if (target) {
-        // Geometry, hit testing and the DOM raster use viewport coordinates.
-        // getLensBounds already includes CSS translate via getBoundingClientRect;
-        // subtracting magnetic appliedX/Y again shifted the ROI away from the
-        // actual button while the lens kept drawing in its visual position.
-        const bounds = getLensBounds(target, pointerX, pointerY);
-        const nextLeft = Math.round(Math.max(0, Math.min(maxLeft, bounds.centerX - roiWidth / 2)));
-        const nextTop = Math.round(Math.max(0, Math.min(maxTop, bounds.centerY - roiHeight / 2)));
-        // Small hysteresis absorbs half-pixel CSS translation rounding, but
-        // never permits an old 28px offset between capture and visible lens.
-        const recenterThreshold = 2;
-        if (roiLockedTarget !== target || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop) ||
-            Math.abs(nextLeft - roiLeft) > recenterThreshold ||
-            Math.abs(nextTop - roiTop) > recenterThreshold) {
-          roiLeft = nextLeft;
-          roiTop = nextTop;
-          roiLockedTarget = target;
-          rasterDirty = true;
-        }
-        return;
-      }
-
-      roiLockedTarget = null;
-      if (!Number.isFinite(roiLeft) || !Number.isFinite(roiTop)) {
-        roiLeft = Math.round(Math.max(0, Math.min(maxLeft, lensX - roiWidth / 2)));
-        roiTop = Math.round(Math.max(0, Math.min(maxTop, lensY - roiHeight / 2)));
-        rasterDirty = true;
-        return;
-      }
-
-      const halfW = lensWidth / 2;
-      const halfH = lensHeight / 2;
-      const marginX = Math.max(8, Math.min(FREE_ROI_PADDING, (roiWidth - lensWidth) / 2 - 8));
-      const marginY = Math.max(8, Math.min(FREE_ROI_PADDING, (roiHeight - lensHeight) / 2 - 8));
-      const minX = roiLeft + halfW + marginX;
-      const maxX = roiLeft + roiWidth - halfW - marginX;
-      const minY = roiTop + halfH + marginY;
-      const maxY = roiTop + roiHeight - halfH - marginY;
-
-      let nextLeft = roiLeft;
-      let nextTop = roiTop;
-      if (lensX < minX) nextLeft -= Math.max(ROI_DEADZONE, minX - lensX);
-      else if (lensX > maxX) nextLeft += Math.max(ROI_DEADZONE, lensX - maxX);
-      if (lensY < minY) nextTop -= Math.max(ROI_DEADZONE, minY - lensY);
-      else if (lensY > maxY) nextTop += Math.max(ROI_DEADZONE, lensY - maxY);
-
-      nextLeft = Math.round(Math.max(0, Math.min(maxLeft, nextLeft)));
-      nextTop = Math.round(Math.max(0, Math.min(maxTop, nextTop)));
-      if (nextLeft !== roiLeft || nextTop !== roiTop) {
-        roiLeft = nextLeft;
-        roiTop = nextTop;
-        rasterDirty = true;
-      }
-    };
     const uploadTexture = (roiLeft: number, roiTop: number, now: number) => {
       const moved = Math.abs(roiLeft - lastRoiLeft) >= 0.75 || Math.abs(roiTop - lastRoiTop) >= 0.75;
       if (!rasterDirty && !moved) return;
+      // The ROI and the uploaded pixels are an atomic pair: never apply a new
+      // coordinate origin to an old texture. Moving to a new ROI bypasses the
+      // ordinary 32ms stationary-cache throttle.
       const minCaptureInterval = activeTarget ? 16 : 32;
-      if (now - lastCapture < minCaptureInterval) return;
+      if (!moved && !urgentCapture && now - lastCapture < minCaptureInterval) return;
       lastCapture = now;
-      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roiWidth, roiHeight, dpr)) {
+      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roi.state.width, roi.state.height, dpr)) {
         textureReady = false;
         return;
       }
-      try {
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        if (!textureReady) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, capture);
-          textureReady = true;
-        } else {
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, capture);
-        }
-        // Never mark the frame clean until the fresh pixels reached WebGL.
-        lastRoiLeft = roiLeft;
-        lastRoiTop = roiTop;
-        rasterDirty = false;
-      } catch (error) {
-        console.warn("PowerBid liquid cursor texture upload failed:", error);
-        textureReady = false;
-        rasterDirty = true;
+      if (renderer.upload(capture)) {
+        // The sampled ROI always belongs to the pixels actually uploaded.
+        lastRoiLeft = roiLeft;lastRoiTop = roiTop;
+        textureReady = true;rasterDirty = false;
+        urgentCapture = false;
+      } else {
+        textureReady = false;rasterDirty = true;
       }
     };
 
@@ -1065,7 +173,7 @@ export function LiquidGlassCursor() {
     const frame = (now: number) => {
       const dt = Math.min(0.032, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
-      const magneticSettled = updateMagneticTargets(dt);
+      const magneticSettled = magnetism.update(dt);
       updateChartLens();
       updateTargets();
 
@@ -1079,15 +187,16 @@ export function LiquidGlassCursor() {
       stepSpring(pressure, dt, pressed ? 620 : 400, pressed ? 38 : 23);
       const deformation = Math.max(-0.22, Math.min(1.08, pressure.value));
 
-      updateRoi(x.value, y.value, width.value, height.value);
-      uploadTexture(roiLeft, roiTop, now);
+      roi.update(x.value,y.value,width.value,height.value,activeTarget,snap.value);
+      uploadTexture(roi.state.left, roi.state.top, now);
 
-      canvas.style.transform = `translate3d(${roiLeft}px, ${roiTop}px, 0)`;
+      const hasSample = textureReady && Number.isFinite(lastRoiLeft) && Number.isFinite(lastRoiTop);
+      canvas.style.transform = `translate3d(${lastRoiLeft}px, ${lastRoiTop}px, 0)`;
       dot.style.transform = `translate3d(${pointerX - 1.75}px, ${pointerY - 1.75}px, 0)`;
-      canvas.style.opacity = pointerInside && textureReady ? "1" : "0";
+      canvas.style.opacity = pointerInside && hasSample ? "1" : "0";
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
-      if (textureReady) {
+      if (hasSample) {
         const pressWeight = Math.max(0, Math.min(1, deformation));
         const releaseWeight = Math.max(0, -deformation);
         const brandSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home"));
@@ -1107,22 +216,14 @@ export function LiquidGlassCursor() {
           : 1 + 0.055 * snap.value + 0.025 * pressWeight;
         const wobble = chartLens ? 0.025 : brandSurface ? 0.022 + 0.012 * pressWeight : 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
 
-        gl.viewport(0, 0, canvas.width, canvas.height);
-        gl.clearColor(0, 0, 0, 0);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-        gl.useProgram(program);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.uniform1i(uniforms.texture, 0);
-        gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
-        gl.uniform2f(uniforms.lensCenter, (x.value - roiLeft) * dpr, (y.value - roiTop) * dpr);
-        gl.uniform2f(uniforms.lensSize, width.value * dpr * (1 + 0.025 * deformation), height.value * dpr * (1 - 0.085 * deformation));
-        gl.uniform1f(uniforms.strength, strength);
-        gl.uniform1f(uniforms.pinch, pinch);
-        gl.uniform1f(uniforms.aberration, aberration);
-        gl.uniform1f(uniforms.zoom, zoom);
-        gl.uniform1f(uniforms.wobble, wobble);
-        gl.uniform1f(uniforms.time, now / 1000);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        renderer.render({
+          canvasWidth:canvas.width,canvasHeight:canvas.height,
+          x:x.value,y:y.value,
+          width:width.value * (1 + 0.025 * deformation),
+          height:height.value * (1 - 0.085 * deformation),
+          roiLeft:lastRoiLeft,roiTop:lastRoiTop,dpr,
+          strength,pinch,aberration,zoom,wobble,time:now/1000,
+        });
       }
 
       const settled =
@@ -1152,14 +253,14 @@ export function LiquidGlassCursor() {
     // actual on-screen rectangles as well as DOM mutations. The timer checks
     // at ~12Hz but uploads a new texture only when the scene has changed.
     const dynamicSignature = () => {
-      if (!pointerInside || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop)) return "";
+      if (!pointerInside || !Number.isFinite(roi.state.left) || !Number.isFinite(roi.state.top)) return "";
       const parts: string[] = [];
       for (const node of root.querySelectorAll<Element>(DYNAMIC_SCENE_SELECTOR)) {
         if (node.closest("[data-powerbid-liquid-cursor='true']")) continue;
         const st = getComputedStyle(node);
         if (st.display === "none" || st.visibility === "hidden" || Number(st.opacity) < 0.01) continue;
         const r = node.getBoundingClientRect();
-        if (!intersects(r, roiLeft, roiTop, roiWidth, roiHeight)) continue;
+        if (!intersects(r, roi.state.left, roi.state.top, roi.state.width, roi.state.height)) continue;
         parts.push([node.tagName, node.getAttribute("class") || "",
           Math.round(r.left * 4), Math.round(r.top * 4),
           Math.round(r.width * 4), Math.round(r.height * 4),
@@ -1192,9 +293,9 @@ export function LiquidGlassCursor() {
       // endless ROI redraws. Include a generous outer margin so transitions
       // entering the sampled region are still observed.
       const margin = 120;
-      if (Number.isFinite(roiLeft) && Number.isFinite(roiTop) &&
-          !intersects(bounds, roiLeft - margin, roiTop - margin,
-            roiWidth + margin * 2, roiHeight + margin * 2)) return;
+      if (Number.isFinite(roi.state.left) && Number.isFinite(roi.state.top) &&
+          !intersects(bounds, roi.state.left - margin, roi.state.top - margin,
+            roi.state.width + margin * 2, roi.state.height + margin * 2)) return;
       animationWatchUntil = Math.max(animationWatchUntil, performance.now() + 1400);
       rasterDirty = true;
       ensureFrame();
@@ -1205,14 +306,31 @@ export function LiquidGlassCursor() {
       "animationstart", "animationiteration", "animationend", "animationcancel",
     ];
 
+    // Browsers can evict a GPU context after sleep or tab suspension. Avoid
+    // displaying stale pixels, and recreate shaders/textures on restoration.
+    const onContextLost = (event:Event) => {
+      event.preventDefault();
+      textureReady=false;
+      canvas.style.opacity="0";
+      running=false;
+      window.cancelAnimationFrame(raf);
+    };
+    const onContextRestored = () => setContextVersion(version=>version+1);
+    canvas.addEventListener("webglcontextlost",onContextLost);
+    canvas.addEventListener("webglcontextrestored",onContextRestored);
+
     const wake = () => ensureFrame();
     const handlePointerMove = (event: PointerEvent) => {
       pointerX = event.clientX;
       pointerY = event.clientY;
       pointerInside = true;
       snapDirty = true;
-      // A floating tooltip can move even when the ROI itself stays fixed.
-      rasterDirty = true;
+      // Static page pixels do not change when the pointer merely moves.
+      // Chart tooltips are compositor-driven and still need rapid repaint.
+      if (chartLens || event.target instanceof Element &&
+          Boolean(event.target.closest(".recharts-wrapper, .ta-supply-chart, .ta-bars, .ta-gauge-wrap, .pmss-chart"))) {
+        rasterDirty = true;
+      }
       wake();
       watchScene();
     };
@@ -1254,15 +372,14 @@ export function LiquidGlassCursor() {
       pointerInside = true; snapDirty = true; rasterDirty = true; wake(); watchScene();
     };
     const handleScroll = () => {
-      roiLockedTarget = null; rasterDirty = true; snapDirty = true; wake(); watchScene();
+      roi.clearLock(); rasterDirty = true;urgentCapture=true; snapDirty = true; wake(); watchScene();
     };
     // Editing changes input.value without mutating DOM text or attributes.
-    const handleInput = () => { rasterDirty = true; wake(); };
+    const handleInput = () => { rasterDirty = true;urgentCapture=true; wake(); };
     const handleResize = () => {
-      roiLeft = Number.NaN;
-      roiTop = Number.NaN;
-      roiLockedTarget = null;
+      roi.reset();
       rasterDirty = true;
+      urgentCapture = true;
       snapDirty = true;
       wake();
     };
@@ -1274,9 +391,8 @@ export function LiquidGlassCursor() {
         return !el?.closest("[data-powerbid-liquid-cursor='true']");
       });
       if (!updates.length) return;
-      if (updates.some(record => record.type === "childList" ||
-          (record.type === "attributes" && ["class", "type", "aria-hidden", "data-state"].includes(record.attributeName || "")))) {
-        refreshMagneticTargets();
+      if (updates.some(affectsMagneticTargets)) {
+        magnetism.refresh();
         snapDirty = true;
       }
       rasterDirty = true;
@@ -1287,7 +403,7 @@ export function LiquidGlassCursor() {
       childList: true, subtree: true, characterData: true, attributes: true,
       attributeFilter: ["type", "value", "placeholder", "style", "class", "transform",
         "opacity", "fill", "stroke", "d", "x", "y", "cx", "cy", "r",
-        "width", "height", "aria-hidden", "data-state"],
+        "width", "height", "aria-hidden", "data-state", "disabled", "data-liquid-snap"],
     });
     const resizeObserver = new ResizeObserver(() => { rasterDirty = true; snapDirty = true; wake(); });
     resizeObserver.observe(root);
@@ -1314,6 +430,8 @@ export function LiquidGlassCursor() {
 
     return () => {
       window.cancelAnimationFrame(raf);
+      canvas.removeEventListener("webglcontextlost",onContextLost);
+      canvas.removeEventListener("webglcontextrestored",onContextRestored);
       window.clearTimeout(sceneTimer);
       observer.disconnect();
       resizeObserver.disconnect();
@@ -1332,14 +450,10 @@ export function LiquidGlassCursor() {
       window.removeEventListener("pointercancel", handlePointerUp);
       for (const event of sceneAnimationEvents) root.removeEventListener(event, onSceneAnimation, true);
       document.documentElement.classList.remove("powerbid-liquid-cursor-active");
-      for (const element of magneticTargets) element.style.removeProperty("translate");
-      magneticStates.clear();
-      gl.deleteTexture(texture);
-      gl.deleteBuffer(position);
-      gl.deleteBuffer(uv);
-      gl.deleteProgram(program);
+      magnetism.dispose();
+      renderer.dispose();
     };
-  }, []);
+  }, [contextVersion]);
 
   return (
     <>
