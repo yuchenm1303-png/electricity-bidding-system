@@ -43,7 +43,10 @@ def audit_dc_solution(
     """
     if type(period) is not int or not 1 <= period <= 24:
         raise ValueError("period must be an integer in 1..24")
-    if type(load_multiplier) not in (int, float) or not isfinite(load_multiplier) or load_multiplier <= 0:
+    if (
+        type(load_multiplier) not in (int, float)
+        or not isfinite(load_multiplier) or load_multiplier <= 0
+    ):
         raise ValueError("load_multiplier must be finite and positive")
     if set(generation_mw) != set(network.unit_bus):
         raise DcPhysicsError("Generator IDs do not match DC unitBus")
