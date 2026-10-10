@@ -199,6 +199,14 @@
 @media (max-height:740px) and (max-width:820px) {
   .pb-identity-access-center {padding-block:14px;}
 }
+/* Keep the thumb aligned with the compact authentication layout. */
+@media (min-width:821px) and (min-height:600px) {
+  .pb-identity-screen .pb-identity-tabs {--pb-switch-inset:3px;}
+}
+@media (min-width:821px) and (min-height:600px) and (max-height:739px) {
+  .pb-identity-screen .pb-identity-tabs {--pb-switch-inset:2px;}
+  .pb-identity-screen .pb-identity-tabs button {min-height:31px;}
+}
 /* Avoid layout surprises for reduced-motion users. */
 @media (prefers-reduced-motion:reduce) {
   .pb-identity-card,.pb-identity-network {transition:none!important;}
