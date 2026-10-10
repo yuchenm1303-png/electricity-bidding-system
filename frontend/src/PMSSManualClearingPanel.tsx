@@ -1,7 +1,8 @@
 import { useState, type ChangeEvent } from "react";
 import { Download, FileJson2, ShieldCheck, UploadCloud } from "lucide-react";
 import { reviewManuallyImportedPMSSResult } from "./api";
-import { csvExport, numeric, type PMSSManualClearingReview, type PMSSOptimization } from "./types";
+import { csvExport, numeric, type PMSSManualClearingReview } from "./types";
+import type { PMSSBidProposal } from "./pmssBiddingFlow";
 
 /**
  * Workflow intentionally ends at a HUMAN handoff. We have no authorized PMSS
@@ -9,11 +10,12 @@ import { csvExport, numeric, type PMSSManualClearingReview, type PMSSOptimizatio
  * unless an operator explicitly makes that UNVERIFIED assertion.
  */
 export function PMSSManualClearingPanel({
-  snapshot, caseDate, analysis,
+  snapshot, caseDate, proposal, onReviewed,
 }: {
   snapshot: Record<string, unknown>;
   caseDate: string;
-  analysis: PMSSOptimization;
+  proposal: PMSSBidProposal;
+  onReviewed?: (review: PMSSManualClearingReview | null) => void;
 }) {
   const [confirmation, setConfirmation] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -25,7 +27,7 @@ export function PMSSManualClearingPanel({
     // The local solver uses the SAME curve at each hour. A CSV with 24*5
     // rows is for human transcription and checking, NEVER direct submission.
     const rows = Array.from({length: 24}, (_, hour) =>
-      analysis.recommended.segments.map((segment, i) => [
+      proposal.segments.map((segment, i) => [
         hour + 1, i + 1, segment.start_power, segment.end_power, segment.price,
       ]),
     ).flat();
@@ -41,6 +43,7 @@ export function PMSSManualClearingPanel({
     event.target.value = "";
     setFile("");
     setReview(null);
+    onReviewed?.(null);
     setError("");
     if (!input) return;
     if (!confirmation) {
@@ -68,7 +71,7 @@ export function PMSSManualClearingPanel({
         throw new Error("出清文件日期与当前研究案例不同，请重新选择正确的结果");
       }
       const compared = await reviewManuallyImportedPMSSResult(
-        snapshot, analysis.target_unit_id, analysis.recommended.segments,
+        snapshot, proposal.targetUnitId, proposal.segments,
         dated, results as Record<string, unknown>, true,
       );
       if (compared.pmss_write_performed !== false ||
@@ -78,6 +81,7 @@ export function PMSSManualClearingPanel({
         throw new Error("服务器未正确声明数据关联与出清来源的限制");
       }
       setReview(compared);
+      onReviewed?.(compared);
       setFile(input.name);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "出清结果检查失败");
@@ -89,7 +93,7 @@ export function PMSSManualClearingPanel({
   return <div className="pmss-panel" aria-label="报价至老师出清结果的人工交接">
     <div className="pmss-panel-head">
       <div>
-        <small>04 / REAL RESULT HANDOFF</small>
+        <small>05-07 / MANUAL RESULT HANDOFF</small>
         <h3>报价与老师出清结果 · 人工交接</h3>
         <p>先在 PowerBid 检查并导出五段报价建议；经老师授权，在其平台人工确认提交及执行课程规定的出清流程；最后把同日的脱敏出清结果导回本页面。</p>
       </div>
@@ -103,7 +107,7 @@ export function PMSSManualClearingPanel({
     </div>
     <div className="pmss-privacy">
       <FileJson2 size={17}/>
-      当前机组 {analysis.target_unit_id} · {caseDate || "日期未标明"} ·
+      当前机组 {proposal.targetUnitId} · {caseDate || "日期未标明"} ·
       <strong> 1–24 时段使用同一条五段曲线</strong>，并不是每小时独立优化的24条曲线。
       请使用上方「下载审核 JSON」记录分段、价格和 MW 边界。
       该文件仅供人工核对，不是老师平台可直接提交的API报文。
@@ -124,7 +128,7 @@ export function PMSSManualClearingPanel({
     </div>
     <label className="pmss-footnote">
       <input type="checkbox" checked={confirmation}
-        onChange={event => {setConfirmation(event.target.checked);setReview(null);setFile("");}}
+        onChange={event => {setConfirmation(event.target.checked);setReview(null);onReviewed?.(null);setFile("");}}
         aria-label="我已人工确认该出清结果对应本次已提交的报价"/>
       {" "}我已在老师平台人工确认提交该次报价，并确认将导入的结果与本次方案人工关联。
       我理解 PowerBid 无法独立验证老师平台是否真的使用了这份推荐报价。

@@ -88,7 +88,7 @@ function WorkspaceHeader({ view, onRun, running, onReset, onToggleSettings, sett
     trials: ["试算明细", "完整记录每个候选报价的市场出清结果"],
   };
   return <div className="workspace-header">
-    <div className="workspace-heading"><div className="crumbs"><span>工作空间</span><ChevronRight size={13}/><span>{label[view][0]}</span></div>
+    <div className="workspace-heading pb-route-heading" key={view}><div className="crumbs"><span>工作空间</span><ChevronRight size={13}/><span>{label[view][0]}</span></div>
       <h1>{label[view][0]}</h1><p>{label[view][1]}</p></div>
     <div className="header-actions">
       {view !== "pmss" && <>
@@ -172,6 +172,7 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [config, setConfig] = useState<Settings | null>(null);
   const [view, setView] = useState<WorkspaceView>("workspace");
+  const [viewDirection, setViewDirection] = useState<"forward"|"backward">("forward");
   const [report, setReport] = useState<Report | null>(null);
   const [reportSignature, setReportSignature] = useState("");
   const [error, setError] = useState("");
@@ -233,10 +234,14 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
     if (config) update({ ...config, mode });
   };
   const changeView = (next: WorkspaceView) => {
+    if (next === view) { setMobileNav(false); return; }
+    const currentIndex = navigation.findIndex(item => item.id === view);
+    const nextIndex = navigation.findIndex(item => item.id === next);
+    setViewDirection(nextIndex >= currentIndex ? "forward" : "backward");
     if (next === "pmss") setPmssVisited(true);
     setView(next);
     setMobileNav(false);
-    document.querySelector(".app-main")?.scrollTo({ top: 0, behavior: "auto" });
+    document.querySelector(".app-main")?.scrollTo({ top: 0, behavior: "instant" });
     if (next === "risk" && config && config.mode !== "risk") setMode("risk");
   };
   const reset = () => {
@@ -245,7 +250,9 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
     setReport(null);
     setReportSignature("");
     setError("");
+    setViewDirection("backward");
     setView("workspace");
+    document.querySelector(".app-main")?.scrollTo({top:0,behavior:"instant"});
   };
   const run = useCallback(async () => {
     if (!config || running) return;
@@ -320,7 +327,7 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
         <WorkspaceHeader view={view} onRun={() => void run()} running={running} onReset={reset}
           onToggleSettings={toggleSettings} settingsHidden={settingsHidden} disabled={!!validationError}/>
         {view !== "pmss" && validationError && <div className="validation-banner"><CircleHelp size={15}/>{validationError}</div>}
-        <div className="view-stage" key={view}>
+        <div className="view-stage" key={view} data-motion-direction={viewDirection} data-workspace-view={view}>
         {view === "workspace" && <>
           <DashboardOverview offers={config.offers} demand={config.demand_mw}
             targetId={config.target_unit_id} report={report}
@@ -355,7 +362,7 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
         </>}
         {view === "trials" && <TrialDetails report={report} analyzedSettings={analyzedSettings}/>}
         </div>
-        {pmssVisited && <div className="pmss-persistent-stage" style={{display:view === "pmss" ? "block" : "none"}}>
+        {pmssVisited && <div className="pmss-persistent-stage" data-motion-direction={viewDirection} data-active={view === "pmss" ? "true" : "false"} style={{display:view === "pmss" ? "block" : "none"}}>
           <PMSSWorkspace/>
         </div>}
         <footer className="app-footer"><span>POWERBID STUDIO · 市场策略研究</span><span>Simulation only · Not for live trading</span></footer>

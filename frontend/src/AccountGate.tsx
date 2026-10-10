@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
-  Activity, ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2,
+  Activity, ArrowLeft, ArrowRight, ArrowUpRight, BarChart3, Check, CheckCircle2, Database,
   ChevronRight, Eye, EyeOff, Fingerprint, Github, LockKeyhole, Mail,
   Search, Shield, ShieldCheck, UserRound, Users,
   UserX, X,
@@ -14,6 +14,7 @@ import "./account-portal-polish.css";
 import "./account-buttons.css";
 import "./icon-interactions.css";
 import "./account-one-screen.css";
+import "./account-premium.css";
 
 export type AccountUser = {
   id: number;
@@ -179,16 +180,45 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
           <h1>让每一次报价，<br/><em>都有迹可循。</em></h1>
           <p>从电力市场仿真到策略分析，<br/>在同一个空间，连接数据与决策。</p>
           <div className="pb-identity-network" aria-hidden="true">
-            <svg viewBox="0 0 510 210" fill="none" role="presentation">
-              <path d="M18 141L104 75L197 119L284 43L389 90L485 27M18 141L148 187L197 119L389 90L446 179M104 75L284 43L446 179L485 27" stroke="currentColor" strokeWidth="1.1" strokeOpacity=".42"/>
-              <path d="M18 141L104 75L197 119L284 43L389 90L485 27" stroke="#9BAAFF" strokeWidth="1.3" strokeDasharray="5 9" opacity=".7"/>
-              {[ [18,141],[104,75],[197,119],[284,43],[389,90],[485,27],[148,187],[446,179] ].map(([x,y],i)=>
-                <g key={i}><circle cx={x} cy={y} r={i===3?8:5} fill="#6678E9" opacity=".17"/><circle cx={x} cy={y} r={i===3?3.8:2.6} fill="#B5C3FF"/></g>)}
+            <div className="pb-identity-network-heading">
+              <span className="pb-identity-network-title"><Activity size={14} strokeWidth={1.8}/> POWER FLOW <span className="pb-network-separator">/</span> GRID TOPOLOGY</span>
+              <span className="pb-identity-network-tag"><i/> MODEL VIEW</span>
+            </div>
+            <svg className="pb-identity-network-graph" viewBox="0 0 560 206" fill="none" role="presentation">
+              <defs>
+                <linearGradient id="pb-network-link" x1="20" y1="42" x2="525" y2="190" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#547DBA" stopOpacity=".32"/>
+                  <stop offset=".56" stopColor="#A0B9FE" stopOpacity=".7"/>
+                  <stop offset="1" stopColor="#6384C7" stopOpacity=".32"/>
+                </linearGradient>
+                <radialGradient id="pb-network-halo">
+                  <stop stopColor="#9BB9FF" stopOpacity=".32"/>
+                  <stop offset="1" stopColor="#9BB9FF" stopOpacity="0"/>
+                </radialGradient>
+              </defs>
+              <g className="pb-identity-network-grid">
+                {[52,111,170,229,288,347,406,465,524].map(x=><path key={"x"+x} d={`M${x} 7V202`}/>)}
+                {[30,70,110,150,190].map(y=><path key={"y"+y} d={`M7 ${y}H553`}/>)}
+              </g>
+              <path className="pb-identity-network-link" d="M30 137L120 81L211 124L306 44L404 94L518 50M30 137L172 179L211 124L475 179L518 50M120 81L306 44L475 179M211 124L404 94L475 179M306 44L404 94"/>
+              <path className="pb-identity-network-primary" d="M30 137L120 81L211 124L306 44L404 94L518 50"/>
+              <path className="pb-identity-network-flow" d="M30 137L120 81L211 124L306 44L404 94L518 50"/>
+              {[[30,137],[120,81],[211,124],[306,44],[404,94],[518,50],[172,179],[475,179]].map(([x,y],i)=>
+                <g key={i} className={i===3 || i===4 ? "pb-identity-network-node is-active" : "pb-identity-network-node"}>
+                  <circle className="pb-identity-network-aura" cx={x} cy={y} r={i===3?20:15} fill="url(#pb-network-halo)"/>
+                  <circle className="pb-identity-network-node-ring" cx={x} cy={y} r={i===3?6.8:5.2}/>
+                  <circle className="pb-identity-network-node-core" cx={x} cy={y} r={i===3?3.1:2.4}/>
+                </g>)}
             </svg>
-            <div className="pb-identity-network-caption"><Activity size={13}/> POWER FLOW / CONNECTED NODES</div>
+            <div className="pb-identity-network-footer">
+              <span>节点连接 · 策略推演示意</span>
+              <span className="pb-identity-network-signal"><i/><i/><i/> SIGNAL PATHS</span>
+            </div>
           </div>
           <div className="pb-identity-story-trails" aria-label="研究流程">
-            <span><i/> 数据洞察</span><span><i/> 策略推演</span><span><i/> 情景评估</span>
+            <div className="pb-identity-story-feature"><span className="pb-identity-feature-icon"><Database size={17} strokeWidth={1.7}/></span><span><strong>数据洞察</strong><small>发现市场规律</small></span></div>
+            <div className="pb-identity-story-feature"><span className="pb-identity-feature-icon"><BarChart3 size={17} strokeWidth={1.7}/></span><span><strong>策略推演</strong><small>比较报价方案</small></span></div>
+            <div className="pb-identity-story-feature"><span className="pb-identity-feature-icon"><Activity size={17} strokeWidth={1.7}/></span><span><strong>情景评估</strong><small>辅助合理决策</small></span></div>
           </div>
         </div>
         <div className="pb-identity-story-footer"><span>电力报价系统 · 小组作业</span><span>EST. 2026 <span className="pb-identity-footer-dot"/> SYSTEM ONLINE</span></div>
