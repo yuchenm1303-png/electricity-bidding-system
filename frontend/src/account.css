@@ -46,9 +46,9 @@
 .pb-identity-kicker{font-size:10px;font-weight:760;letter-spacing:.2em;color:#879cec}
 .pb-identity-card h2{margin:13px 0 10px;font-size:clamp(28px,2.8vw,38px);font-weight:700;letter-spacing:-.058em;line-height:1.25}
 .pb-identity-lead{color:#91a2c1;font-size:13px;line-height:1.7;margin:0 0 32px}
-.pb-identity-tabs{display:grid;grid-template-columns:1fr 1fr;padding:4px;gap:5px;margin-bottom:27px;border-radius:12px;border:1px solid rgba(148,165,208,.16);background:rgba(20,32,51,.72)}
-.pb-identity-tabs button{border:0;border-radius:8px;background:transparent;color:#8798b7;font-size:12px;font-weight:660;padding:11px;cursor:pointer;transition:background .2s,color .2s}
-.pb-identity-tabs button.selected{background:#283955;color:#eef3ff;box-shadow:0 2px 9px #070e1a55}
+.pb-identity-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:4px;gap:5px;margin-bottom:27px}
+.pb-identity-tabs button{border:0;background:transparent;color:#8798b7;font-size:12px;font-weight:660;padding:11px;cursor:pointer}
+.pb-identity-tabs button.selected{color:#eef3ff}
 .pb-identity-form{display:flex;flex-direction:column;gap:19px}
 .pb-identity-field{display:flex;flex-direction:column;gap:9px}
 .pb-identity-field label{font-size:12px;letter-spacing:.01em;font-weight:650;color:#c8d4eb}
