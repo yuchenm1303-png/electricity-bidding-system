@@ -1,0 +1,277 @@
+/* PowerBid icon micro-interactions
+   Every gesture conveys an action. The site's existing page transitions,
+   button surfaces, restored solid topbar and LiquidGlassCursor are untouched.
+   Hover effects only run with a precise pointer; keyboard focus has
+   an equivalent, restrained state. Never animate SVG graphs or chart data. */
+
+:root {
+  --pb-icon-ease: cubic-bezier(.2,.85,.25,1);
+  --pb-icon-spring: cubic-bezier(.2,1.3,.35,1);
+  --pb-icon-speed: 380ms;
+}
+/* Only Lucide pictograms are eligible, not charts, SVG backdrops or cursor. */
+.app :is(button,a,.ta-stat-icon,.ta-card-icon,.ta-card-tag,.report-empty-art,.simulation-note) > svg.lucide,
+.app :is(button,a,.ta-stat-icon,.ta-card-icon,.ta-card-tag,.report-empty-art,.simulation-note) > span > svg.lucide,
+.pb-landing :is(button,a,.pb-feature-icon,.pb-wide-icon,.pb-intro-mark,.pb-lab-hint) svg.lucide,
+.pb-identity-screen :is(button,a,.pb-identity-emblem) svg.lucide,
+.pb-identity-overlay :is(button,a,.pb-identity-emblem) svg.lucide {
+  transform-origin:center;
+  transition: transform var(--pb-icon-speed) var(--pb-icon-spring),
+              color 230ms ease, opacity 230ms ease, filter 230ms ease;
+}
+/* A minimal color/intensity change creates tactile feedback without blooming. */
+@media (hover:hover) and (pointer:fine) {
+  .app :is(.ta-header-icon,.ta-menu-toggle,.icon-button,.sidebar-collapse,
+      .pb-account-trigger,.pb-identity-close):hover > svg.lucide {
+    filter:brightness(1.12);
+  }
+}
+
+/* Navigation: distinctive gestures based on each symbol's meaning. */
+.app .nav-entry svg.lucide {
+  transform-origin:center;
+  transition:transform 450ms var(--pb-icon-spring),filter 240ms ease,color 240ms ease;
+}
+@media (hover:hover) and (pointer:fine) {
+  .app .nav-entry[data-icon-motion="workspace"]:hover svg.lucide {
+    transform:scale(1.16) rotate(-4deg);
+  }
+  .app .nav-entry[data-icon-motion="units"]:hover svg.lucide {
+    transform:translateY(-3px) rotate(-8deg);
+  }
+  .app .nav-entry[data-icon-motion="pmss"]:hover svg.lucide {
+    transform:rotate(13deg) scale(1.13);
+  }
+  .app .nav-entry[data-icon-motion="analysis"]:hover svg.lucide {
+    transform:translate(3px,-3px) scale(1.11);
+  }
+  .app .nav-entry[data-icon-motion="risk"]:hover svg.lucide {
+    animation:pb-pictogram-heartbeat 590ms ease-in-out both;
+  }
+  .app .nav-entry[data-icon-motion="trials"]:hover svg.lucide {
+    transform:translateY(-3px) rotate(4deg);
+  }
+  .app .nav-entry[data-icon-motion="external"]:hover svg.lucide {
+    transform:translate(3px,-3px);
+  }
+  .app .nav-entry:not(.active):hover svg.lucide {
+    filter:drop-shadow(0 2px 6px rgba(111,136,242,.2));
+  }
+}
+/* active icon settles once after selecting a section; no persistent wiggle. */
+.app .nav-entry.active svg.lucide {
+  animation:pb-pictogram-selected 390ms var(--pb-icon-spring) both;
+}
+.app .nav-entry[data-icon-motion="workspace"]:focus-visible svg.lucide {transform:scale(1.1)}
+.app .nav-entry[data-icon-motion="units"]:focus-visible svg.lucide {transform:translateY(-2px)}
+.app .nav-entry[data-icon-motion="pmss"]:focus-visible svg.lucide {transform:rotate(8deg)}
+.app .nav-entry[data-icon-motion="analysis"]:focus-visible svg.lucide {transform:translate(2px,-2px)}
+.app .nav-entry[data-icon-motion="risk"]:focus-visible svg.lucide {transform:scale(1.1)}
+.app .nav-entry[data-icon-motion="trials"]:focus-visible svg.lucide {transform:translateY(-2px)}
+.app .nav-entry[data-icon-motion="external"]:focus-visible svg.lucide {transform:translate(2px,-2px)}
+
+/* Topbar: restored SOLID header. Only icon motion is edited here. */
+@media (hover:hover) and (pointer:fine) {
+  .app :is(.ta-header-icon,.icon-button):hover .lucide-sun {
+    transform:rotate(75deg) scale(1.13);
+  }
+  .app :is(.ta-header-icon,.icon-button):hover .lucide-moon {
+    transform:rotate(-16deg) scale(1.12);
+  }
+  .app :is(.ta-header-icon,.icon-button,.settings-toggle):hover .lucide-sliders-horizontal,
+  .app :is(.ta-header-icon,.icon-button):hover .lucide-settings-2 {
+    transform:translateY(-1px) scale(1.13);
+  }
+  .app :is(.ta-menu-toggle,.sidebar-collapse,.icon-button):hover .lucide-menu {
+    transform:scaleX(.83) scaleY(1.08);
+  }
+  .app .ta-global-search:hover > .lucide-search {
+    transform:scale(1.10) rotate(-9deg);
+  }
+  .app .ta-global-search:focus-within > .lucide-search {
+    transform:scale(1.13) rotate(-12deg);
+  }
+  .app :is(.pb-account-trigger,.pb-account-menu):hover .lucide-chevron-down {
+    transform:translateY(2px) rotate(180deg);
+  }
+}
+.app :is(.ta-header-icon,.icon-button):focus-visible .lucide-sun {transform:rotate(45deg)}
+.app :is(.ta-header-icon,.icon-button):focus-visible .lucide-moon {transform:rotate(-13deg)}
+/* Differing use cases: refresh spins, play advances, settings slide. */
+@media (hover:hover) and (pointer:fine) {
+  .app .reset-button:hover .lucide-rotate-ccw,
+  .pb-landing .pb-lab-reset:hover:not(:disabled) .lucide-rotate-ccw {
+    transform:rotate(-95deg);
+  }
+  .app :is(.run-button,.guide-action):hover:not(:disabled) .lucide-play {
+    transform:translateX(3px) scale(1.16);
+  }
+  .app :is(.settings-toggle,.ta-header-icon):hover .lucide-panel-right-open,
+  .app :is(.settings-toggle,.ta-header-icon):hover .lucide-panel-right-close {
+    transform:translateX(2px) scale(1.08);
+  }
+  .app :is(.primary-button,.outline-button,.secondary-button,.subtle-button,
+      .guide-action,.ghost-cta,.ta-report-link,.pmss-run-button,
+      .pmss-import-button,.pmss-result-toolbar button):hover:not(:disabled)
+      :is(.lucide-arrow-right,.lucide-chevron-right) {
+    transform:translateX(4px);
+  }
+  .app :is(.primary-button,.outline-button,.secondary-button,.subtle-button,
+      .ta-report-link,.pmss-result-toolbar button):hover:not(:disabled)
+      :is(.lucide-arrow-up-right,.lucide-move-up-right,.lucide-external-link) {
+    transform:translate(3px,-3px);
+  }
+  .app :is(.primary-button,.outline-button,.secondary-button,.subtle-button,
+      .pmss-import-button,.pmss-result-toolbar button):hover:not(:disabled)
+      :is(.lucide-download,.lucide-upload-cloud) {
+    transform:translateY(3px) scale(1.09);
+  }
+  .app :is(.row-action,.table-toolbar button):hover:not(:disabled) .lucide-trash-2 {
+    animation:pb-pictogram-delete 470ms ease-in-out both;
+  }
+  .app :is(.add-unit-button,.table-toolbar button):hover:not(:disabled) .lucide-plus {
+    transform:rotate(90deg) scale(1.17);
+  }
+  .app :is(button,.ta-report-link):hover:not(:disabled) .lucide-check {
+    transform:scale(1.18);
+  }
+}
+.app .run-button.is-running svg {animation:none!important}
+.app .run-button:disabled svg,.app button:disabled svg {transform:none!important;animation:none!important}
+
+/* Chart and status illustrations: movement stays inside their slots. */
+.app .ta-stat-icon,.app .ta-card-icon {
+  transition:background-color 240ms ease,border-color 240ms ease,color 240ms ease;
+}
+@media (hover:hover) and (pointer:fine) {
+  .app .ta-stat-card:first-child:hover .ta-stat-icon svg.lucide {
+    animation:pb-pictogram-heartbeat 650ms ease-out both;
+  }
+  .app .ta-stat-card:nth-child(2):hover .ta-stat-icon svg.lucide {
+    transform:translateY(-3px) rotate(-7deg) scale(1.09);
+  }
+  .app .ta-capacity:hover .ta-card-icon svg.lucide {
+    transform:rotate(17deg) scale(1.12);
+  }
+  .app .ta-chart-card:hover .ta-card-tag svg.lucide {
+    transform:translateY(-2px) scale(1.10);
+  }
+  .app .simulation-note:hover svg.lucide {
+    transform:scale(1.13) rotate(-7deg);
+  }
+  .app .result-ready:hover .recommendation-foot svg.lucide {transform:scale(1.14)}
+  .app .report-empty:hover .report-empty-art svg.lucide {transform:translateY(-2px)}
+}
+/* Icon hover is bounded and not running by default. */
+
+/* Landing: move arrows along their intended direction, not arbitrary rotations. */
+@media (hover:hover) and (pointer:fine) {
+  .pb-landing :is(.pb-header-cta,.pb-button-main,.pb-mobile-enter,
+      .pb-mobile-auth-entry,.pb-finale-bottom a):hover .lucide-arrow-up-right {
+    transform:translate(3px,-3px);
+  }
+  .pb-landing :is(.pb-text-link,.pb-hero-bottom a):hover .lucide-arrow-down {
+    transform:translateY(4px);
+  }
+  .pb-landing .pb-feature-main:hover .pb-feature-icon svg.lucide {
+    transform:scale(1.15) translateX(2px);
+  }
+  .pb-landing .pb-feature-side:hover .pb-feature-icon svg.lucide {
+    transform:rotate(18deg) scale(1.12);
+  }
+  .pb-landing .pb-feature-wide:hover .pb-wide-icon svg.lucide {
+    transform:translateY(-3px) rotate(-7deg);
+  }
+  .pb-landing .pb-intro-mark:hover svg.lucide {
+    transform:rotate(27deg) scale(1.11);
+  }
+  .pb-landing .pb-flow-step:hover .lucide-chevron-right {
+    transform:translateX(4px);
+  }
+  .pb-landing .pb-lab-stepper button:not(:disabled):hover .lucide-plus {
+    transform:rotate(90deg) scale(1.14);
+  }
+  .pb-landing .pb-lab-stepper button:not(:disabled):hover .lucide-minus {
+    transform:scaleX(1.24);
+  }
+  .pb-landing .pb-menu-toggle:hover .lucide-menu {
+    transform:scaleX(.83);
+  }
+  .pb-landing .pb-menu-toggle:hover .lucide-x {
+    transform:rotate(90deg);
+  }
+  .pb-landing .pb-lab-hint:hover .lucide-mouse-pointer-2 {
+    transform:translate(2px,-2px) rotate(-8deg);
+  }
+}
+.pb-landing .pb-flow-step:focus-visible .lucide-chevron-right {transform:translateX(3px)}
+.pb-landing button:disabled svg.lucide {
+  animation:none!important;transform:none!important;filter:none!important;
+}
+
+/* Login/register and administration: trust, identity, actions. */
+@media (hover:hover) and (pointer:fine) {
+  .pb-identity-screen .pb-identity-card:hover .pb-identity-emblem .lucide-fingerprint {
+    transform:scale(1.14) rotate(-5deg);
+  }
+  .pb-identity-screen .pb-identity-eye:hover :is(.lucide-eye,.lucide-eye-off) {
+    transform:scale(1.16);
+  }
+  .pb-identity-screen .pb-identity-primary:hover:not(:disabled) .lucide-arrow-right,
+  .pb-identity-screen .pb-identity-primary:hover:not(:disabled) .lucide-arrow-up-right {
+    transform:translateX(4px);
+  }
+  .pb-identity-screen .pb-identity-back:hover .lucide-arrow-left {
+    transform:translateX(-4px);
+  }
+  .pb-identity-screen .pb-social-button:not(.is-disabled):hover .lucide-github {
+    transform:rotate(-11deg) scale(1.10);
+  }
+  .pb-identity-screen .pb-social-button:not(.is-disabled):hover .lucide-shield-check {
+    transform:scale(1.11);
+  }
+  .pb-identity-overlay :is(.pb-identity-close,.pb-identity-secondary-full):hover:not(:disabled) .lucide-x {
+    transform:rotate(90deg);
+  }
+  .pb-identity-overlay :is(.pb-identity-close,.pb-identity-secondary-full):hover:not(:disabled) .lucide-arrow-up-right {
+    transform:translate(3px,-3px);
+  }
+  .pb-identity-overlay :is(.pb-identity-table-action,.pb-identity-confirm-actions button):hover:not(:disabled) .lucide-user-x {
+    transform:translateX(2px) rotate(-7deg);
+  }
+  .pb-identity-overlay .pb-identity-admin-search:focus-within .lucide-search {
+    transform:scale(1.12) rotate(-9deg);
+  }
+}
+.pb-identity-screen .pb-identity-eye:focus-visible svg.lucide {transform:scale(1.13)}
+/* Never animate disabled OAuth/submit, and never keep animated traces in menus. */
+.pb-identity-screen :is(.is-disabled,:disabled) svg.lucide,
+.pb-identity-overlay :disabled svg.lucide {animation:none!important;transform:none!important}
+
+/* Semi-semantic feedback for SVG strokes only on interactive pictograms.
+   Unlike a universal SVG selector this cannot touch charts or the cursor. */
+@keyframes pb-pictogram-heartbeat {
+  0%,100% {transform:scale(1)}
+  25% {transform:scale(1.17)}
+  51% {transform:scale(.94)}
+  77% {transform:scale(1.08)}
+}
+@keyframes pb-pictogram-selected {
+  0% {transform:translateY(2px) scale(.93)}
+  65% {transform:translateY(-1px) scale(1.09)}
+  100% {transform:translateY(0) scale(1)}
+}
+@keyframes pb-pictogram-delete {
+  0%,100% {transform:rotate(0)}
+  26% {transform:rotate(-10deg)}
+  63% {transform:rotate(6deg)}
+}
+@media(prefers-reduced-motion:reduce) {
+  .app svg.lucide,
+  .pb-landing svg.lucide,
+  .pb-identity-screen svg.lucide,
+  .pb-identity-overlay svg.lucide {
+    animation:none!important;transition:none!important;transform:none!important;
+    filter:none!important;
+  }
+}
