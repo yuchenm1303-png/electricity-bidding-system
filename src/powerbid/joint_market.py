@@ -17,6 +17,8 @@ from math import isfinite
 from typing import Literal
 
 from powerbid.network_dispatch import DcNetwork
+from powerbid.network_integrity import audit_dc_solution
+from powerbid.joint_solution_integrity import audit_joint_schedule
 from powerbid.network_strategy import verify_network_inputs
 from powerbid.pmss_integration import PeriodBid, PMSSSnapshot, curve_for_period
 from powerbid.unit_commitment import TerminalMode, ThermalConstraints
@@ -120,6 +122,8 @@ def joint_clear_day(
             raise ValueError("Initial unit on/off status must be an actual boolean")
         if spec.max_mw > snapshot.unit(ident).capacity_mw + 1e-7:
             raise ValueError(f"{ident}: technical maximum exceeds snapshot capacity")
+        if spec.min_mw + 1e-7 < snapshot.unit(ident).min_power_mw:
+            raise ValueError(f"{ident}: technical minimum below PMSS snapshot minimum")
     if target_mwh_extreme not in (None, "minimum", "maximum"):
         raise ValueError("target_mwh_extreme must be minimum, maximum or None")
     if any(
@@ -413,6 +417,21 @@ def joint_clear_day(
             bool(round(projected.x[commitment[t, target_unit_id][0]]))
             for t in range(24)
         )
+        # Independently verify the complete projected network solution,
+        # not only the objective-cost cap and target MWh.
+        for t in range(24):
+            dispatch = {
+                gen: sum(max(0.0, float(projected.x[idx])) for idx in blocks[t, gen])
+                for gen in units
+            }
+            flows = {
+                line.line_id: float(projected.x[flow_vars[t, line.line_id]])
+                for line in network.lines
+            }
+            audit_dc_solution(
+                network, dispatch, flows, t + 1,
+                load_multiplier=demand_multiplier,
+            )
         return JointMwhExtreme(
             target_unit_id=target_unit_id,
             direction=target_mwh_extreme,
@@ -488,6 +507,14 @@ def joint_clear_day(
                 transition_cost=float(transitions),
             )
         )
+    # Independent model audit: nodal KCL, all line MW ratings, DC angle
+    # consistency, interhour ramps and explicit binary transitions.
+    for hour in hours:
+        audit_dc_solution(
+            network, hour.accepted_by_unit, hour.line_flows_mw, hour.period,
+            load_multiplier=demand_multiplier,
+        )
+    audit_joint_schedule(technical, hours, terminal_mode=terminal_mode)
     total_bid = sum(row.bid_energy_cost for row in hours)
     total_transition = sum(row.transition_cost for row in hours)
     if abs(total_bid + total_transition - continuous.fun) > max(
