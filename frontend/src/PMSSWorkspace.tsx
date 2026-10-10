@@ -138,6 +138,9 @@ export function PMSSWorkspace() {
       setBusy(false); setActiveTask(null);
     }
   };
+  const chooseUnit = (unitId: string) => {
+    setTarget(unitId); setAnalysis(null); setNetworkResult(null); setRankResult(null);
+  };
   const onFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -275,6 +278,18 @@ export function PMSSWorkspace() {
         <Metric label="日前负荷峰值" value={numeric(Math.max(...inspection.load_mw), 2) + " MW"} detail="历史场景输入，并非未来预测"/>
         <Metric label="节点电价" value={network ? String(network.node_count) + " 个" : "未包含"} detail="24小时历史 LMP"/>
         <Metric label="线路潮流" value={network ? String(network.branch_count) + " 条" : "未包含"} detail="已出清支路数据"/>
+      </div>
+      <div className="pmss-market-context">
+        <div><span>当前研究对象</span><strong>{fileName || "已校验的历史市场快照"}</strong>
+          <small>切换机组会清除旧机组的本地优化结果，保留所选案例</small></div>
+        <label>目标机组
+          <select value={target} disabled={busy || networkBusy || rankBusy}
+            onChange={e => chooseUnit(e.target.value)}>
+            {inspection.units.map(unit => <option key={unit.unit_id} value={unit.unit_id}>
+              {unit.name || unit.unit_id} · {unit.unit_id}
+            </option>)}
+          </select>
+        </label>
       </div>
       <div className="pmss-privacy">
         <ShieldCheck size={17}/>
@@ -530,7 +545,7 @@ export function PMSSWorkspace() {
           <span className="pmss-state-label">本地模拟</span>
         </div>
         <div className="pmss-controls">
-          <label>目标机组<select disabled={busy || networkBusy} value={target} onChange={e => {setTarget(e.target.value);setAnalysis(null);setNetworkResult(null);setRankResult(null);}}>
+          <label>目标机组<select disabled={busy || networkBusy} value={target} onChange={e => chooseUnit(e.target.value)}>
             {inspection.units.map(item => <option key={item.unit_id} value={item.unit_id}>{item.name}</option>)}
           </select></label>
           <label>最低报价<input type="number" disabled={busy || networkBusy} min="0" max="10000" value={minimum} onChange={e => {setMinimum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);}}/></label>
