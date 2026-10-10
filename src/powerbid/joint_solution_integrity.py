@@ -58,7 +58,9 @@ def audit_joint_schedule(
             if started or stopped:
                 required = spec.min_up_hours if previous_on else spec.min_down_hours
                 if elapsed < required:
-                    raise JointPhysicsError(f"Hour {index}: {unit_id} violates minimum state duration")
+                    raise JointPhysicsError(
+                        f"Hour {index}: {unit_id} violates minimum state duration"
+                    )
                 if started and mw > spec.startup_ramp_mw + tol:
                     raise JointPhysicsError(f"Hour {index}: {unit_id} violates startup ramp")
                 if stopped and previous_mw > spec.shutdown_ramp_mw + tol:
