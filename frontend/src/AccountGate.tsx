@@ -13,6 +13,7 @@ import "./account.css";
 import "./account-portal-polish.css";
 import "./account-buttons.css";
 import "./icon-interactions.css";
+import "./account-one-screen.css";
 
 export type AccountUser = {
   id: number;
@@ -126,7 +127,7 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
       setBusy(false);
     }
   };
-  return <main className="pb-identity-screen">
+  return <main className="pb-identity-screen" data-auth-view={isRegister ? "register" : "login"}>
     <div className="pb-identity-grain" aria-hidden="true"/>
     <div className="pb-identity-layout">
       <aside className="pb-identity-story">
