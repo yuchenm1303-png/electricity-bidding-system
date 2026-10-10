@@ -16,10 +16,47 @@
   background:linear-gradient(145deg,rgba(25,39,64,.83),rgba(15,27,47,.92));
   box-shadow:0 22px 65px rgba(1,7,19,.25),inset 0 1px 0 rgba(242,247,255,.045);
 }
-.pb-identity-input-wrap {
+/* Unified input surface: the icon, typed/autofilled text and reveal control
+   must appear on the very same color, without segmented backgrounds. */
+.pb-identity-screen .pb-identity-input-wrap {
+  --pb-field-surface: #101d33;
   border-radius:10px;
-  background:rgba(8,18,36,.61);
+  background:var(--pb-field-surface);
 }
+.pb-identity-screen .pb-identity-input-wrap:focus-within {
+  background:var(--pb-field-surface);
+}
+.pb-identity-screen .pb-identity-input-wrap > input,
+.pb-identity-screen .pb-identity-input-wrap > input:focus {
+  min-width:0;
+  background:transparent !important;
+  background-image:none !important;
+  border:0;
+  box-shadow:none !important;
+  color:#f3f6ff;
+  -webkit-text-fill-color:#f3f6ff;
+  caret-color:#b7c5ff;
+  color-scheme:dark;
+}
+.pb-identity-screen .pb-identity-input-wrap > input:is(:-webkit-autofill,:autofill),
+.pb-identity-screen .pb-identity-input-wrap > input:-webkit-autofill:hover,
+.pb-identity-screen .pb-identity-input-wrap > input:-webkit-autofill:focus {
+  -webkit-text-fill-color:#f3f6ff !important;
+  caret-color:#b7c5ff;
+  /* Chrome paints an autofill layer on the INPUT only. Mask it with the exact
+     same opaque surface as the outer input wrapper, without a visible seam. */
+  -webkit-box-shadow:0 0 0 1000px var(--pb-field-surface) inset !important;
+  box-shadow:0 0 0 1000px var(--pb-field-surface) inset !important;
+  background-color:transparent !important;
+  background-image:none !important;
+  transition:background-color 600000s 0s;
+}
+.pb-identity-screen .pb-identity-input-wrap > svg,
+.pb-identity-screen .pb-identity-input-wrap > .pb-identity-eye,
+.pb-identity-screen .pb-identity-input-wrap > .pb-identity-eye:hover {
+  background:transparent !important;
+}
+
 .pb-identity-screen .pb-social-button {
   border-radius:10px;
   background:rgba(20,34,56,.8);
