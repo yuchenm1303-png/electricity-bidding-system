@@ -16,9 +16,9 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Literal
 
+from powerbid.joint_solution_integrity import audit_joint_schedule
 from powerbid.network_dispatch import DcNetwork
 from powerbid.network_integrity import audit_dc_solution
-from powerbid.joint_solution_integrity import audit_joint_schedule
 from powerbid.network_strategy import verify_network_inputs
 from powerbid.pmss_integration import PeriodBid, PMSSSnapshot, curve_for_period
 from powerbid.unit_commitment import TerminalMode, ThermalConstraints
