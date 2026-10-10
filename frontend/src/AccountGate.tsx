@@ -167,7 +167,7 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
             <span className="pb-identity-kicker">YOUR WORKSPACE</span>
             <h2>{isRegister ? "创建 PowerBid 账号" : "欢迎回来"}</h2>
             <p className="pb-identity-lead">{isRegister ? "只需简单几步，即可开始你的策略研究。" : "登录，继续你的电力市场探索。"}</p>
-            <div className="pb-identity-tabs" role="group" aria-label="登录或注册">
+            <div className="pb-identity-tabs" role="group" aria-label="登录或注册" data-view={view}>
                 <button type="button" className={!isRegister ? "selected" : ""} aria-pressed={!isRegister} onClick={()=>switchView("login")}>登录账号</button>
                 <button type="button" className={isRegister ? "selected" : ""} aria-pressed={isRegister} onClick={()=>switchView("register")}>创建账号</button>
               </div>
