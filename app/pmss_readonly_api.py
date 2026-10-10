@@ -22,7 +22,7 @@ from app.account_auth import require_user
 from app.pmss_api import ALLOWED_ROOT_KEYS, _parse_snapshot
 
 router = APIRouter(prefix="/api/pmss/read-only", tags=["pmss-authorized-read"])
-_FILE = re.compile(r"^[a-zA-Z0-9_-]{1,96}\\.json$")
+_FILE = re.compile(r"^[a-zA-Z0-9_-]{1,96}\.json$")
 _ID = re.compile(r"^[a-zA-Z0-9_-]{1,128}$")
 _HEADERS = {
     "Cache-Control": "private, no-store, max-age=0",
