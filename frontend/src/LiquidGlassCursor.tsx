@@ -14,6 +14,9 @@ import { createRoiManager } from "./liquidGlass/roi";
 export function LiquidGlassCursor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
+  // Retained across context recreation; a stationary pointer must not lose
+  // the optical lens until the user moves again.
+  const pointerRef = useRef({x:0,y:0,inside:false,known:false});
   const [contextVersion, setContextVersion] = useState(0);
 
   useEffect(() => {
@@ -48,9 +51,9 @@ export function LiquidGlassCursor() {
     };
     resizeSurfaces(FREE_ROI_SIZE, FREE_ROI_SIZE);
 
-    let pointerX = window.innerWidth / 2;
-    let pointerY = window.innerHeight / 2;
-    let pointerInside = false;
+    let pointerX = pointerRef.current.known ? pointerRef.current.x : window.innerWidth / 2;
+    let pointerY = pointerRef.current.known ? pointerRef.current.y : window.innerHeight / 2;
+    let pointerInside = pointerRef.current.inside;
     let pressed = false;
     const pressure: SpringValue = { value: 0, velocity: 0, target: 0 };
     let activeTarget: HTMLElement | null = null;
@@ -324,6 +327,7 @@ export function LiquidGlassCursor() {
       pointerX = event.clientX;
       pointerY = event.clientY;
       pointerInside = true;
+      pointerRef.current={x:pointerX,y:pointerY,inside:true,known:true};
       snapDirty = true;
       // Static page pixels do not change when the pointer merely moves.
       // Chart tooltips are compositor-driven and still need rapid repaint.
@@ -356,6 +360,7 @@ export function LiquidGlassCursor() {
     };
     const handlePointerLeave = () => {
       pointerInside = false;
+      pointerRef.current.inside=false;
       chartLens = false;
       pressed = false;
       pressure.target = 0;
@@ -369,7 +374,9 @@ export function LiquidGlassCursor() {
       wake();
     };
     const handlePointerEnter = () => {
-      pointerInside = true; snapDirty = true; rasterDirty = true; wake(); watchScene();
+      pointerInside = true;
+      pointerRef.current.inside=true;
+      snapDirty = true; rasterDirty = true; wake(); watchScene();
     };
     const handleScroll = () => {
       roi.clearLock(); rasterDirty = true;urgentCapture=true; snapDirty = true; wake(); watchScene();
