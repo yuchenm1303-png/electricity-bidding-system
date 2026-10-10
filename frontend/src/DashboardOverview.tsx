@@ -14,13 +14,13 @@ type Props = {
   onNavigate: () => void;
 };
 
-const axis = { fill: "#98a2b3", fontSize: 11 };
+const axis = { fill: "var(--pb-chart-text)", fontSize: 11 };
 const tooltip = {
   background: "var(--ta-panel)",
   color: "var(--ta-ink)",
   border: "1px solid var(--ta-border)",
-  borderRadius: 12,
-  boxShadow: "0 12px 30px rgba(0,0,0,.18)",
+  borderRadius: 9,
+  boxShadow: "0 10px 26px rgba(0,0,0,.12)",
   fontSize: 12,
 };
 
@@ -52,8 +52,8 @@ function CapacityGauge({ demand, total, unitCount }: { demand: number; total: nu
     </div>
     <div className="ta-gauge-wrap">
       <svg viewBox="0 0 240 150" aria-hidden="true">
-        <path d={path} fill="none" stroke="#e9edf3" strokeWidth="16" strokeLinecap="round" pathLength={100} />
-        <path className="ta-gauge-arc" d={path} fill="none" stroke="#465fff" strokeWidth="16" strokeLinecap="round"
+        <path d={path} fill="none" stroke="var(--pb-chart-track)" strokeWidth="12" strokeLinecap="round" pathLength={100} />
+        <path className="ta-gauge-arc" d={path} fill="none" stroke="var(--pb-chart-accent)" strokeWidth="12" strokeLinecap="round"
           strokeDasharray={`${shown} 100`} pathLength={100} />
       </svg>
       <div className="ta-gauge-reading"><strong>{pct}%</strong><span>市场负荷 / 申报容量</span></div>
@@ -97,14 +97,14 @@ export function DashboardOverview({ offers, demand, targetId, report, onNavigate
           <div className="ta-bars">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={offers} margin={{top:16,right:5,bottom:0,left:-21}} barSize={26}>
-                <CartesianGrid stroke="#edf0f5" vertical={false}/>
+                <CartesianGrid stroke="var(--pb-chart-grid)" vertical={false}/>
                 <XAxis dataKey="unit_id" tick={axis} axisLine={false} tickLine={false} tickMargin={12}/>
                 <YAxis tick={axis} axisLine={false} tickLine={false} width={50}/>
                 <Tooltip cursor={{fill:"var(--ta-chart-hover)"}} contentStyle={tooltip}
                   labelStyle={{color:"var(--ta-ink)"}} itemStyle={{color:"var(--ta-ink-2)"}}
                   formatter={(v, name) => [typeof v==="number"?numeric(v,2):v, name]}/>
                 <Bar isAnimationActive={false} dataKey="bid_price" name="机组报价" radius={[5,5,0,0]}>
-                  {offers.map(o => <Cell key={o.unit_id} fill={o.unit_id===targetId ? "#465fff" : "#a6b4ff"}/>)}
+                  {offers.map(o => <Cell key={o.unit_id} fill={o.unit_id===targetId ? "var(--pb-chart-accent)" : "var(--pb-chart-secondary)"}/>)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -128,18 +128,18 @@ export function DashboardOverview({ offers, demand, targetId, report, onNavigate
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={cumulative} margin={{top:16,right:22,bottom:0,left:-5}}>
             <defs><linearGradient id="taSupply" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#465fff" stopOpacity={.21}/>
-              <stop offset="100%" stopColor="#465fff" stopOpacity={.01}/>
+              <stop offset="0%" stopColor="var(--pb-chart-accent)" stopOpacity={.14}/>
+              <stop offset="100%" stopColor="var(--pb-chart-accent)" stopOpacity={.005}/>
             </linearGradient></defs>
-            <CartesianGrid stroke="#edf0f5" vertical={false}/>
+            <CartesianGrid stroke="var(--pb-chart-grid)" vertical={false}/>
             <XAxis dataKey="name" tick={axis} axisLine={false} tickLine={false} tickMargin={13}/>
             <YAxis tick={axis} axisLine={false} tickLine={false} width={55}/>
-            <ReferenceLine y={demand} stroke="#e2a25a" strokeDasharray="5 5"
-              label={{value:"市场负荷", position:"insideTopRight",fill:"#ba874b",fontSize:11}}/>
+            <ReferenceLine y={demand} stroke="var(--pb-chart-reference)" strokeDasharray="5 5"
+              label={{value:"市场负荷", position:"insideTopRight",fill:"var(--pb-chart-reference)",fontSize:11}}/>
             <Tooltip contentStyle={tooltip} labelStyle={{color:"var(--ta-ink)"}} itemStyle={{color:"var(--ta-ink-2)"}}
               formatter={v => typeof v==="number" ? numeric(v,2) + " MW" : v}/>
-            <Area isAnimationActive={false} dataKey="capacity" name="累积供给容量" stroke="#465fff" strokeWidth={2.7} fill="url(#taSupply)"
-              type="stepAfter" dot={{fill:"#465fff",r:3}} activeDot={{r:5}}/>
+            <Area isAnimationActive={false} dataKey="capacity" name="累积供给容量" stroke="var(--pb-chart-accent)" strokeWidth={2.3} fill="url(#taSupply)"
+              type="stepAfter" dot={{fill:"var(--pb-chart-accent)",r:3}} activeDot={{r:5}}/>
           </AreaChart>
         </ResponsiveContainer>
       </div>}
