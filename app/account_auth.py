@@ -87,6 +87,25 @@ def connection():
               locked_until INTEGER NOT NULL,
               updated_at INTEGER NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS email_verification_codes (
+              email TEXT PRIMARY KEY COLLATE NOCASE,
+              code_hash TEXT NOT NULL,
+              expires_at INTEGER NOT NULL,
+              last_sent_at INTEGER NOT NULL,
+              failed_attempts INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS email_send_events (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              email_hash TEXT NOT NULL,
+              ip_hash TEXT NOT NULL,
+              sent_at INTEGER NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS email_send_events_email_idx
+              ON email_send_events(email_hash,sent_at);
+            CREATE INDEX IF NOT EXISTS email_send_events_ip_idx
+              ON email_send_events(ip_hash,sent_at);
+            CREATE INDEX IF NOT EXISTS email_send_events_time_idx
+              ON email_send_events(sent_at);
         """)
         if path.exists():
             os.chmod(path, 0o600)
@@ -147,6 +166,7 @@ class Credentials(BaseModel):
 
 class SignUp(Credentials):
     email: EmailStr
+    email_code: str | None = Field(default=None, min_length=6, max_length=6)
 
 
 def _set_session(response: Response, user_id: int) -> None:
@@ -172,9 +192,12 @@ def _set_session(response: Response, user_id: int) -> None:
 
 @router.get("/config")
 def config() -> dict:
-    from app import social_auth, turnstile_auth
+    from app import email_verification, social_auth, turnstile_auth
 
     return {
+        "email_verification_enabled": (
+            email_verification.required() and email_verification.configured()
+        ),
         "enabled": auth_enabled(),
         "registration_open": auth_enabled() and registration_open(),
         "turnstile_site_key": turnstile_auth.site_key(),
@@ -196,8 +219,12 @@ async def register(data: SignUp, response: Response) -> dict:
     email = str(data.email).lower()
     if not USERNAME.fullmatch(username):
         raise HTTPException(422, detail="用户名必须以字母开头，只能包含字母、数字、下划线和连字符")
+    from app.email_verification import check_code
+
     password_hash = HASHER.hash(data.password)
     with connection() as db:
+        db.execute("BEGIN IMMEDIATE")
+        check_code(db, email, data.email_code)
         try:
             cursor = db.execute(
                 (
@@ -209,8 +236,16 @@ async def register(data: SignUp, response: Response) -> dict:
         except sqlite3.IntegrityError as exc:
             raise HTTPException(409, detail="用户名或邮箱已被使用") from exc
         user_id = cursor.lastrowid
+        if email_verification_required():
+            db.execute("DELETE FROM email_verification_codes WHERE email=?", (email,))
     _set_session(response, user_id)
     return {"id": user_id, "username": username, "email": email, "role": "member", "active": True}
+
+
+def email_verification_required() -> bool:
+    from app.email_verification import required
+
+    return required()
 
 
 @router.post("/login")
@@ -323,6 +358,7 @@ async def protect_api(request: Request, call_next):
             "/api/auth/config",
             "/api/auth/login",
             "/api/auth/register",
+            "/api/auth/email/send-code",
             "/api/auth/logout",
         }
         if path.startswith("/api/auth/oauth/"):

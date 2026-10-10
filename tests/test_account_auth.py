@@ -41,6 +41,7 @@ def test_register_login_me_and_logout(client, tmp_path):
         "enabled": True,
         "registration_open": True,
         "turnstile_site_key": "",
+        "email_verification_enabled": False,
         "social": {"google": False, "github": False},
     }
     assert client.get("/api/scenario").status_code == 401

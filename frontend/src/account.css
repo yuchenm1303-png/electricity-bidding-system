@@ -251,3 +251,13 @@
 .pb-social-captcha-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:650;color:#c5d3ef}
 .pb-social-captcha-widget{min-height:64px}
 @media(max-width:420px){.pb-social-button{min-height:47px;gap:6px;font-size:12px}.pb-social-button small{display:none}}
+
+/* Email confirmation keeps form widths stable on mobile. */
+.pb-email-code-row{display:flex;gap:9px;min-width:0}
+.pb-email-code-row>.pb-identity-input-wrap{flex:1;min-width:0}
+.pb-email-send{flex-shrink:0;min-width:112px;padding:0 12px;border:1px solid #5267a4;
+ background:#27395c;border-radius:10px;color:#dce5ff;cursor:pointer;font-size:12px;font-weight:650}
+.pb-email-send:hover:not(:disabled){background:#354b79;border-color:#8b9eff}
+.pb-email-send:disabled{opacity:.52;cursor:not-allowed}
+.pb-email-code-status{font-size:11px;line-height:1.6;color:#9cdbb9}
+@media(max-width:420px){.pb-email-send{min-width:100px;padding:0 8px;font-size:11px}}
