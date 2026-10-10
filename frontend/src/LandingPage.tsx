@@ -6,6 +6,7 @@ import "./landing-dark.css";
 import "./portal-polish.css";
 import "./landing-buttons.css";
 import "./landing-showcase-polish.css";
+import "./icon-interactions.css";
 import PowerConstellation from "./PowerConstellation";
 
 type LandingProps = { workspaceHref: string };
