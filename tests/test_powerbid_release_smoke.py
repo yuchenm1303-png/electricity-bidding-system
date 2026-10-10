@@ -68,6 +68,7 @@ def test_public_release_checks_actual_lazy_chunk_and_post_validation():
     assert result["manualClearingFrontendPresent"] is True
     assert result["manualClearingBackendPostRoutePresent"] is True
     assert result["invalidResearchReportRejected"] is True
+    assert result["researchPostAuthRequired"] is False
     assert result["productionMainHeadVerified"] is False
     assert result["teacherPMSSAuthenticated"] is False
     assert result["submittedMarketBid"] is False
@@ -86,6 +87,7 @@ def test_public_release_checks_actual_lazy_chunk_and_post_validation():
 @pytest.mark.parametrize(("ui", "post", "lazy"), [
     (False, 422, True),
     (True, 404, True),
+    (True, 403, True),
     (True, 200, True),
     (True, 422, False),
 ])
@@ -93,6 +95,17 @@ def test_missing_ui_or_insecure_backend_fails_closed(ui, post, lazy):
     fetcher, _ = _bundle(fake_ui=ui, api_post=post, lazy=lazy)
     with pytest.raises(ValueError):
         inspect_powerbid_release("https://power.smirel.com", fetcher=fetcher)
+
+
+def test_production_auth_gate_is_not_a_false_deployment_failure():
+    fetcher, called = _bundle(api_post=401)
+    report = inspect_powerbid_release("https://power.smirel.com", fetcher=fetcher)
+    assert report["state"] == "FRONTEND_BACKEND_AUTH_GATE_VERIFIED"
+    assert report["researchPostAuthRequired"] is True
+    assert report["invalidResearchReportRejected"] is False
+    assert report["manualClearingFrontendPresent"] is True
+    assert report["manualClearingBackendPostRoutePresent"] is True
+    assert ("/api/pmss/holdout-gate", "POST") in called
 
 
 @pytest.mark.parametrize(("manual_ui", "manual_route"), [
