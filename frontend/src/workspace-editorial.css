@@ -1,0 +1,331 @@
+/* PowerBid / editorial workbench
+   A flatter, coherent instrument-panel material system.
+   Dark theme is the product default; light mode remains separately usable.
+   This file intentionally does not change the restored solid header position,
+   the cursor compositor, animation timings or any data/interaction logic. */
+
+:root {
+  --pb-chart-grid:#e9edf4;
+  --pb-chart-accent:#6078d8;
+  --pb-chart-secondary:#a4b4de;
+  --pb-chart-track:#e5eaf2;
+  --pb-chart-text:#738198;
+  --pb-chart-reference:#c18e55;
+}
+:root[data-theme="dark"] {
+  /* One navy/graphite scale, not independent blue plastic blocks. */
+  --ta-bg:#101827;
+  --ta-panel:#192434;
+  --ta-rail:#131d2b;
+  --ta-ink:#edf1fa;
+  --ta-ink-2:#d4dceb;
+  --ta-muted:#9cabc0;
+  --ta-muted-2:#7e90a8;
+  --ta-border:#2c394b;
+  --ta-faint:#202d3e;
+  --ta-hover:#1f2c3d;
+  --ta-primary:#9baaf0;
+  --ta-primary-hover:#bdc7ff;
+  --ta-primary-soft:#26334d;
+  --ta-success:#8ccbab;
+  --ta-success-soft:#1b352d;
+  --ta-field:#172438;
+  --ta-shadow:none;
+  --ta-chart-hover:rgba(153,171,238,.065);
+  --pb-chart-grid:#324054;
+  --pb-chart-accent:#95a7e7;
+  --pb-chart-secondary:#687da9;
+  --pb-chart-track:#38475c;
+  --pb-chart-text:#8595aa;
+  --pb-chart-reference:#b29a7b;
+}
+:root[data-theme="dark"] .app,
+:root[data-theme="dark"] .app-main,
+:root[data-theme="dark"] .content-shell {
+  background:var(--ta-bg);
+}
+/* Sidebar and topbar: same material family, no glass/fake high reflection. */
+:root[data-theme="dark"] .app .sidebar {
+  background:var(--ta-rail);
+  border-right-color:rgba(190,207,237,.10);
+}
+:root[data-theme="dark"] .app .brand {
+  border-bottom-color:rgba(190,207,237,.09);
+}
+:root[data-theme="dark"] .app .global-header {
+  background:#172232;
+  border-bottom-color:rgba(190,207,237,.10);
+  box-shadow:none;
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
+}
+:root[data-theme="dark"] .app .ta-global-search,
+:root[data-theme="dark"] .app :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger) {
+  background:#172232;
+  border-color:#303d51;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .app .ta-global-search:hover,
+:root[data-theme="dark"] .app :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger):hover {
+  border-color:#43526b;background:#1d2b3d;
+}
+:root[data-theme="dark"] .app .ta-global-search kbd {
+  background:#202e40;border-color:#344258;box-shadow:none;
+}
+:root[data-theme="dark"] .app .sidebar-section-label {
+  color:#8392a9;letter-spacing:.09em;font-weight:650;
+}
+:root[data-theme="dark"] .app .nav-entry {
+  border-radius:9px;
+  font-weight:530;
+  color:#9baac0;
+}
+:root[data-theme="dark"] .app .nav-entry:hover:not(.active) {
+  background:#202c3d;
+  color:#e8edfa;
+}
+:root[data-theme="dark"] .app .nav-entry.active {
+  background:#293650;
+  border-color:transparent;
+  box-shadow:inset 2px 0 #93a7eb;
+  color:#dce4ff;
+  font-weight:650;
+}
+:root[data-theme="dark"] .app .nav-entry.active svg {
+  color:#aabaf8;
+}
+:root[data-theme="dark"] .app .simulation-note {
+  background:#1c2a3b;
+  border-color:rgba(191,211,242,.10);
+  border-radius:10px;
+}
+:root[data-theme="dark"] .app .sidebar-foot {border-top-color:rgba(192,210,239,.09)}
+/* Visual hierarchy: label, key figure, supporting context. */
+:root[data-theme="dark"] .app .workspace-heading h1 {
+  font-weight:680;letter-spacing:-.035em;
+}
+:root[data-theme="dark"] .app .workspace-heading p {color:#879ab2}
+:root[data-theme="dark"] .app .crumbs {color:#8597ae}
+:root[data-theme="dark"] .app .content-shell {padding-bottom:56px}
+/* One restrained surface per functional block. No inset reflections,
+   bevels or hover elevation on non-interactive data containers. */
+:root[data-theme="dark"] .app :is(
+  .ta-stat-card,.ta-chart-card,.ta-capacity,.data-panel,
+  .recommendation-panel,.trials-panel,.chart-card,.result-metric,
+  .report-empty,.trial-placeholder
+) {
+  background:var(--ta-panel);
+  border:1px solid rgba(186,202,231,.105);
+  border-radius:13px;
+  box-shadow:none;
+}
+@media(hover:hover) and (pointer:fine) {
+  :root[data-theme="dark"] .app :is(
+    .ta-stat-card,.ta-chart-card,.ta-capacity,.data-panel,
+    .recommendation-panel,.trials-panel,.chart-card,.result-metric
+  ):hover {
+    transform:none;
+    box-shadow:none;
+    border-color:rgba(187,205,240,.19);
+  }
+}
+:root[data-theme="dark"] .app .ta-stat-card {
+  padding:22px 23px 20px;
+}
+:root[data-theme="dark"] .app .ta-stat-icon {
+  background:rgba(157,174,215,.082);
+  border:1px solid rgba(168,190,230,.075);
+  border-radius:11px;
+  color:#a6b8d5;
+  width:43px;height:43px;
+  margin-bottom:18px;
+}
+:root[data-theme="dark"] .app .ta-stat-label {
+  color:#9caac0;
+  font-weight:500;
+  letter-spacing:.004em;
+}
+:root[data-theme="dark"] .app .ta-stat-bottom {
+  margin-top:8px;
+}
+:root[data-theme="dark"] .app .ta-stat-bottom strong {
+  font-weight:670;
+  letter-spacing:-.045em;
+  font-variant-numeric:tabular-nums;
+}
+:root[data-theme="dark"] .app .ta-stat-detail {color:#8497ae;}
+:root[data-theme="dark"] .app .ta-stat-badge {
+  background:rgba(96,157,124,.13);
+  border:1px solid rgba(110,186,149,.17);
+  color:#99d7b3;
+  border-radius:6px;
+  padding:4px 7px;
+  font-size:10px;
+  font-weight:590;
+}
+:root[data-theme="dark"] .app :is(.ta-card-title h3,.panel-head h2,.ta-section-heading h2) {
+  font-weight:650;letter-spacing:-.025em;
+}
+:root[data-theme="dark"] .app .ta-card-title p {color:#8798af;}
+:root[data-theme="dark"] .app .ta-card-tag,
+:root[data-theme="dark"] .app .ta-card-icon {
+  background:transparent;
+  border:1px solid rgba(185,202,230,.15);
+  border-radius:8px;
+  color:#8e9fb7;
+}
+:root[data-theme="dark"] .app .ta-chart-card {padding:23px 24px}
+:root[data-theme="dark"] .app .ta-capacity {padding-top:23px;overflow:hidden;}
+:root[data-theme="dark"] .app .ta-capacity>.ta-card-title {padding-inline:24px}
+:root[data-theme="dark"] .app .ta-gauge-wrap {
+  width:min(74%,276px);
+  margin-top:36px;
+}
+:root[data-theme="dark"] .app .ta-gauge-reading strong {
+  font-weight:670;
+  font-size:35px;
+  letter-spacing:-.055em;
+}
+:root[data-theme="dark"] .app .ta-gauge-explain {
+  color:#96a6ba;
+  max-width:310px;
+  padding-inline:18px;
+}
+/* Break the giant opaque footer bar into a quiet data divider. */
+:root[data-theme="dark"] .app .ta-capacity-footer {
+  background:transparent;
+  border-top:1px solid rgba(185,202,230,.13);
+  padding:21px 9px 22px;
+}
+:root[data-theme="dark"] .app .ta-capacity-footer>div {
+  border-right-color:rgba(185,202,230,.11);
+}
+:root[data-theme="dark"] .app .ta-capacity-footer span {
+  color:#90a0b6;
+  font-size:11px;
+}
+:root[data-theme="dark"] .app .ta-capacity-footer strong {
+  font-weight:630;font-variant-numeric:tabular-nums;
+}
+:root[data-theme="dark"] .app .ta-report-link {
+  background:transparent;
+  border-color:rgba(182,201,236,.19);
+  color:#a7b6e9;
+  border-radius:8px;
+}
+:root[data-theme="dark"] .app .ta-report-link:hover {
+  background:#24324a;border-color:#697eae;
+}
+/* Functional primary actions remain recognizable but no candy gradients. */
+:root[data-theme="dark"] .app :is(.primary-button,.pmss-import-button,.pmss-run-button,.guide-action) {
+  background:#7387e9;
+  border:1px solid rgba(171,188,252,.33);
+  color:#fff;
+  border-radius:9px;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .app :is(.primary-button,.pmss-import-button,.pmss-run-button,.guide-action):hover:not(:disabled) {
+  background:#8599f3;border-color:#a8b9ff;
+  box-shadow:none;
+  transform:translateY(-1px);
+}
+:root[data-theme="dark"] .app :is(.outline-button,.secondary-button,.subtle-button) {
+  background:#1b293b;
+  border:1px solid #354357;
+  color:#d3deeb;
+  border-radius:9px;box-shadow:none;
+}
+:root[data-theme="dark"] .app :is(.outline-button,.secondary-button,.subtle-button):hover:not(:disabled) {
+  background:#27364b;color:#f2f5fe;
+  border-color:#4a5d79;box-shadow:none;
+}
+:root[data-theme="dark"] .app .environment-pill {
+  background:#1a352f;
+  border-color:rgba(118,194,156,.09);
+  color:#9dd5b4;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .app .online-dot {box-shadow:none}
+/* Dense data controls: keep affordances, lose glossy layered tiles. */
+:root[data-theme="dark"] .app :is(.panel-counter,.table-search,.table-toolbar input,.number-field,.select-wrap) {
+  background:#172336;
+  border-color:#344257;
+  box-shadow:none;
+}
+:root[data-theme="dark"] .app .ta-section-heading span:first-child,
+:root[data-theme="dark"] .app .panel-kicker {
+  color:#a5b4e2;
+}
+:root[data-theme="dark"] .app .units-table thead th,
+:root[data-theme="dark"] .app .trials-table thead th {
+  background:#1a293b;
+  border-color:rgba(186,204,237,.12);
+  color:#97a9c1;
+  font-weight:560;
+}
+:root[data-theme="dark"] .app .units-table tbody td,
+:root[data-theme="dark"] .app .trials-table tbody td {
+  border-bottom-color:rgba(189,205,232,.09);
+}
+:root[data-theme="dark"] .app .units-table tbody tr.target-row,
+:root[data-theme="dark"] .app .trials-table tbody tr.is-best {
+  background:rgba(138,158,228,.095);
+}
+:root[data-theme="dark"] .app .unit-symbol {
+  border-radius:6px;background:#263449;
+}
+:root[data-theme="dark"] .app .target-row .unit-symbol {
+  background:#374768;color:#b6c5ff;
+}
+:root[data-theme="dark"] .app .target-radio.selected {
+  box-shadow:0 0 0 2px rgba(142,162,238,.12);
+}
+:root[data-theme="dark"] .app .recommendation-illustration,
+:root[data-theme="dark"] .app .report-empty-art {
+  background:#263550;border:0;border-radius:13px;
+}
+:root[data-theme="dark"] .app .status-chip.success {
+  background:#233d32;color:#9bdbb8;
+}
+:root[data-theme="dark"] .app .result-metric.accent,
+:root[data-theme="dark"] .app .ta-report-complete {
+  background:#25344e;border-color:#425577;
+}
+:root[data-theme="dark"] .app .quick-guide,
+:root[data-theme="dark"] .app .analysis-teaser {
+  background:#1d2b3e;
+  border-color:#33445c;
+}
+/* The legacy 1200px rule collapses the sidebar at 78px, whereas
+   TailAdmin waits until 1110px to shrink the *grid*. This mismatch
+   left a dead 156px gutter on common 1150–1200px laptop widths. */
+@media(min-width:961px) and (max-width:1200px) {
+  :root .app,
+  :root .app:has(.settings-closed),
+  :root .app:has(.sidebar.collapsed),
+  :root .app:has(.settings-closed):has(.sidebar.collapsed) {
+    grid-template-columns:78px minmax(0,1fr);
+  }
+  :root .sidebar .brand {
+    justify-content:center;
+    padding:0;
+  }
+  :root .sidebar .brand-home-link {
+    max-width:100%;
+    min-width:0;
+    justify-content:center;
+  }
+  :root .sidebar .brand-mark-smirel {
+    width:63px;
+    min-width:63px;
+    height:24px;
+    flex:0 0 63px;
+  }
+}
+/* Preserve mobile layout: merely adjust surface tokens, never overflow. */
+@media(max-width:780px) {
+  :root[data-theme="dark"] .app .ta-gauge-wrap {margin-top:12px;width:min(75%,260px)}
+}
+@media(prefers-reduced-motion:reduce) {
+  :root[data-theme="dark"] .app :is(.ta-stat-card,.ta-chart-card,.ta-capacity) {transition:none}
+}
