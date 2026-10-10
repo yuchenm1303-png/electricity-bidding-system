@@ -1,0 +1,111 @@
+/* Coordinated workspace navigation: only route containers animate, never
+   chart points, network graph geometry, editable fields or the optical cursor. */
+.app {--pb-route-ease:cubic-bezier(.2,.76,.22,1);--pb-route-travel:11px}
+
+/* One shared moving rail on the nav container. :has() tracks React's active
+   button without adding DOM nodes or breaking reconciliation on rapid clicks. */
+:root .app .sidebar-nav {position:relative}
+:root .app .sidebar-nav::before {
+  content:"";position:absolute;z-index:2;pointer-events:none;
+  left:13px;top:4px;width:3px;height:45px;
+  border-radius:999px;background:var(--ta-primary);opacity:.9;
+  clip-path:inset(11px 0 round 999px);
+  transform:translate3d(0,0,0);
+  transition:transform 420ms cubic-bezier(.2,.83,.25,1),background-color 220ms ease;
+}
+:root .app .sidebar-nav:has(> button.nav-entry:nth-of-type(2).active)::before {transform:translate3d(0,50px,0)}
+:root .app .sidebar-nav:has(> button.nav-entry:nth-of-type(3).active)::before {transform:translate3d(0,100px,0)}
+:root .app .sidebar-nav:has(> button.nav-entry:nth-of-type(4).active)::before {transform:translate3d(0,150px,0)}
+:root .app .sidebar-nav:has(> button.nav-entry:nth-of-type(5).active)::before {transform:translate3d(0,200px,0)}
+:root .app .sidebar-nav:has(> button.nav-entry:nth-of-type(6).active)::before {transform:translate3d(0,250px,0)}
+:root .app .nav-entry.active::before {opacity:0;transform:scaleY(.28)}
+:root .app .sidebar .nav-entry.active {transition:background-color 260ms ease,color 230ms ease,border-color 230ms ease}
+/* Header actions remain fixed; only breadcrumb/title/subtitle transition. */
+:root .app .pb-route-heading {
+  animation:pb-heading-in 395ms var(--pb-route-ease) both;
+}
+:root .app .pb-route-heading .crumbs {animation:pb-route-opacity 290ms ease-out both}
+:root .app .pb-route-heading h1 {animation:pb-heading-detail 405ms 25ms var(--pb-route-ease) both}
+:root .app .pb-route-heading p {animation:pb-heading-detail 420ms 80ms var(--pb-route-ease) both}
+@keyframes pb-heading-in {
+  from {opacity:.78;transform:translate3d(0,4px,0)}
+  to {opacity:1;transform:translate3d(0,0,0)}
+}
+@keyframes pb-route-opacity {from{opacity:.45}to{opacity:1}}
+@keyframes pb-heading-detail {
+  from {opacity:.65;transform:translate3d(0,6px,0)}
+  to {opacity:1;transform:translate3d(0,0,0)}
+}
+
+/* App.tsx keys view-stage by route; parameter edits never remount it. */
+:root .app .view-stage,
+:root .app .pmss-persistent-stage {--pb-route-x:var(--pb-route-travel)}
+:root .app .view-stage[data-motion-direction="backward"],
+:root .app .pmss-persistent-stage[data-motion-direction="backward"] {
+  --pb-route-x:calc(-1 * var(--pb-route-travel));
+}
+:root .app .view-stage:not(:empty) {
+  animation:pb-route-content-in 405ms var(--pb-route-ease) both;
+}
+@keyframes pb-route-content-in {
+  0% {opacity:.42;transform:translate3d(var(--pb-route-x),7px,0)}
+  60% {opacity:.95}
+  100% {opacity:1;transform:translate3d(0,0,0)}
+}
+/* PMSS remains mounted while hidden; display block restarts its animation. */
+:root .app .pmss-persistent-stage[data-active="true"],
+:root .app .pmss-persistent-stage[style*="display: block"] {
+  animation:pb-route-content-in 410ms var(--pb-route-ease) both;
+}
+
+/* Separate functional regions enter in a short, legible sequence. */
+:root .app .view-stage .ta-top-dashboard .ta-stat-card:nth-child(1) {
+  animation:pb-route-region-in 365ms 45ms var(--pb-route-ease) both;
+}
+:root .app .view-stage .ta-top-dashboard .ta-stat-card:nth-child(2) {
+  animation:pb-route-region-in 395ms 85ms var(--pb-route-ease) both;
+}
+:root .app .view-stage .ta-bidding-chart {
+  animation:pb-route-region-in 450ms 120ms var(--pb-route-ease) both;
+}
+:root .app .view-stage .ta-capacity {
+  animation:pb-route-region-in 455ms 145ms var(--pb-route-ease) both;
+}
+:root .app .view-stage .ta-wide-chart,
+:root .app .view-stage .ta-secondary-section {
+  animation:pb-route-region-in 480ms 175ms var(--pb-route-ease) both;
+}
+:root .app .view-stage[data-workspace-view="units"] .section-note,
+:root .app .view-stage[data-workspace-view="risk"] .section-note {
+  animation:pb-route-region-in 330ms 45ms var(--pb-route-ease) both;
+}
+:root .app .view-stage[data-workspace-view="units"] .data-panel.expanded,
+:root .app .view-stage[data-workspace-view="analysis"] .results-content,
+:root .app .view-stage[data-workspace-view="risk"] .results-content,
+:root .app .view-stage[data-workspace-view="trials"] .trials-panel,
+:root .app .view-stage[data-workspace-view="trials"] .trial-placeholder,
+:root .app .view-stage > .data-panel.expanded,
+:root .app .view-stage > .results-content,
+:root .app .view-stage > .trial-placeholder {
+  animation:pb-route-region-in 455ms 95ms var(--pb-route-ease) both;
+}
+@keyframes pb-route-region-in {
+  from {opacity:.53;transform:translate3d(0,9px,0)}
+  to {opacity:1;transform:translate3d(0,0,0)}
+}
+/* Chart hover points are never animated or shifted off data coordinates. */
+:root .app :is(.recharts-active-dot,.recharts-active-dot *) {
+  animation:none!important;transition:none!important;pointer-events:none;
+}
+@media (hover:none),(pointer:coarse) {
+  :root .app .sidebar-nav::before {transition-duration:230ms}
+}
+@media (prefers-reduced-motion:reduce) {
+  :root .app :is(.view-stage,.pmss-persistent-stage,.pb-route-heading,
+    .pb-route-heading *,.ta-stat-card,.ta-bidding-chart,.ta-capacity,
+    .ta-wide-chart,.ta-secondary-section,.section-note,.results-content,
+    .data-panel,.trials-panel) {
+      animation:none!important;transform:none!important;transition:none!important;
+  }
+  :root .app .sidebar-nav::before {transition:none!important}
+}
