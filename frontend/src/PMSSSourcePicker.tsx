@@ -22,7 +22,7 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
   const [message, setMessage] = useState("");
   const [connected, setConnected] = useState(false);
   const inflight = useRef<AbortController | null>(null);
-  const refresh = useRef(0);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -38,7 +38,7 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
       }
     }).finally(() => { if (!ctrl.signal.aborted) setLoadingProjects(false); });
     return () => ctrl.abort();
-  }, [refresh.current]); // refreshed only by the button below
+  }, [revision]);
 
   useEffect(() => {
     if (!projectId) {setCases([]); setCaseDate(""); return;}
@@ -115,7 +115,7 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
       </button>
       <button className="pmss-source-refresh" type="button" title="重新检查工程接口"
         disabled={loadingProjects || loadingSnapshot}
-        onClick={() => {setProjects([]);chooseProject("");setConnected(false);setLoadingProjects(true);refresh.current += 1;setMessage("");}}>
+        onClick={() => {setProjects([]);chooseProject("");setConnected(false);setLoadingProjects(true);setRevision(v => v + 1);setMessage("");}}>
         <RefreshCw size={16}/>
       </button>
     </div>
