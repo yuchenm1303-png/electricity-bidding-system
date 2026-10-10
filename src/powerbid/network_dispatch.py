@@ -30,7 +30,7 @@ class DcLine:
         if self.from_bus == self.to_bus:
             raise ValueError("Self-connected line is invalid")
         if any(
-            isinstance(v, bool) or not isfinite(v) or v <= 0
+            type(v) not in (int, float) or not isfinite(v) or v <= 0
             for v in (self.reactance_pu, self.limit_mw)
         ):
             raise ValueError("Line reactance and MW limit must be positive and finite")
@@ -56,7 +56,7 @@ class DcNetwork:
             raise ValueError("Too many lines")
         if len({x.line_id for x in self.lines}) != len(self.lines):
             raise ValueError("Duplicate line ID")
-        if isinstance(self.base_mva, bool) or not isfinite(self.base_mva):
+        if type(self.base_mva) not in (int, float) or not isfinite(self.base_mva):
             raise ValueError("base_mva must be positive and finite")
         if self.base_mva <= 0:
             raise ValueError("base_mva must be positive and finite")
@@ -75,7 +75,7 @@ class DcNetwork:
             if len(hourly) != 24:
                 raise ValueError(f"Bus {bus} requires exactly 24 load values")
             if any(
-                isinstance(x, bool) or not isfinite(x) or x < 0
+                type(x) not in (int, float) or not isfinite(x) or x < 0
                 for x in hourly
             ):
                 raise ValueError(f"Bus {bus} load must be finite and non-negative")
@@ -107,7 +107,7 @@ class DcOffer:
         if not self.unit_id or self.block < 1:
             raise ValueError("Offer requires unit ID and positive block number")
         if any(
-            isinstance(value, bool) or not isfinite(value) or value < 0
+            type(value) not in (int, float) or not isfinite(value) or value < 0
             for value in (self.quantity_mw, self.price)
         ):
             raise ValueError("Quantity and price must be finite and nonnegative")
@@ -152,7 +152,8 @@ def dc_clear_hour(
     if not 1 <= period <= 24:
         raise ValueError("period must be 1..24")
     if (
-        not isfinite(load_multiplier) or load_multiplier <= 0
+        type(load_multiplier) not in (int, float) or not isfinite(load_multiplier)
+        or load_multiplier <= 0 or type(time_limit_seconds) not in (int, float)
         or not isfinite(time_limit_seconds) or time_limit_seconds <= 0
     ):
         raise ValueError("Invalid load multiplier or time limit")
@@ -240,6 +241,9 @@ def dc_clear_hour(
         line.line_id: float(result.x[line_start + i])
         for i, line in enumerate(network.lines)
     }
+    from powerbid.network_integrity import audit_dc_solution
+
+    audit_dc_solution(network, by_unit, flow, period, load_multiplier=load_multiplier)
     lmp = {
         bus: float(result.eqlin.marginals[index])
         for bus, index in buses.items()
@@ -269,6 +273,13 @@ def network_from_dict(raw: Mapping[str, object]) -> DcNetwork:
     }
     if set(raw) != expected:
         raise ValueError(f"DC network schema keys must be exactly {sorted(expected)}")
+    def number(value: object, field: str) -> float:
+        # PMSS read-only bridge and window-A canonical DTO share this schema.
+        # Never silently turn Boolean flags or text into physical MW/pu.
+        if type(value) not in (int, float) or not isfinite(value):
+            raise ValueError(f"{field} requires an explicit finite numeric value")
+        return float(value)
+
     lines = raw["lines"]
     if not isinstance(lines, list) or any(not isinstance(x, Mapping) for x in lines):
         raise ValueError("lines must be an array of line objects")
@@ -280,7 +291,8 @@ def network_from_dict(raw: Mapping[str, object]) -> DcNetwork:
         model_lines.append(
             DcLine(
                 str(line["lineId"]), str(line["fromBus"]), str(line["toBus"]),
-                float(line["reactancePu"]), float(line["limitMw"]),
+                number(line["reactancePu"], "reactancePu"),
+                number(line["limitMw"], "limitMw"),
             )
         )
     buses = raw["buses"]
@@ -299,10 +311,11 @@ def network_from_dict(raw: Mapping[str, object]) -> DcNetwork:
         lines=tuple(model_lines),
         unit_bus=dict(unit_bus),
         hourly_demand_mw={
-            bus: tuple(float(v) for v in series) for bus, series in hourly.items()
+            bus: tuple(number(v, "hourlyDemandMw") for v in series)
+            for bus, series in hourly.items()
         },
         slack_bus=str(raw["slackBus"]),
-        base_mva=float(raw["baseMva"]),
+        base_mva=number(raw["baseMva"], "baseMva"),
         topology_source=str(raw["topologySource"]),
         demand_source=str(raw["demandSource"]),
     )
