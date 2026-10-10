@@ -42,7 +42,7 @@
 .pb-identity-network > svg {max-height:170px;}
 .pb-identity-story-trails {margin-top:20px;}
 /* Long pages are needed only on compact screens, never clipped by force. */
-@media (min-width:821px) and (min-height:740px) {
+@media (min-width:821px) and (min-height:600px) {
   html:has(.pb-identity-screen),body:has(.pb-identity-screen) {
     height:100%;
     overflow:hidden;
@@ -145,7 +145,41 @@
 }
 /* On low-height desktop windows, mobile phones, or zoomed layouts, ordinary
    scrolling is safer than hiding CAPTCHA/error/help content. */
-@media (max-height:739px) and (min-width:821px) {
+/* Laptop displays often leave ~600-700 CSS pixels after browser chrome.
+   Keep the full login/sign-up usable without a document scrollbar there. */
+@media (min-width:821px) and (min-height:600px) and (max-height:739px) {
+  .pb-identity-story {padding-top:15px;padding-bottom:12px;}
+  .pb-identity-story h1 {font-size:clamp(35px,3.45vw,46px);margin:11px 0 9px;}
+  .pb-identity-story-content>p {font-size:12px;line-height:1.65;}
+  .pb-identity-network {margin-top:12px;padding:9px 14px 8px;}
+  .pb-identity-network>svg {max-height:85px;}
+  .pb-identity-network-caption {font-size:8px;margin-top:5px;}
+  .pb-identity-story-trails {margin-top:9px;}
+  .pb-identity-story-footer {padding-top:6px;}
+  .pb-identity-access {padding-top:13px;padding-bottom:11px;}
+  .pb-identity-access-center {padding:5px 0;}
+  .pb-identity-card {padding:12px 23px;}
+  .pb-identity-emblem {width:33px;height:33px;margin-bottom:6px;border-radius:10px;}
+  .pb-identity-emblem svg {width:18px;height:18px;}
+  .pb-identity-kicker {display:none;}
+  .pb-identity-card h2 {font-size:24px;margin:3px 0 6px;}
+  .pb-identity-lead {display:none;}
+  .pb-identity-tabs {margin-bottom:8px;padding:2px;}
+  .pb-identity-tabs button {padding:5px;min-height:31px;}
+  .pb-identity-form {gap:7px;}
+  .pb-identity-field {gap:3px;}
+  .pb-identity-field label {font-size:10px;}
+  .pb-identity-input-wrap {height:36px;}
+  .pb-identity-primary {min-height:40px;margin-top:1px;}
+  .pb-social-auth {margin-top:8px;}
+  .pb-social-divider {margin-bottom:7px;font-size:9px;}
+  .pb-social-button {min-height:32px!important;font-size:11px;}
+  .pb-social-note {display:none;}
+  .pb-identity-card-bottom {margin-top:7px;padding-top:7px;}
+  .pb-identity-access-footer {padding-top:4px;}
+  .pb-pass-progress-label {font-size:9px;}
+}
+@media (max-height:599px) and (min-width:821px) {
   html:has(.pb-identity-screen),body:has(.pb-identity-screen) {height:auto;overflow:auto;}
   .pb-identity-screen,.pb-identity-layout {height:auto;min-height:100dvh;overflow:visible;}
   .pb-identity-access-center {padding:15px 0;}
