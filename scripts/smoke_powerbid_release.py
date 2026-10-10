@@ -76,7 +76,10 @@ def _request(origin: str, path: str, method: str = "GET") -> tuple[int, bytes]:
             "User-Agent": "PowerBid-Safe-Release-Check/1.0",
             "Accept": "application/json" if path.startswith("/api/") or path == _OPENAPI
             else "text/html,application/javascript",
-            **({"Content-Type": "application/json"} if data else {}),
+            **({
+                "Content-Type": "application/json",
+                "X-PowerBid-Request": "1",
+            } if data else {}),
         },
     )
     opener = build_opener(RedirectsForbidden())
@@ -193,18 +196,24 @@ def inspect_powerbid_release(
         raise ValueError("Production OpenAPI lacks the manual-clearing POST handler")
 
     invalid_post_status, _ = fetcher(target, _GATE, "POST")
-    if invalid_post_status != 422:
+    if invalid_post_status not in (401, 422):
         raise ValueError(
-            "Production holdout API did not reject an invalid research report"
+            "Production holdout API neither required login nor rejected "
+            "an invalid research report"
         )
     return {
-        "state": "FRONTEND_BACKEND_HOLDOUT_PARITY_VERIFIED",
+        "state": (
+            "FRONTEND_BACKEND_AUTH_GATE_VERIFIED"
+            if invalid_post_status == 401
+            else "FRONTEND_BACKEND_HOLDOUT_PARITY_VERIFIED"
+        ),
         "frontendLazyChunkDiscovered": True,
         "frontendHistoryGatePresent": True,
         "backendPostRoutePresent": True,
         "manualClearingFrontendPresent": True,
         "manualClearingBackendPostRoutePresent": True,
-        "invalidResearchReportRejected": True,
+        "invalidResearchReportRejected": invalid_post_status == 422,
+        "researchPostAuthRequired": invalid_post_status == 401,
         "productionMainHeadVerified": False,
         "teacherPMSSAuthenticated": False,
         "originalHistoricalInputsInspected": False,
@@ -213,6 +222,7 @@ def inspect_powerbid_release(
         "note": (
             "The current public release contains matching frontend and "
             "backend research and manual-clearing route availability. "
+            "An HTTP 401 is an expected login gate, not validated data. "
             "This does not attest deployed "
             "Git SHA, teacher PMSS correctness or counterfactual performance."
         ),
