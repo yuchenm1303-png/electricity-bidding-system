@@ -12,3 +12,10 @@ htmlcov/
 .idea/
 .vscode/
 .streamlit/secrets.toml
+
+# Never version private PMSS course exports or runtime configuration
+.env.*
+powerbid_pmss_*.json
+powerbid_private_pmss_*.json
+pmss-grid-snapshot.json
+*.private.json
