@@ -306,6 +306,21 @@
   :root .app:has(.settings-closed):has(.sidebar.collapsed) {
     grid-template-columns:78px minmax(0,1fr);
   }
+  :root .sidebar .brand {
+    justify-content:center;
+    padding:0;
+  }
+  :root .sidebar .brand-home-link {
+    max-width:100%;
+    min-width:0;
+    justify-content:center;
+  }
+  :root .sidebar .brand-mark-smirel {
+    width:63px;
+    min-width:63px;
+    height:24px;
+    flex:0 0 63px;
+  }
 }
 /* Preserve mobile layout: merely adjust surface tokens, never overflow. */
 @media(max-width:780px) {
