@@ -58,23 +58,25 @@ function isEligibleSurface(element: HTMLElement) {
     rect.left < window.innerWidth && rect.top < window.innerHeight;
 }
 
-// Frame the whole visible control with one lens. The entire brand-home-link
-// is a single target (Smirel graphic + PowerBid lettering) with the same
-// modest 8px padding used by other buttons, not an oversized header glass.
+// Keep Smirel + PowerBid as one optical surface. The brand needs more breathing
+// room than an ordinary button so the refractive rim cannot cut through the
+// wordmark; no extra mount or second lens is created.
 function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
   const rect = element.getBoundingClientRect();
+  const brand = element.matches(".brand-home-link, .mobile-brand-home");
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
-  const padding = compact ? 6 : 8;
+  const paddingX = brand ? 18 : compact ? 6 : 8;
+  const paddingY = brand ? 15 : compact ? 6 : 8;
 
   // The viewport may crop part of a control near its edges; frame the
   // entire *visible* control rather than moving the center away and
   // leaving its first/last letters outside the lens.
-  let left = Math.max(0, rect.left - padding);
-  let right = Math.min(window.innerWidth, rect.right + padding);
-  let top = Math.max(0, rect.top - padding);
-  let bottom = Math.min(window.innerHeight, rect.bottom + padding);
+  const left = Math.max(0, rect.left - paddingX);
+  const right = Math.min(window.innerWidth, rect.right + paddingX);
+  const top = Math.max(0, rect.top - paddingY);
+  const bottom = Math.min(window.innerHeight, rect.bottom + paddingY);
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
-  const height = Math.max(1, Math.min(window.innerHeight, Math.max(MIN_LENS_HEIGHT, bottom - top)));
+  const height = Math.max(1, Math.min(window.innerHeight, Math.max(brand ? 60 : MIN_LENS_HEIGHT, bottom - top)));
   return {
     width,
     height,
@@ -1088,18 +1090,22 @@ export function LiquidGlassCursor() {
       if (textureReady) {
         const pressWeight = Math.max(0, Math.min(1, deformation));
         const releaseWeight = Math.max(0, -deformation);
+        const brandSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home"));
         const readingSurface = Boolean(activeTarget?.matches(".ta-global-search, input, textarea, select, [contenteditable='true']"));
-        // Lower refraction on typography-rich surfaces: no ghosted search
-        // placeholder or oversized, displaced brand lettering.
+        // Brand lettering is a high-contrast texture. Keep its single optical
+        // lens generously framed, with restrained refraction and nearly no
+        // chromatic splitting instead of applying the stronger button preset.
         const strength = chartLens ? 0.78
+          : brandSurface ? 0.43 + 0.10 * pressWeight
           : readingSurface ? 0.68 + 0.18 * pressWeight
           : (0.95 + (1.14 - 0.95) * snap.value) + 0.62 * pressWeight;
-        const pinch = chartLens ? 8.1 : (7.7 + (7.35 - 7.7) * snap.value) - 0.85 * pressWeight;
-        const aberration = chartLens ? 0.055 : readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
+        const pinch = chartLens ? 8.1 : brandSurface ? 8.1 : (7.7 + (7.35 - 7.7) * snap.value) - 0.85 * pressWeight;
+        const aberration = chartLens ? 0.055 : brandSurface ? 0.015 : readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
         const zoom = chartLens ? 1.48
+          : brandSurface ? 1.007 + 0.005 * pressWeight
           : readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
           : 1 + 0.055 * snap.value + 0.025 * pressWeight;
-        const wobble = chartLens ? 0.025 : 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
+        const wobble = chartLens ? 0.025 : brandSurface ? 0.022 + 0.012 * pressWeight : 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
 
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0, 0, 0, 0);
