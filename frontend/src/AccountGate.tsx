@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Activity, ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2,
   ChevronRight, Eye, EyeOff, Fingerprint, Github, LockKeyhole, Mail,
@@ -82,6 +82,9 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
   const [capsLock, setCapsLock] = useState(false);
   const [captcha, setCaptcha] = useState("");
   const [resetCaptcha, setResetCaptcha] = useState(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const previousCardHeightRef = useRef<number | null>(null);
+  const cardHeightAnimationRef = useRef<Animation | null>(null);
   const oauthError = new URLSearchParams(window.location.search).get("auth_error");
   const oauthMessage = oauthError === "existing_email"
     ? "这个邮箱已有 PowerBid 账号。为保护账号安全，请先使用原来的登录方式，暂不自动合并账号。"
@@ -89,7 +92,42 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
     : oauthError ? "第三方登录未完成，请重新尝试或使用密码登录。" : "";
   const isRegister = view === "register";
   const authAvailable = config.enabled && (!isRegister || config.registration_open);
+  // Record the visible height before React swaps the form fields. The next
+  // layout effect measures the new natural height and animates between them.
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    const fromHeight = previousCardHeightRef.current;
+    previousCardHeightRef.current = null;
+    if (!card || fromHeight === null || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const toHeight = card.getBoundingClientRect().height;
+    if (Math.abs(toHeight - fromHeight) > 1) {
+      card.style.overflow = "clip";
+      const animation = card.animate(
+        [{ height: `${fromHeight}px` }, { height: `${toHeight}px` }],
+        { duration: 460, easing: "cubic-bezier(.22, 1, .36, 1)" }
+      );
+      cardHeightAnimationRef.current = animation;
+      const finish = () => {
+        if (cardHeightAnimationRef.current !== animation) return;
+        cardHeightAnimationRef.current = null;
+        card.style.overflow = "";
+      };
+      animation.addEventListener("finish", finish, { once: true });
+      animation.addEventListener("cancel", finish, { once: true });
+    }
+
+    const content = card.querySelector<HTMLElement>(".pb-identity-form");
+    content?.animate(
+      [{ opacity: 0.45, transform: "translateY(7px)" }, { opacity: 1, transform: "translateY(0)" }],
+      { duration: 350, easing: "cubic-bezier(.22, 1, .36, 1)" }
+    );
+  }, [view]);
+
   const switchView = (next: AuthView) => {
+    if (next === view) return;
+    previousCardHeightRef.current = cardRef.current?.getBoundingClientRect().height ?? null;
+    cardHeightAnimationRef.current?.cancel();
     setView(next);
     setCaptcha("");
     setResetCaptcha(v => v + 1);
@@ -162,7 +200,7 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
           <span className="pb-identity-access-tag"><span/> SECURE ACCESS</span>
         </div>
         <div className="pb-identity-access-center">
-          <div className="pb-identity-card">
+          <div className="pb-identity-card" ref={cardRef}>
             <div className="pb-identity-emblem"><Fingerprint size={27} strokeWidth={1.5}/></div>
             <span className="pb-identity-kicker">YOUR WORKSPACE</span>
             <h2>{isRegister ? "创建 PowerBid 账号" : "欢迎回来"}</h2>
