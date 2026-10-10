@@ -1,8 +1,9 @@
 """Safe end-to-end production parity probe for the PowerBid research console.
 
 Detect lazy-loaded Vite workspace bundles (not only the index script).
-Verify both the same-origin frontend chunk AND local FastAPI route; a
-GET to a POST-only endpoint is NOT a valid availability check.
+Verify both history audit and manual-result handoff UI plus FastAPI routes.
+The manual handoff route is checked via public OpenAPI metadata only;
+no operator confirmation or school PMSS call is made.
 
 No PMSS teacher connection or credentials. All HTTP requests are bounded.
 The only POST is an intentionally invalid JSON payload to our OWN audit
@@ -31,6 +32,7 @@ _HTML_MODULE = re.compile(
 _HEALTH = "/api/health"
 _OPENAPI = "/openapi.json"
 _GATE = "/api/pmss/holdout-gate"
+_HANDOFF = "/api/pmss/manual-clearing-review"
 _MAX_ASSETS = 24
 _MAX_BYTES = 4_000_000
 
@@ -138,6 +140,8 @@ def inspect_powerbid_release(
     checked: set[str] = set()
     found_gate = False
     found_title = False
+    found_handoff_endpoint = False
+    found_handoff_title = False
     while discovered and len(checked) < _MAX_ASSETS:
         asset = discovered.popleft()
         if asset in checked:
@@ -149,7 +153,10 @@ def inspect_powerbid_release(
         source = blob.decode("utf-8", errors="replace")
         found_gate |= "holdout-gate" in source
         found_title |= "历史分配规则" in source
-        if found_gate and found_title:
+        found_handoff_endpoint |= "manual-clearing-review" in source
+        found_handoff_title |= "报价与老师出清结果" in source
+        if (found_gate and found_title and found_handoff_endpoint
+                and found_handoff_title):
             break
         for match in _JS_REFERENCE.finditer(source):
             child = _js_path(match.group(1), asset)
@@ -159,6 +166,12 @@ def inspect_powerbid_release(
         raise ValueError(
             "Frontend release lacks the anonymous historical holdout UI "
             "in its entrypoint or reachable lazy-loaded chunks"
+        )
+
+    if not found_handoff_endpoint or not found_handoff_title:
+        raise ValueError(
+            "Frontend release lacks the manual-clearing handoff UI "
+            "in its reachable lazy-loaded chunks"
         )
 
     health_status, health_bytes = fetcher(target, _HEALTH, "GET")
@@ -175,6 +188,10 @@ def inspect_powerbid_release(
     if not isinstance(route, dict) or "post" not in route:
         raise ValueError("Production OpenAPI lacks the holdout POST handler")
 
+    handoff_route = schema.get("paths", {}).get(_HANDOFF)
+    if not isinstance(handoff_route, dict) or "post" not in handoff_route:
+        raise ValueError("Production OpenAPI lacks the manual-clearing POST handler")
+
     invalid_post_status, _ = fetcher(target, _GATE, "POST")
     if invalid_post_status != 422:
         raise ValueError(
@@ -185,6 +202,8 @@ def inspect_powerbid_release(
         "frontendLazyChunkDiscovered": True,
         "frontendHistoryGatePresent": True,
         "backendPostRoutePresent": True,
+        "manualClearingFrontendPresent": True,
+        "manualClearingBackendPostRoutePresent": True,
         "invalidResearchReportRejected": True,
         "productionMainHeadVerified": False,
         "teacherPMSSAuthenticated": False,
@@ -193,7 +212,8 @@ def inspect_powerbid_release(
         "executedTeacherClearing": False,
         "note": (
             "The current public release contains matching frontend and "
-            "backend research functionality. This does not attest deployed "
+            "backend research and manual-clearing route availability. "
+            "This does not attest deployed "
             "Git SHA, teacher PMSS correctness or counterfactual performance."
         ),
     }
