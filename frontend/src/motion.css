@@ -155,7 +155,16 @@
     stroke-width:17;
   }
 }
-:root .recharts-active-dot {animation:pb-target-pop .25s var(--motion-spring) both}
+/* Active chart markers must stay exactly on the data coordinates provided
+   by Recharts. The previous pop animation scaled SVG groups around the
+   viewport origin, making the hovered point visually jump/restart as the
+   cursor crossed data points. Marker animation is for UI controls only. */
+:root .recharts-active-dot,
+:root .recharts-active-dot > * {
+  animation: none !important;
+  transition: none !important;
+  pointer-events: none;
+}
 :root .recharts-tooltip-wrapper {pointer-events:none}
 
 /* Cards: elevation reacts to pointer position gently; no zoom or reflow. */
