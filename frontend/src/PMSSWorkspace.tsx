@@ -10,6 +10,8 @@ import { MarketExplorer, OptimizationHourReview } from "./PMSSInsights";
 import { PMSSCandidateDispatchPanel } from "./PMSSCandidateDispatchPanel";
 import { PMSSHoldoutGatePanel } from "./PMSSHoldoutGatePanel";
 import { PMSSManualClearingPanel } from "./PMSSManualClearingPanel";
+import { PMSSSourcePicker } from "./PMSSSourcePicker";
+import { PMSSGridOverview } from "./PMSSGridOverview";
 
 const tooltipStyle = {
   background: "var(--ta-panel)", color: "var(--ta-ink)",
@@ -80,6 +82,33 @@ export function PMSSWorkspace() {
   const [activeTask, setActiveTask] = useState<"import"|"optimize"|null>(null);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
+
+  const clearMarket = () => {
+    setSnapshot(null); setInspection(null); setAnalysis(null);
+    setNetworkResult(null); setRankResult(null); setTarget("");
+    setFileName(""); setError("");
+  };
+
+  const importServerSnapshot = async (raw: Record<string, unknown>, label: string) => {
+    if (busy || networkBusy || rankBusy) throw new Error("当前正在计算，请完成后再切换案例。");
+    clearMarket();
+    setBusy(true); setActiveTask("import");
+    try {
+      const inspected = await inspectPMSS(raw);
+      setSnapshot(raw);
+      setInspection(inspected);
+      setMinimum(inspected.historical_bid_rule_audit.price_floor ?? 0);
+      setMaximum(Math.min(10000, inspected.historical_bid_rule_audit.price_ceiling ?? 1000));
+      setFileName(label);
+      setTarget(inspected.units[0]?.unit_id || "");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "服务器快照校验失败";
+      setError(message);
+      throw err;
+    } finally {
+      setBusy(false); setActiveTask(null);
+    }
+  };
 
   const importFile = async (file: File) => {
     if (busy || networkBusy || rankBusy) return;
@@ -208,7 +237,7 @@ export function PMSSWorkspace() {
     <div className="pmss-hero">
       <div><span className="pmss-eyebrow"><Activity size={15}/> PMSS / READ-ONLY MARKET INTELLIGENCE</span>
         <h2>真实市场数据与报价策略</h2>
-        <p>读取脱敏历史快照，分析24时段节点电价、线路约束和机组中标，再生成本地五段报价建议。</p>
+        <p>选择已授权 PMSS 工程和案例日期，查看真实历史市场、网络拓扑与出清记录，再进行本地策略研究。</p>
         <div className="pmss-hero-tags">
           <span><ShieldCheck size={14}/> 零平台写入</span>
           <span><Database size={14}/> 实际出清结果</span>
@@ -221,8 +250,9 @@ export function PMSSWorkspace() {
       <input ref={picker} type="file" accept=".json,application/json" hidden
         aria-label="导入 PMSS 脱敏 JSON" onChange={onFile}/>
     </div>
+    <PMSSSourcePicker onLoaded={importServerSnapshot} onReset={clearMarket} inspection={inspection}/>
     <div className="pmss-process-steps" aria-label="PMSS 研究工作流程">
-      <span className={inspection ? "complete" : "current"}><b>01</b> 导入脱敏快照</span>
+      <span className={inspection ? "complete" : "current"}><b>01</b> 选择工程 / 历史日期</span>
       <span className={inspection ? "complete" : ""}><b>02</b> 市场与机组检查</span>
       <span className={analysis ? "complete" : inspection ? "current" : ""}><b>03</b> 本地优化与复核</span>
       {fileName && <span className="pmss-file-label" title={fileName}>{fileName}</span>}
@@ -232,8 +262,8 @@ export function PMSSWorkspace() {
     {error && <div className="pmss-error" role="alert">{error}</div>}
     {!inspection && <div className="pmss-empty" onDragOver={event => event.preventDefault()} onDrop={onDrop}>
       <FileJson2 size={42} strokeWidth={1.3}/>
-      <h3>尚未导入 PMSS 数据</h3>
-      <p>在可信服务器执行只读快照导出，再将不含认证信息的 JSON 拖放至此或手动选择。无需在网页端登录老师平台。</p>
+      <h3>尚未加载 PMSS 市场数据</h3>
+      <p>优先在上方选择已授权工程与历史日期；若接口尚未启用，可继续拖入可信服务器导出的脱敏 JSON。这里不会使用假数据充当真实出清。</p>
       <button type="button" onClick={() => picker.current?.click()}>选择 JSON 文件 <ArrowRight size={15}/></button>
     </div>}
     {inspection && <>
@@ -262,6 +292,7 @@ export function PMSSWorkspace() {
           历史最高申报价为 {numeric(inspection.historical_bid_rule_audit.largest_original_price, 2)}。
           不能仅凭当前规则断定历史提交违规，也不能用历史报价为新报价越界提供依据。
         </div>}
+      {snapshot && <PMSSGridOverview key={fileName} snapshot={snapshot} inspection={inspection} target={target}/>}
       <div className="pmss-panel">
         <div className="pmss-panel-head">
           <div>
