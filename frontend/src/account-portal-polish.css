@@ -51,11 +51,33 @@
 .pb-identity-form {gap:16px;}
 .pb-identity-field {gap:8px;}
 .pb-identity-field label {color:#d9e1f4;font-size:12px;}
-.pb-identity-input-wrap {height:52px;border-radius:11px;border-color:rgba(131,159,217,.26);background:rgba(9,20,39,.65);transition:box-shadow .24s,border-color .24s,background .24s;}
-.pb-identity-input-wrap:hover:not(:focus-within) {border-color:rgba(161,186,243,.45);}
-.pb-identity-input-wrap:focus-within {background:rgba(20,34,60,.9);border-color:#94a6ff;box-shadow:0 0 0 4px rgba(105,126,246,.13);}
-.pb-identity-input-wrap>svg {color:#91a4cd;}
-.pb-identity-input-wrap input {font-size:13px;color:#f5f7ff;}
+/* One clean focus treatment belongs to the field container, not both layers.
+   Workspace-global input:focus-visible must not draw a second square outline
+   around the native input inside the rounded authentication field. */
+.pb-identity-input-wrap {
+  height:52px;
+  border-radius:11px;
+  border-color:rgba(131,159,217,.26);
+  background:rgba(9,20,39,.65);
+  transition:border-color .22s ease,background .22s ease,box-shadow .22s ease;
+}
+.pb-identity-input-wrap:hover:not(:focus-within) {border-color:rgba(161,186,243,.40);}
+.pb-identity-input-wrap:focus-within {
+  background:rgba(12,25,45,.83);
+  border-color:rgba(154,177,247,.69);
+  box-shadow:0 0 0 2px rgba(120,143,228,.11),inset 0 1px 0 rgba(225,233,255,.035);
+}
+/* Explicitly suppress the inner UA/global outline; the outer focus ring above
+   remains visible to keyboard and pointer users alike. */
+:root .pb-identity-screen .pb-identity-input-wrap > input:focus,
+:root .pb-identity-screen .pb-identity-input-wrap > input:focus-visible {
+  outline:none !important;
+  outline-offset:0;
+  box-shadow:none !important;
+}
+.pb-identity-input-wrap>svg {color:#91a4cd;transition:color .22s ease;}
+.pb-identity-input-wrap:focus-within>svg {color:#b0bff0;}
+.pb-identity-input-wrap input {font-size:13px;color:#f5f7ff;caret-color:#b4c4ff;}
 .pb-identity-input-wrap input::placeholder {color:#7e8eaf;}
 .pb-identity-eye {border-radius:7px;}
 .pb-identity-eye:hover {background:rgba(136,158,237,.1);}
