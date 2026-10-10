@@ -76,3 +76,32 @@ def test_pmss_bridge_rejects_system_load_disagreement():
     original["loads"]["data"]["datas"][1]["da"]["t01"] = 5
     with pytest.raises(ValueError, match="node/system|nodal/system"):
         sanitize_pmss_network(original, snapshot=snapshot)
+
+
+@pytest.mark.parametrize("name,value", [
+    ("x", "0.1"),
+    ("x", True),
+    ("x", 0),
+    ("ratedMw", "30"),
+    ("ratedMw", float("inf")),
+    ("ratio", True),
+])
+def test_pmss_grid_rejects_invalid_physical_parameter_units(name, value):
+    snapshot, original = _market_and_private_grid()
+    original["lines"]["datas"][0][name] = value
+    with pytest.raises(ValueError, match="physical|positive"):
+        sanitize_pmss_network(original, snapshot=snapshot)
+
+
+def test_pmss_grid_rejects_explicit_ohm_reactance_without_conversion():
+    snapshot, original = _market_and_private_grid()
+    original["lines"]["datas"][0]["xUnit"] = "ohm"
+    with pytest.raises(ValueError, match="reactance unit"):
+        sanitize_pmss_network(original, snapshot=snapshot)
+
+
+def test_pmss_grid_rejects_boolean_bus_load():
+    snapshot, original = _market_and_private_grid()
+    original["loads"]["data"]["datas"][1]["da"]["t01"] = True
+    with pytest.raises(ValueError, match="nodal MW"):
+        sanitize_pmss_network(original, snapshot=snapshot)

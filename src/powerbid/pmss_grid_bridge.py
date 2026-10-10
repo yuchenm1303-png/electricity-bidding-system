@@ -23,6 +23,11 @@ from powerbid.pmss_integration import PMSSSnapshot
 def sanitize_pmss_network(
     private_grid: Mapping[str, Any], *, snapshot: PMSSSnapshot,
 ) -> dict[str, Any]:
+    def physical_number(value: object, name: str) -> float:
+        if type(value) not in (int, float) or not isfinite(value):
+            raise ValueError(f"PMSS {name} must be a finite numeric physical value")
+        return float(value)
+
     if not isinstance(private_grid, Mapping):
         raise ValueError("PMSS network must come from an authorized read-only export")
     try:
@@ -57,12 +62,12 @@ def sanitize_pmss_network(
         if ident not in bus_names or row.get("elementName") != bus_names[ident]:
             raise ValueError("PMSS node load ID or name disagrees with grid")
         da = row["da"]
-        demand[ident] = [float(da[f"t{i:02d}"]) for i in range(1, 25)]
+        demand[ident] = [physical_number(da[f"t{i:02d}"], "nodal MW load") for i in range(1, 25)]
     if set(demand) != set(bus_names) or total_row is None:
         raise ValueError("Missing Bus loads or PMSS system load summary")
     for period in range(24):
         total = sum(data[period] for data in demand.values())
-        expected = float(total_row["da"][f"t{period+1:02d}"])
+        expected = physical_number(total_row["da"][f"t{period+1:02d}"], "system MW load")
         if not isfinite(total) or abs(total - expected) > 0.1:
             raise ValueError(f"PMSS nodal/system load mismatch in hour {period+1}")
     model_lines: list[dict[str, Any]] = []
@@ -72,15 +77,27 @@ def sanitize_pmss_network(
         a, b = str(item["bgnNodeId"]), str(item["endNodeId"])
         if ident in seen or not ident or a not in bus_names or b not in bus_names:
             raise ValueError("Duplicate line or missing endpoint")
-        if float(item["ratio"]) != 1.0:
+        ratio = physical_number(item["ratio"], "transformer ratio")
+        if ratio != 1.0:
             raise ValueError("Non-unity PMSS transformer ratio needs separate model")
+        # An explicitly different x unit cannot be coerced to per-unit.
+        # The legacy PMSS source does not certify a baseMVA; an absent unit
+        # marker stays an explicit physical-provenance limitation.
+        for unit_field in ("xUnit", "reactanceUnit"):
+            if unit_field in item and item[unit_field] not in ("pu", "p.u.", "per_unit"):
+                raise ValueError("Unsupported PMSS reactance unit (requires per-unit x)")
+        x_pu = physical_number(item["x"], "relative per-unit reactance")
+        limit_mw = physical_number(item["ratedMw"], "line thermal limit MW")
+        if x_pu <= 0 or limit_mw <= 0:
+            raise ValueError("PMSS line reactance and thermal limit must be positive")
+
         seen.add(ident)
         model_lines.append({
             "lineId": ident,
             "fromBus": a,
             "toBus": b,
-            "reactancePu": item["x"],
-            "limitMw": item["ratedMw"],
+            "reactancePu": x_pu,
+            "limitMw": limit_mw,
         })
     unit_bus: dict[str, str] = {}
     for item in units:
