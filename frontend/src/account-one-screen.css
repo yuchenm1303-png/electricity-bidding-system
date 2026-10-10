@@ -1,0 +1,171 @@
+/* Auth experience / viewport-first layout
+   Intent: visually balanced desktop access, no page scrolling at ordinary
+   desktop heights. On small screens and short displays, never trap controls,
+   error messages or CAPTCHA behind a fixed height. */
+.pb-identity-screen {
+  --pb-access-outline: rgba(159,181,248,.19);
+  --pb-access-soft: rgba(9,17,32,.45);
+  background:
+    radial-gradient(ellipse 58% 67% at 8% 38%,rgba(51,78,144,.13),transparent 72%),
+    linear-gradient(110deg,#0d172a 0%,#0b1527 54%,#0b1324 100%);
+}
+.pb-identity-story::after {opacity:.5;}
+.pb-identity-card {
+  border-radius:21px;
+  border-color:var(--pb-access-outline);
+  background:linear-gradient(145deg,rgba(25,39,64,.83),rgba(15,27,47,.92));
+  box-shadow:0 22px 65px rgba(1,7,19,.25),inset 0 1px 0 rgba(242,247,255,.045);
+}
+.pb-identity-input-wrap {
+  border-radius:10px;
+  background:rgba(8,18,36,.61);
+}
+.pb-identity-screen .pb-social-button {
+  border-radius:10px;
+  background:rgba(20,34,56,.8);
+}
+.pb-identity-story h1 {
+  font-weight:735;
+  font-size:clamp(43px,4vw,66px);
+  line-height:1.17;
+  margin:21px 0 17px;
+}
+.pb-identity-story h1 em {background:linear-gradient(120deg,#8ca6ff,#c6b9fb);background-clip:text;-webkit-background-clip:text;}
+.pb-identity-story-content>p {font-size:14px;line-height:1.85;}
+.pb-identity-network {
+  max-width:510px;
+  margin-top:27px;
+  padding:18px 21px 14px;
+  border-radius:17px;
+  box-shadow:0 12px 45px rgba(3,10,29,.10);
+}
+.pb-identity-network > svg {max-height:170px;}
+.pb-identity-story-trails {margin-top:20px;}
+/* Long pages are needed only on compact screens, never clipped by force. */
+@media (min-width:821px) and (min-height:740px) {
+  html:has(.pb-identity-screen),body:has(.pb-identity-screen) {
+    height:100%;
+    overflow:hidden;
+  }
+  .pb-identity-screen {
+    height:100dvh;
+    min-height:0;
+    overflow:hidden;
+  }
+  .pb-identity-layout {
+    height:100%;
+    min-height:0;
+    grid-template-columns:minmax(0,1.08fr) minmax(430px,.92fr);
+  }
+  .pb-identity-story {
+    min-height:0;
+    padding:clamp(20px,3.2vh,34px) clamp(34px,5vw,82px) 22px;
+  }
+  .pb-identity-story-content {
+    padding-top:0;
+    margin:auto 0;
+    max-width:545px;
+  }
+  .pb-identity-story-footer {
+    flex-shrink:0;
+    padding-top:14px;
+  }
+  .pb-identity-access {
+    height:100%;
+    min-height:0;
+    padding:clamp(19px,3vh,30px) clamp(27px,4.6vw,79px) 18px;
+  }
+  .pb-identity-access-top {flex-shrink:0;}
+  .pb-identity-access-center {
+    min-height:0;
+    padding:14px 0;
+    display:grid;
+    place-items:center;
+    /* Only unusual content (validation errors, captcha) can scroll here. */
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(133,155,218,.17) transparent;
+    overscroll-behavior:contain;
+  }
+  .pb-identity-card {
+    max-width:426px;
+    width:100%;
+    margin:auto;
+    padding:clamp(20px,2.6vh,26px) clamp(24px,2.8vw,34px) 22px;
+  }
+  .pb-identity-emblem {width:46px;height:46px;border-radius:14px;margin-bottom:12px;}
+  .pb-identity-emblem svg {width:24px;height:24px;}
+  .pb-identity-kicker {font-size:9px;letter-spacing:.17em;}
+  .pb-identity-card h2 {font-size:30px;line-height:1.16;margin:7px 0 7px;}
+  .pb-identity-lead {font-size:12px;line-height:1.6;margin-bottom:16px;}
+  .pb-identity-tabs {
+    padding:3px;gap:5px;
+    margin-bottom:16px;border-radius:11px;
+  }
+  .pb-identity-tabs button {padding:8px 10px;min-height:38px;}
+  .pb-identity-form {gap:11px;}
+  .pb-identity-field {gap:5px;}
+  .pb-identity-field label {font-size:11px;}
+  .pb-identity-input-wrap {height:44px;padding-inline:13px;}
+  .pb-identity-primary {min-height:47px;margin-top:2px;}
+  .pb-social-auth {margin-top:15px;}
+  .pb-social-divider {font-size:10px;margin-bottom:11px;}
+  .pb-social-button {min-height:41px!important;font-size:12px;}
+  .pb-social-options {gap:10px;}
+  .pb-social-note {font-size:10px;line-height:1.45;margin-top:9px;}
+  .pb-identity-card-bottom {margin-top:15px;padding-top:13px;}
+  .pb-identity-access-footer {flex-shrink:0;padding-top:9px;font-size:10px;}
+  .pb-pass-progress {margin-top:1px;}
+  .pb-pass-progress-label {margin-top:2px;}
+  .pb-identity-story-trails {margin-top:17px;}
+}
+@media (min-width:821px) and (max-height:860px) {
+  .pb-identity-story h1 {font-size:clamp(40px,3.8vw,57px);}
+  .pb-identity-network {margin-top:20px;padding:13px 17px 10px;}
+  .pb-identity-network > svg {max-height:132px;}
+  .pb-identity-story-trails {margin-top:13px;}
+  .pb-identity-access-center {padding:8px 0;}
+  .pb-identity-card {padding-top:17px;padding-bottom:17px;}
+  .pb-identity-emblem {height:41px;width:41px;margin-bottom:9px;}
+  .pb-identity-lead {margin-bottom:11px;}
+  .pb-identity-tabs {margin-bottom:11px;}
+  .pb-identity-form {gap:8px;}
+  .pb-identity-input-wrap {height:41px;}
+  .pb-social-auth {margin-top:10px;}
+  .pb-social-divider {margin-bottom:8px;}
+  .pb-social-button {min-height:38px!important;}
+  .pb-social-note {margin-top:6px;}
+  .pb-identity-card-bottom {margin-top:11px;padding-top:11px;}
+}
+@media (max-width:1100px) and (min-width:821px) {
+  .pb-identity-story {padding-inline:36px;}
+  .pb-identity-access {padding-inline:28px;}
+  .pb-identity-story h1 {font-size:clamp(37px,4vw,49px);}
+  .pb-identity-network > svg {max-height:145px;}
+}
+/* On low-height desktop windows, mobile phones, or zoomed layouts, ordinary
+   scrolling is safer than hiding CAPTCHA/error/help content. */
+@media (max-height:739px) and (min-width:821px) {
+  html:has(.pb-identity-screen),body:has(.pb-identity-screen) {height:auto;overflow:auto;}
+  .pb-identity-screen,.pb-identity-layout {height:auto;min-height:100dvh;overflow:visible;}
+  .pb-identity-access-center {padding:15px 0;}
+}
+@media (max-width:820px) {
+  .pb-identity-screen,.pb-identity-layout {height:auto;min-height:100dvh;overflow:visible;}
+  .pb-identity-story {padding:18px 22px 0;}
+  .pb-identity-access {height:auto;min-height:0;padding:13px 20px 26px;}
+  .pb-identity-access-center {padding:22px 0 17px;overflow:visible;}
+  .pb-identity-card {padding:24px 23px;border-radius:18px;max-width:440px;}
+  .pb-identity-emblem {height:46px;width:46px;margin-bottom:14px;}
+  .pb-identity-lead {margin-bottom:17px;}
+  .pb-identity-tabs {margin-bottom:17px;}
+  .pb-identity-form {gap:12px;}
+  .pb-identity-input-wrap {height:46px;}
+}
+@media (max-height:740px) and (max-width:820px) {
+  .pb-identity-access-center {padding-block:14px;}
+}
+/* Avoid layout surprises for reduced-motion users. */
+@media (prefers-reduced-motion:reduce) {
+  .pb-identity-card,.pb-identity-network {transition:none!important;}
+}
