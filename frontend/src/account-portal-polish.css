@@ -45,9 +45,7 @@
 .pb-identity-kicker {letter-spacing:.18em;font-size:10px;color:#99acff;}
 .pb-identity-card h2 {font-size:clamp(29px,2.7vw,36px);margin-top:11px;letter-spacing:-.06em;font-weight:730;}
 .pb-identity-lead {margin-bottom:26px;line-height:1.8;color:#a7b6d0;}
-.pb-identity-tabs {background:rgba(7,15,30,.42);border-color:rgba(147,170,226,.17);border-radius:12px;margin-bottom:26px;}
-.pb-identity-tabs button {padding:12px 9px;border-radius:9px;color:#9aaac6;transition:background .2s,color .2s,box-shadow .2s;}
-.pb-identity-tabs button.selected {color:#f4f6ff;background:linear-gradient(135deg,#354669,#2a3b5a);box-shadow:0 5px 14px rgba(2,6,20,.25),inset 0 1px 0 rgba(255,255,255,.07);}
+.pb-identity-tabs {margin-bottom:26px;}
 .pb-identity-form {gap:16px;}
 .pb-identity-field {gap:8px;}
 .pb-identity-field label {color:#d9e1f4;font-size:12px;}
