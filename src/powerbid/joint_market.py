@@ -122,8 +122,6 @@ def joint_clear_day(
             raise ValueError("Initial unit on/off status must be an actual boolean")
         if spec.max_mw > snapshot.unit(ident).capacity_mw + 1e-7:
             raise ValueError(f"{ident}: technical maximum exceeds snapshot capacity")
-        if spec.min_mw + 1e-7 < snapshot.unit(ident).min_power_mw:
-            raise ValueError(f"{ident}: technical minimum below PMSS snapshot minimum")
     if target_mwh_extreme not in (None, "minimum", "maximum"):
         raise ValueError("target_mwh_extreme must be minimum, maximum or None")
     if any(
@@ -476,9 +474,9 @@ def joint_clear_day(
             gen: sum(max(0.0, float(continuous.x[k])) for k in blocks[t, gen])
             for gen in units
         }
-        online = {gen: lo_arr[commitment[t, gen][0]] > 0.5 for gen in units}
-        started = {gen: lo_arr[commitment[t, gen][1]] > 0.5 for gen in units}
-        stopped = {gen: lo_arr[commitment[t, gen][2]] > 0.5 for gen in units}
+        online = {gen: bool(lo_arr[commitment[t, gen][0]] > 0.5) for gen in units}
+        started = {gen: bool(lo_arr[commitment[t, gen][1]] > 0.5) for gen in units}
+        stopped = {gen: bool(lo_arr[commitment[t, gen][2]] > 0.5) for gen in units}
         bid_cost = sum(
             c_arr[k] * continuous.x[k]
             for gen in units for k in blocks[t, gen]
