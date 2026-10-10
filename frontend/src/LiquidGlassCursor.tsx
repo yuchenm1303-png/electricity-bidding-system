@@ -4,6 +4,9 @@ const FREE_ROI_SIZE = 420;
 const SNAP_ROI_PADDING = 160;
 const BASE_WIDTH = 80;
 const BASE_HEIGHT = 54;
+// The existing optical lens becomes a larger, perfectly circular viewport over charts.
+const CHART_LENS_SIZE = 118;
+const CHART_LENS_SELECTOR = ".ta-gauge-wrap, .ta-bars, .ta-supply-chart, .recharts-wrapper, .pmss-chart";
 const FREE_OFFSET_Y = -32;
 const SNAP_DISTANCE = 10;
 const RELEASE_DISTANCE = 15;
@@ -711,6 +714,7 @@ export function LiquidGlassCursor() {
     let pressed = false;
     const pressure: SpringValue = { value: 0, velocity: 0, target: 0 };
     let activeTarget: HTMLElement | null = null;
+    let chartLens = false;
     let raf = 0;
     let lastTime = performance.now();
     let lastCapture = 0;
@@ -837,7 +841,20 @@ export function LiquidGlassCursor() {
 
     refreshMagneticTargets();
 
+    // Chart mode changes the original glass geometry, not its rendering layer.
+    // Keep native graph hit-testing intact and prioritize actual controls.
+    const updateChartLens = () => {
+      const element = document.elementFromPoint(pointerX, pointerY);
+      const next = pointerInside && Boolean(element?.closest(CHART_LENS_SELECTOR)) &&
+        !Boolean(element?.closest("button, a, input, textarea, select, [contenteditable='true'], [data-liquid-snap='false']"));
+      if (next === chartLens) return;
+      chartLens = next;
+      snapDirty = true;
+      rasterDirty = true;
+    };
+
     const findSnapTarget = () => {
+      if (chartLens) { activeTarget = null; return null; }
       const previous = activeTarget;
       let next: HTMLElement | null = null;
       let bestScore = Number.POSITIVE_INFINITY;
@@ -898,6 +915,14 @@ export function LiquidGlassCursor() {
         width.target = lens.width;
         height.target = lens.height;
         snap.target = 1;
+      } else if (chartLens) {
+        // Unlike the offset freeform cursor, a circular lens stays centered
+        // exactly beneath the pointer; the same shader samples the same ROI.
+        x.target = Math.max(CHART_LENS_SIZE / 2 + 4, Math.min(window.innerWidth - CHART_LENS_SIZE / 2 - 4, pointerX));
+        y.target = Math.max(CHART_LENS_SIZE / 2 + 4, Math.min(window.innerHeight - CHART_LENS_SIZE / 2 - 4, pointerY));
+        width.target = CHART_LENS_SIZE;
+        height.target = CHART_LENS_SIZE;
+        snap.target = 0;
       } else {
         // Keep the unsnapped lens wholly on-screen near the top/bottom.
         x.target = Math.max(BASE_WIDTH / 2 + 6, Math.min(window.innerWidth - BASE_WIDTH / 2 - 6, pointerX));
@@ -1039,6 +1064,7 @@ export function LiquidGlassCursor() {
       const dt = Math.min(0.032, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
       const magneticSettled = updateMagneticTargets(dt);
+      updateChartLens();
       updateTargets();
 
       const snapping = Boolean(activeTarget) || snap.target > 0.001;
@@ -1065,13 +1091,15 @@ export function LiquidGlassCursor() {
         const readingSurface = Boolean(activeTarget?.matches(".ta-global-search, input, textarea, select, [contenteditable='true']"));
         // Lower refraction on typography-rich surfaces: no ghosted search
         // placeholder or oversized, displaced brand lettering.
-        const strength = readingSurface ? 0.68 + 0.18 * pressWeight
+        const strength = chartLens ? 0.78
+          : readingSurface ? 0.68 + 0.18 * pressWeight
           : (0.95 + (1.14 - 0.95) * snap.value) + 0.62 * pressWeight;
-        const pinch = (7.7 + (7.35 - 7.7) * snap.value) - 0.85 * pressWeight;
-        const aberration = readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
-        const zoom = readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
+        const pinch = chartLens ? 8.1 : (7.7 + (7.35 - 7.7) * snap.value) - 0.85 * pressWeight;
+        const aberration = chartLens ? 0.055 : readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
+        const zoom = chartLens ? 1.48
+          : readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
           : 1 + 0.055 * snap.value + 0.025 * pressWeight;
-        const wobble = 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
+        const wobble = chartLens ? 0.025 : 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
 
         gl.viewport(0, 0, canvas.width, canvas.height);
         gl.clearColor(0, 0, 0, 0);
@@ -1204,6 +1232,7 @@ export function LiquidGlassCursor() {
     };
     const handlePointerLeave = () => {
       pointerInside = false;
+      chartLens = false;
       pressed = false;
       pressure.target = 0;
       activeTarget = null;
