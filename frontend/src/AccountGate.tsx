@@ -12,6 +12,7 @@ import Workspace from "./WorkspaceEntry";
 import "./account.css";
 import "./account-portal-polish.css";
 import "./account-buttons.css";
+import "./icon-interactions.css";
 
 export type AccountUser = {
   id: number;
