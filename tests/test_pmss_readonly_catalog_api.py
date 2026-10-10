@@ -10,9 +10,9 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from test_pmss_web_api import _synthetic_network_case  # noqa: E402
 from app import account_auth  # noqa: E402
 from app.web_server import app  # noqa: E402
-from test_pmss_web_api import _synthetic_network_case  # noqa: E402
 
 
 @pytest.fixture
