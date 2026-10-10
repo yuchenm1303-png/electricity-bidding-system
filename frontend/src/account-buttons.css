@@ -32,17 +32,72 @@
 .pb-identity-screen .pb-identity-primary:disabled {
   opacity:.58;cursor:not-allowed;transform:none;box-shadow:none;
 }
-.pb-identity-screen .pb-identity-tabs {border-radius:13px;padding:4px;gap:5px}
+/* A single moving thumb, not two independently painted button backgrounds. */
+.pb-identity-screen .pb-identity-tabs {
+  --pb-switch-inset:4px;
+  --pb-switch-gap:5px;
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  padding:var(--pb-switch-inset);
+  gap:var(--pb-switch-gap);
+  border:1px solid rgba(153,174,226,.18);
+  border-radius:15px;
+  background:rgba(8,18,36,.66);
+  box-shadow:inset 0 2px 7px rgba(1,7,19,.24),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.pb-identity-screen .pb-identity-tabs::before {
+  content:"";
+  position:absolute;
+  box-sizing:border-box;
+  pointer-events:none;
+  left:var(--pb-switch-inset);
+  top:var(--pb-switch-inset);
+  bottom:var(--pb-switch-inset);
+  width:calc((100% - 2 * var(--pb-switch-inset) - var(--pb-switch-gap)) / 2);
+  border:1px solid rgba(172,195,254,.22);
+  border-radius:11px;
+  background:linear-gradient(145deg,rgba(73,97,150,.96),rgba(44,64,105,.98));
+  box-shadow:0 5px 14px rgba(0,5,20,.28),inset 0 1px 0 rgba(255,255,255,.13);
+  transform:translateX(0);
+  transition:transform .43s cubic-bezier(.22,1,.36,1);
+}
+.pb-identity-screen .pb-identity-tabs[data-view="register"]::before {
+  transform:translateX(calc(100% + var(--pb-switch-gap)));
+}
 .pb-identity-screen .pb-identity-tabs button {
-  border-radius:9px;border:1px solid transparent;min-height:41px;
+  position:relative;
+  z-index:1;
+  min-width:0;
+  min-height:41px;
+  border:0;
+  border-radius:11px;
+  padding:10px 12px;
+  color:#9aaac7;
+  background:transparent;
+  box-shadow:none;
+  font-weight:670;
+  letter-spacing:.01em;
+  transition:color .22s ease,transform .22s ease;
 }
 .pb-identity-screen .pb-identity-tabs button:hover:not(.selected) {
-  background:rgba(125,151,236,.11);color:#eef2ff;
+  color:#e0e9ff;
+  background:transparent;
 }
 .pb-identity-screen .pb-identity-tabs button.selected {
-  border-color:rgba(154,174,249,.19);color:#f6f8ff;
-  background:linear-gradient(140deg,rgba(65,85,134,.91),rgba(41,57,89,.96));
-  box-shadow:0 4px 14px rgba(3,8,23,.18),inset 0 1px 0 rgba(255,255,255,.08);
+  color:#f8faff;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+}
+.pb-identity-screen .pb-identity-tabs button:active {
+  transform:scale(.985);
+}
+.pb-identity-screen .pb-identity-tabs:focus-within {
+  border-color:rgba(159,181,248,.38);
+}
+@media (prefers-reduced-motion:reduce) {
+  .pb-identity-screen .pb-identity-tabs::before {transition:none;}
 }
 .pb-identity-screen .pb-social-button {
   min-height:49px;border:1px solid rgba(148,170,229,.28);border-radius:11px;
