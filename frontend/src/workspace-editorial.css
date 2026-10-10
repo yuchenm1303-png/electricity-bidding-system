@@ -296,6 +296,17 @@
   background:#1d2b3e;
   border-color:#33445c;
 }
+/* The legacy 1200px rule collapses the sidebar at 78px, whereas
+   TailAdmin waits until 1110px to shrink the *grid*. This mismatch
+   left a dead 156px gutter on common 1150–1200px laptop widths. */
+@media(min-width:961px) and (max-width:1200px) {
+  :root .app,
+  :root .app:has(.settings-closed),
+  :root .app:has(.sidebar.collapsed),
+  :root .app:has(.settings-closed):has(.sidebar.collapsed) {
+    grid-template-columns:78px minmax(0,1fr);
+  }
+}
 /* Preserve mobile layout: merely adjust surface tokens, never overflow. */
 @media(max-width:780px) {
   :root[data-theme="dark"] .app .ta-gauge-wrap {margin-top:12px;width:min(75%,260px)}
