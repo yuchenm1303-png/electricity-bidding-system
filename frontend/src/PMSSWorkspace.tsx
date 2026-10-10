@@ -592,7 +592,7 @@ export function PMSSWorkspace() {
           <div className="pmss-toolbar">
             <p>逐时段 DC 潮流和线限额约束；节点边际电价来自本地线性规划。</p>
             <button className="pmss-run-button" type="button"
-              disabled={!analysis || busy || networkBusy}
+              disabled={(!analysis && !proposal) || busy || networkBusy}
               onClick={() => void runNetwork()}>
               {networkBusy ? "网络模型计算中..." : "运行真实拓扑网络对照"}
               <ArrowRight size={16}/>
