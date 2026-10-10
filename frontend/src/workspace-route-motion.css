@@ -37,18 +37,19 @@
   to {opacity:1;transform:translate3d(0,0,0)}
 }
 
-/* App.tsx keys view-stage by route; parameter edits never remount it. */
+/* Route entries travel strictly on the Y axis. Forward navigation rises
+   into place; backward navigation gently descends. No diagonal drift. */
 :root .app .view-stage,
-:root .app .pmss-persistent-stage {--pb-route-x:var(--pb-route-travel)}
+:root .app .pmss-persistent-stage {--pb-route-y:var(--pb-route-travel)}
 :root .app .view-stage[data-motion-direction="backward"],
 :root .app .pmss-persistent-stage[data-motion-direction="backward"] {
-  --pb-route-x:calc(-1 * var(--pb-route-travel));
+  --pb-route-y:calc(-1 * var(--pb-route-travel));
 }
 :root .app .view-stage:not(:empty) {
   animation:pb-route-content-in 405ms var(--pb-route-ease) both;
 }
 @keyframes pb-route-content-in {
-  0% {opacity:.42;transform:translate3d(var(--pb-route-x),7px,0)}
+  0% {opacity:.42;transform:translate3d(0,var(--pb-route-y),0)}
   60% {opacity:.95}
   100% {opacity:1;transform:translate3d(0,0,0)}
 }
