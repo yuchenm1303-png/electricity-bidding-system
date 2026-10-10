@@ -69,6 +69,8 @@ export function PMSSWorkspace() {
   const [inspection, setInspection] = useState<PMSSInspection | null>(null);
   const [analysis, setAnalysis] = useState<PMSSOptimization | null>(null);
   const [proposal, setProposal] = useState<PMSSBidProposal | null>(null);
+  const activeProposalRef = useRef<PMSSBidProposal | null>(null);
+  activeProposalRef.current = proposal;
   const [manualReviewReady, setManualReviewReady] = useState(false);
   const [networkResult, setNetworkResult] = useState<PMSSNetworkComparison | null>(null);
   const [networkBusy, setNetworkBusy] = useState(false);
@@ -126,7 +128,7 @@ export function PMSSWorkspace() {
   };
 
   const run = async () => {
-    if (!snapshot || !target || busy || networkBusy) return;
+    if (!snapshot || !target || busy || networkBusy || rankBusy) return;
     if (![minimum, maximum, step].every(Number.isFinite) ||
         minimum < (inspection?.historical_bid_rule_audit.price_floor ?? 0) ||
         maximum > (inspection?.historical_bid_rule_audit.price_ceiling ?? 10000) ||
@@ -160,7 +162,7 @@ export function PMSSWorkspace() {
 
   const runNetwork = async () => {
     if (!snapshot || (!analysis && !proposal) || !target || !inspection?.dc_grid_available ||
-        busy || networkBusy) return;
+        busy || networkBusy || rankBusy) return;
     setNetworkBusy(true);
     setNetworkResult(null);
     setError("");
@@ -222,7 +224,7 @@ export function PMSSWorkspace() {
           <span>本地策略搜索</span>
         </div>
       </div>
-      <button className="pmss-import-button" type="button" disabled={busy || networkBusy} onClick={() => picker.current?.click()}>
+      <button className="pmss-import-button" type="button" disabled={busy || networkBusy || rankBusy} onClick={() => picker.current?.click()}>
         <UploadCloud size={19}/>{activeTask==="import" ? "正在校验..." : inspection ? "更换快照" : "导入快照"}
       </button>
       <input ref={picker} type="file" accept=".json,application/json" hidden
@@ -517,19 +519,19 @@ export function PMSSWorkspace() {
           <span className="pmss-state-label">本地模拟</span>
         </div>
         <div className="pmss-controls">
-          <label>目标机组<select disabled={busy || networkBusy} value={target} onChange={e => {setTarget(e.target.value);setAnalysis(null);setNetworkResult(null);setRankResult(null);setProposal(null);setManualReviewReady(false);}}>
+          <label>目标机组<select disabled={busy || networkBusy || rankBusy} value={target} onChange={e => {setTarget(e.target.value);setAnalysis(null);setNetworkResult(null);setRankResult(null);setProposal(null);setManualReviewReady(false);}}>
             {inspection.units.map(item => <option key={item.unit_id} value={item.unit_id}>{item.name}</option>)}
           </select></label>
-          <label>最低报价<input type="number" disabled={busy || networkBusy} min="0" max="10000" value={minimum} onChange={e => {setMinimum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
-          <label>最高报价<input type="number" disabled={busy || networkBusy} min="0" max="10000" value={maximum} onChange={e => {setMaximum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
-          <label>报价步长<input type="number" disabled={busy || networkBusy} min="1" value={step} onChange={e => {setStep(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
-          <label>局部迭代<select disabled={busy || networkBusy} value={iterations} onChange={e => {setIterations(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}>
+          <label>最低报价<input type="number" disabled={busy || networkBusy || rankBusy} min="0" max="10000" value={minimum} onChange={e => {setMinimum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
+          <label>最高报价<input type="number" disabled={busy || networkBusy || rankBusy} min="0" max="10000" value={maximum} onChange={e => {setMaximum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
+          <label>报价步长<input type="number" disabled={busy || networkBusy || rankBusy} min="1" value={step} onChange={e => {setStep(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
+          <label>局部迭代<select disabled={busy || networkBusy || rankBusy} value={iterations} onChange={e => {setIterations(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}>
             <option value={1}>1轮</option><option value={2}>2轮</option><option value={3}>3轮</option>
           </select></label>
         </div>
         <div className="pmss-toolbar">
           <p>最多 {inspection.max_segments} 段 · 24时段同一曲线 · 报价范围需服从课程规则</p>
-          <button className="pmss-run-button" type="button" disabled={busy || networkBusy} onClick={() => void run()}>
+          <button className="pmss-run-button" type="button" disabled={busy || networkBusy || rankBusy} onClick={() => void run()}>
             {activeTask==="optimize" ? "正在计算..." : "生成分段报价"} <ArrowRight size={16}/>
           </button>
         </div>
@@ -573,7 +575,9 @@ export function PMSSWorkspace() {
         key={target + ":" + inspection.case_date + ":" + JSON.stringify(proposal.segments)}
         snapshot={snapshot!} caseDate={inspection.case_date}
         proposal={proposal}
-        onReviewed={result => setManualReviewReady(result !== null)}
+        onReviewed={result => {
+          if (activeProposalRef.current === proposal) setManualReviewReady(result !== null);
+        }}
       />}
       <div className="pmss-panel">
         <div className="pmss-panel-head">
@@ -592,7 +596,7 @@ export function PMSSWorkspace() {
           <div className="pmss-toolbar">
             <p>逐时段 DC 潮流和线限额约束；节点边际电价来自本地线性规划。</p>
             <button className="pmss-run-button" type="button"
-              disabled={(!analysis && !proposal) || busy || networkBusy}
+              disabled={(!analysis && !proposal) || busy || networkBusy || rankBusy}
               onClick={() => void runNetwork()}>
               {networkBusy ? "网络模型计算中..." : "运行真实拓扑网络对照"}
               <ArrowRight size={16}/>
