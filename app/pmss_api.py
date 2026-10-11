@@ -651,3 +651,45 @@ async def manual_clearing_review(request: Request) -> dict[str, Any]:
                 "请使用对应案例的24小时日前结果；旧历史原结果不能冒充新方案的出清。"
             ),
         ) from exc
+
+
+class StrategyGuardInput(BaseModel):
+    """Three to five sanitized dated cases and Window A curve candidates."""
+
+    model_config = ConfigDict(extra="forbid")
+    history_cases: list[dict[str, Any]] = Field(min_length=3, max_length=5)
+    candidates: list[dict[str, Any]] = Field(min_length=1, max_length=6)
+    target_unit_id: str = Field(min_length=1, max_length=120)
+    max_dispatch_mae_mw: float = Field(
+        default=20.0, ge=0, le=10000, allow_inf_nan=False
+    )
+    max_nodal_price_mae: float = Field(
+        default=50.0, ge=0, le=100000, allow_inf_nan=False
+    )
+
+
+@router.post("/strategy-guard")
+async def assess_strategy_risk(request: Request) -> dict[str, Any]:
+    """Offline independent-date risk ranking, NOT real PMSS candidate clearing."""
+    from powerbid.pmss_strategy_guard import assess_pmss_strategy_candidates
+
+    try:
+        params = StrategyGuardInput.model_validate(await _read_payload(request))
+        for case in params.history_cases:
+            _screen_snapshot(case)
+        if not _NETWORK_LIMITER.acquire(blocking=False):
+            raise HTTPException(429, "已有网络策略计算在运行")
+        try:
+            return await run_in_threadpool(
+                assess_pmss_strategy_candidates,
+                params.history_cases, params.candidates, params.target_unit_id,
+                max_dispatch_mae_mw=params.max_dispatch_mae_mw,
+                max_nodal_price_mae=params.max_nodal_price_mae,
+            )
+        finally:
+            _NETWORK_LIMITER.release()
+    except (ValidationError, ValueError, KeyError, TypeError, StopIteration) as exc:
+        # Uploaded fields may be private; never reflect them into error bodies.
+        raise HTTPException(
+            422, detail="历史案例、候选曲线或独立日期校验失败；需完整脱敏的24小时DA案例"
+        ) from exc
