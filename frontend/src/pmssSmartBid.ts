@@ -1,5 +1,5 @@
 import type { PMSSInspection, PMSSNetworkRank, PMSSRankedCurve } from "./types";
-import { makePMSSBidProposal, type PMSSBidProposal } from "./pmssBiddingFlow";
+import { makePMSSBidProposal, type PMSSBidProposal } from "./pmssBiddingFlow.ts";
 
 export type SmartProfileId = "revenue" | "balanced" | "defensive";
 export type SmartBidProfile = {
