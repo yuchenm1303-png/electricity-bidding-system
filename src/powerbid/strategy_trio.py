@@ -7,7 +7,7 @@ Missing thermal records keep dispatch feasibility UNKNOWN rather than inferred.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from math import isfinite
 
 from powerbid.joint_market import JointInfeasibleError
@@ -242,10 +242,14 @@ def recommend_strategy_trio(
                     )
             except JointInfeasibleError:
                 status = "LOCAL_DC_UC_INFEASIBLE"
-                warnings.append("This candidate violates the combined local 24h grid/UC constraints")
+                warnings.append(
+                    "This candidate violates the combined local 24h grid/UC constraints"
+                )
             except RuntimeError:
                 status = "LOCAL_DC_UC_NOT_PROVEN"
-                warnings.append("MILP optimality/feasibility was not proven; no fallback dispatch assumed")
+                warnings.append(
+                    "MILP optimality/feasibility was not proven; no fallback dispatch assumed"
+                )
         candidates.append(StrategyCandidate(
             profile=profile,
             policy_name=result.name,
