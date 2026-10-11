@@ -62,12 +62,12 @@ def test_guest_blocked_but_member_can_read_shared_status(clients, monkeypatch):
         body = result.json()
         assert body["operator"] == "ready"
         assert body["shared_connection"] is True
-        assert body["reconnect_allowed"] is True
+        assert body["reconnect_allowed"] is False
         assert body["pmss_access"] == "unreachable"
     assert calls == [("GET", "/status")]
 
 
-def test_member_can_reconnect_only_during_confirmed_outage(clients, monkeypatch):
+def test_only_admin_can_reconnect_during_confirmed_outage(clients, monkeypatch):
     calls = []
 
     def fake(method, path):
@@ -82,9 +82,11 @@ def test_member_can_reconnect_only_during_confirmed_outage(clients, monkeypatch)
             "/api/pmss/connection/reconnect",
             json={"container": "termrelay-postgres", "command": "stop"},
             headers={"X-PowerBid-Request": "1"},
-        ).status_code == 422
+        ).status_code == 403
         assert calls == []
-        response = member.post(
+    with clients("pmssadmin") as admin:
+        assert admin.get("/api/pmss/connection/status").json()["reconnect_allowed"] is True
+        response = admin.post(
             "/api/pmss/connection/reconnect",
             headers={"X-PowerBid-Request": "1"},
         )
@@ -114,6 +116,12 @@ def test_member_cannot_interrupt_non_outage(clients, monkeypatch, probe, code):
         assert state["pmss_access"] == probe
         assert state["reconnect_allowed"] is False
         result = member.post(
+            "/api/pmss/connection/reconnect",
+            headers={"X-PowerBid-Request": "1"},
+        )
+        assert result.status_code == 403
+    with clients("pmssadmin") as admin:
+        result = admin.post(
             "/api/pmss/connection/reconnect",
             headers={"X-PowerBid-Request": "1"},
         )
@@ -157,7 +165,7 @@ def test_reconnect_fail_closed_and_cooldown(clients, monkeypatch):
         raise OSError("server secret must not leak")
 
     monkeypatch.setattr(pmss_connection_api, "_operator", offline)
-    with clients("pmssmember") as member:
+    with clients("pmssadmin") as member:
         result = member.post(
             "/api/pmss/connection/reconnect",
             headers={"X-PowerBid-Request": "1"},
