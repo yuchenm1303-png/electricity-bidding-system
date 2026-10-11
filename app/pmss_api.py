@@ -483,7 +483,9 @@ async def generate_strategy_trio(request: Request) -> dict[str, Any]:
         params = StrategyTrioInput.model_validate(await _read_payload(request))
         raw = params.snapshot
         if raw.get("historicalBacktestOnly") is not True:
-            raise ValueError("Only sanitized, explicitly historical teaching snapshots are supported")
+            raise ValueError(
+                "Only sanitized, explicitly historical teaching snapshots are supported"
+            )
         snapshot = _parse_snapshot(raw)
         if raw.get("dcNetwork") is None:
             raise ValueError("Cannot recommend without the actual mapped DC network")
@@ -495,10 +497,14 @@ async def generate_strategy_trio(request: Request) -> dict[str, Any]:
         if params.technical is None:
             if (params.technical_source is not None or params.technical_lineage is not None
                     or params.technical_source_description):
-                raise ValueError("Incomplete technical-input declaration; do not infer UC constraints")
+                raise ValueError(
+                    "Incomplete technical-input declaration; do not infer UC constraints"
+                )
         else:
             if params.technical_source not in ("synthetic", "course_verified_by_user"):
-                raise ValueError("Physical source must be synthetic or separately evidenced course data")
+                raise ValueError(
+                    "Physical source must be synthetic or separately evidenced course data"
+                )
             if not params.technical_source_description.strip():
                 raise ValueError("Provide an explicit description of the thermal-parameter source")
             readiness = assess_joint_readiness(
@@ -509,7 +515,9 @@ async def generate_strategy_trio(request: Request) -> dict[str, Any]:
                                  + repr(asdict(readiness))[:1000])
             if params.technical_source == "course_verified_by_user":
                 if params.technical_lineage is None:
-                    raise ValueError("Every course-sourced physical parameter requires case-bound lineage")
+                    raise ValueError(
+                        "Every course-sourced physical parameter requires case-bound lineage"
+                    )
                 lineage = validate_technical_lineage(
                     snapshot, params.technical, params.technical_lineage,
                     case_date=str(raw.get("caseDate") or ""),
