@@ -10,22 +10,22 @@ export function opticalProfile(mode:LensMode, snap:number, press:number, release
   const clampedSnap=Math.max(0,Math.min(1,snap));
   const clampedPress=Math.max(0,Math.min(1,press));
   if(mode==="chart")return {
-    strength:1.4,pinch:7.7,aberration:0.12,zoom:1.22,wobble:0.025,reflection:0.25,
+    strength:1.4,pinch:7.7,aberration:0.12,zoom:1.48,wobble:0.025,reflection:0.8,
   };
   if(mode==="hero")return {
     // Framer-style expressive refraction, only on decorative backgrounds.
     strength:3.5,pinch:5.5,aberration:0.18,zoom:1,wobble:0.12,reflection:0,
   };
   if(mode==="grid")return {
-    strength:1.7,pinch:7.7,aberration:0.12,zoom:1.6,wobble:0.06,reflection:0.30,
+    strength:1.7,pinch:7.7,aberration:0.12,zoom:1.6,wobble:0.06,reflection:0.8,
   };
   if(mode==="brand")return {
     strength:0.43+0.10*clampedPress,pinch:8.1,aberration:0.015,
-    zoom:1.007+0.005*clampedPress,wobble:0.022+0.012*clampedPress,reflection:0.2,
+    zoom:1.007+0.005*clampedPress,wobble:0.022+0.012*clampedPress,reflection:1,
   };
   if(mode==="reading")return {
     strength:0.68+0.18*clampedPress,pinch:7.7,aberration:0.045,
-    zoom:1+0.015*clampedSnap+0.012*clampedPress,wobble:0.025,reflection:0.15,
+    zoom:1+0.015*clampedSnap+0.012*clampedPress,wobble:0.025,reflection:1,
   };
   return {
     strength:0.95+0.19*clampedSnap+0.62*clampedPress,
@@ -33,7 +33,7 @@ export function opticalProfile(mode:LensMode, snap:number, press:number, release
     aberration:0.10+0.03*Math.max(clampedSnap,clampedPress),
     zoom:1+0.055*clampedSnap+0.025*clampedPress,
     wobble:0.12+0.05*clampedSnap+0.06*clampedPress+0.18*Math.max(0,release),
-    reflection:0.38,
+    reflection:1,
   };
 }
 
