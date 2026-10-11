@@ -44,7 +44,8 @@ def environment(tmp_path, monkeypatch):
     return root, login
 
 
-def populate(root: Path, *, snapshot: dict | None = None, visibility: str | None = None):
+def populate(root: Path, *, snapshot: dict | None = None, visibility: str | None = None,
+             allowed_user_ids: list[int] | None = None):
     market = _synthetic_network_case() if snapshot is None else snapshot
     standard = dict(market)
     standard["schemaVersion"] = "powerbid.pmss.standard.v1"
@@ -59,6 +60,8 @@ def populate(root: Path, *, snapshot: dict | None = None, visibility: str | None
     }
     if visibility is not None:
         project["visibility"] = visibility
+    if allowed_user_ids is not None:
+        project["allowed_user_ids"] = allowed_user_ids
     (root / "catalog.json").write_text(
         json.dumps({"projects": [project]}, ensure_ascii=False), encoding="utf-8"
     )
@@ -205,5 +208,55 @@ def test_invalid_visibility_cannot_open_cases(environment):
     populate(root, visibility="public")
     with login("student") as member:
         assert member.get("/api/pmss/read-only/projects").status_code == 503
+    with login("owner") as admin:
+        assert admin.get("/api/pmss/read-only/projects").status_code == 503
+
+
+def test_private_catalog_assigned_user_ids_do_not_grant_all_members(environment):
+    root, login = environment
+    with account_auth.connection() as db:
+        db.execute(
+            "INSERT INTO users(username,email,password_hash,role,active,created_at) "
+            "VALUES(?,?,?,'member',1,1)",
+            ("teammate", "teammate@example.com",
+             account_auth.HASHER.hash("A-long-private-passphrase")),
+        )
+        student_id = db.execute("SELECT id FROM users WHERE username='student'").fetchone()["id"]
+        teammate_id = db.execute("SELECT id FROM users WHERE username='teammate'").fetchone()["id"]
+    populate(root, visibility="assigned", allowed_user_ids=[student_id])
+    with login("student") as allowed:
+        assert allowed.get("/api/pmss/read-only/projects").json()["projects"]
+        assert allowed.get("/api/pmss/read-only/cases", params={
+            "project_id": "pmss-group-2",
+        }).status_code == 200
+        assert allowed.get("/api/pmss/read-only/snapshot", params={
+            "project_id": "pmss-group-2", "case_date": "2025-09-01",
+        }).status_code == 200
+    with login("teammate") as denied:
+        assert denied.get("/api/pmss/read-only/projects").json()["projects"] == []
+        assert denied.get("/api/pmss/read-only/cases", params={
+            "project_id": "pmss-group-2",
+        }).status_code == 403
+        assert denied.get("/api/pmss/read-only/snapshot", params={
+            "project_id": "pmss-group-2", "case_date": "2025-09-01",
+        }).status_code == 403
+    with login("owner") as admin:
+        assert admin.get("/api/pmss/read-only/projects").json()["projects"]
+    assert student_id != teammate_id
+
+
+@pytest.mark.parametrize("ids", [[], [0], [-1], [True], [1, 1], ["1"], [1.0], list(range(1, 103))])
+def test_invalid_assigned_grants_fail_closed(environment, ids):
+    root, login = environment
+    populate(root, visibility="assigned", allowed_user_ids=ids)
+    with login("student") as member:
+        assert member.get("/api/pmss/read-only/projects").status_code == 503
+    with login("owner") as admin:
+        assert admin.get("/api/pmss/read-only/projects").status_code == 503
+
+
+def test_grants_rejected_without_assigned_visibility(environment):
+    root, login = environment
+    populate(root, visibility="authenticated", allowed_user_ids=[1])
     with login("owner") as admin:
         assert admin.get("/api/pmss/read-only/projects").status_code == 503
