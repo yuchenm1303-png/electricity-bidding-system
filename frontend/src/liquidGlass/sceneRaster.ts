@@ -97,7 +97,7 @@ function drawImageFit(
  * Crop in source device pixels and map back to viewport CSS pixels: this
  * prevents scaling/offset mistakes at high-DPI and while the page is resized.
  */
-function drawInteractiveCanvas(
+export function drawInteractiveCanvas(
   ctx: CanvasRenderingContext2D,
   surface: HTMLCanvasElement,
   rect: DOMRect,
@@ -267,6 +267,7 @@ export function rasterizePortal(
   roiWidth: number,
   roiHeight: number,
   dpr: number,
+  omitLiveGrid = false,
 ) {
   const ctx = canvas.getContext("2d", { alpha: true });
   const scratchCtx = scratch.getContext("2d", { alpha: true });
@@ -346,7 +347,7 @@ export function rasterizePortal(
     // Sample the actual animated topology pixels rather than rasterizing
     // only its surrounding DOM. Keep the source interactive: the glass
     // overlay remains pointer-events:none, so canvas drag/selection works.
-    if (el instanceof HTMLCanvasElement && el.matches(".pb-landing .pb-field-canvas")) {
+    if (!omitLiveGrid && el instanceof HTMLCanvasElement && el.matches(".pb-landing .pb-field-canvas")) {
       drawInteractiveCanvas(ctx,el,rect,roiLeft,roiTop,roiWidth,roiHeight,opacity);
     }
 
@@ -435,3 +436,36 @@ export function rasterizePortal(
   return true;
 }
 
+
+
+// Fast path for animated grid only. The expensive DOM traversal above is
+// cached without its native Canvas. Recompose the current source pixels on
+// top of that backdrop whenever the original grid paints a new frame.
+// This path is only used when the optical lens does not overlap the HTML
+// HUD/labels that should appear *over* the grid.
+export function composeLiveGrid(
+  base: HTMLCanvasElement,
+  output: HTMLCanvasElement,
+  source: HTMLCanvasElement,
+  roiLeft: number,
+  roiTop: number,
+  roiWidth: number,
+  roiHeight: number,
+  dpr: number,
+) {
+  const ctx = output.getContext("2d", { alpha:true });
+  if (!ctx) return false;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0,0,output.width,output.height);
+  ctx.drawImage(base,0,0);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  let opacity = 1;
+  for (let parent: HTMLElement | null = source; parent; parent = parent.parentElement) {
+    const style = getComputedStyle(parent);
+    opacity *= Math.max(0,Math.min(1,cssNumber(style.opacity,1)));
+  }
+  drawInteractiveCanvas(ctx,source,source.getBoundingClientRect(),
+    roiLeft,roiTop,roiWidth,roiHeight,opacity);
+  return true;
+}

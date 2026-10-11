@@ -8,7 +8,7 @@ import {
 import { stepSpring, springSettled, type SpringValue } from "./liquidGlass/motion";
 import { opticalProfile, opticalRadius, type LensMode } from "./liquidGlass/optics";
 import { createMagneticController, affectsMagneticTargets } from "./liquidGlass/magnetism";
-import { rasterizePortal } from "./liquidGlass/sceneRaster";
+import { rasterizePortal, composeLiveGrid } from "./liquidGlass/sceneRaster";
 import { createGlassRenderer } from "./liquidGlass/renderer";
 import { createRoiManager } from "./liquidGlass/roi";
 
@@ -34,6 +34,7 @@ export function LiquidGlassCursor() {
     if (!renderer) return;
     const capture = document.createElement("canvas");
     const scratch = document.createElement("canvas");
+    const gridBackdrop = document.createElement("canvas");
     const dpr = Math.min(
       Math.max(1, Math.min(window.devicePixelRatio || 1, 1.75)),
       renderer.maxTextureSize / Math.max(window.innerWidth, window.innerHeight, 1),
@@ -42,7 +43,7 @@ export function LiquidGlassCursor() {
       const nextWidth = Math.max(1, Math.round(cssWidth * dpr));
       const nextHeight = Math.max(1, Math.round(cssHeight * dpr));
       if (canvas.width === nextWidth && canvas.height === nextHeight) return false;
-      for (const target of [canvas, capture, scratch]) {
+      for (const target of [canvas, capture, scratch, gridBackdrop]) {
         target.width = nextWidth; target.height = nextHeight;
       }
       canvas.style.width = String(cssWidth)+"px";
@@ -65,6 +66,10 @@ export function LiquidGlassCursor() {
     let lastRoiLeft = Number.NaN;
     let lastRoiTop = Number.NaN;
     let rasterDirty = true;
+    let gridBackdropReady = false;
+    let gridBackdropLeft = Number.NaN;
+    let gridBackdropTop = Number.NaN;
+    let staticDirty = true;
     let textureReady = false;
     let snapDirty = true;
     let running = false;
@@ -75,7 +80,7 @@ export function LiquidGlassCursor() {
     const roi = createRoiManager(
       resizeSurfaces,
       () => {rasterDirty=true;},
-      () => {textureReady=false;lastRoiLeft=Number.NaN;lastRoiTop=Number.NaN;},
+      () => {textureReady=false;lastRoiLeft=Number.NaN;lastRoiTop=Number.NaN;gridBackdropReady=false;},
     );
 
     const x: SpringValue = { value: pointerX, velocity: 0, target: pointerX };
@@ -97,7 +102,7 @@ export function LiquidGlassCursor() {
       root,
       () => ({x:pointerX,y:pointerY,inside:pointerInside}),
       () => activeTarget,
-      () => {rasterDirty=true;snapDirty=true;},
+      () => {staticDirty=true;rasterDirty=true;snapDirty=true;},
     );
 
     // Chart mode changes the original glass geometry, not its rendering layer.
@@ -153,18 +158,63 @@ export function LiquidGlassCursor() {
       }
     };
 
+    // Fast composition is safe only over unobstructed topology pixels.
+    // Cards, labels and explanatory text must retain native paint order.
+    // Fall back to the original full DOM raster whenever the glass overlaps
+    // those layers; other areas retain the static backdrop + live Canvas path.
+    const liveGridForLens = () => {
+      if (!chartLens || !pointerInside || document.hidden) return null;
+      const grid = root.querySelector<HTMLCanvasElement>(".pb-landing .pb-field-canvas");
+      if (!grid) return null;
+      const st = getComputedStyle(grid);
+      if (st.visibility !== "visible" || st.display === "none") return null;
+      const bounds = grid.getBoundingClientRect();
+      const halfWidth = width.value / 2, halfHeight = height.value / 2;
+      if (x.value-halfWidth < bounds.left || x.value+halfWidth > bounds.right ||
+          y.value-halfHeight < bounds.top || y.value+halfHeight > bounds.bottom) return null;
+      const lens = {left:x.value-halfWidth,top:y.value-halfHeight,
+        right:x.value+halfWidth,bottom:y.value+halfHeight};
+      for (const overlay of root.querySelectorAll<HTMLElement>(
+        ".pb-hero-hud, .pb-constellation-header, .pb-constellation-detail, .pb-constellation-hint, .pb-hero-copy, .pb-hero-content")) {
+        const style = getComputedStyle(overlay);
+        if (style.display === "none" || style.visibility === "hidden") continue;
+        const r=overlay.getBoundingClientRect();
+        if (r.left < lens.right && r.right > lens.left &&
+            r.top < lens.bottom && r.bottom > lens.top) return null;
+      }
+      return grid;
+    };
+
     const uploadTexture = (roiLeft: number, roiTop: number, now: number) => {
       const moved = Math.abs(roiLeft - lastRoiLeft) >= 0.75 || Math.abs(roiTop - lastRoiTop) >= 0.75;
       if (!rasterDirty && !moved) return;
       // The ROI and the uploaded pixels are an atomic pair: never apply a new
       // coordinate origin to an old texture. Moving to a new ROI bypasses the
       // ordinary 32ms stationary-cache throttle.
-      const minCaptureInterval = activeTarget ? 16 : 32;
+      const grid = liveGridForLens();
+      // Source grid paints ~30fps. Reuse its cadence for the optical lens,
+      // rather than redrawing the full DOM at 85ms intervals.
+      const minCaptureInterval = grid ? 24 : activeTarget ? 16 : 32;
       if (!moved && !urgentCapture && now - lastCapture < minCaptureInterval) return;
       lastCapture = now;
-      if (!rasterizePortal(root, capture, scratch, null, roiLeft, roiTop, roi.state.width, roi.state.height, dpr)) {
-        textureReady = false;
-        return;
+      if (grid) {
+        if (!gridBackdropReady || staticDirty ||
+            gridBackdropLeft !== roiLeft || gridBackdropTop !== roiTop) {
+          if (!rasterizePortal(root,gridBackdrop,scratch,null,roiLeft,roiTop,
+              roi.state.width,roi.state.height,dpr,true)) {
+            textureReady=false;return;
+          }
+          gridBackdropReady=true;
+          gridBackdropLeft=roiLeft;gridBackdropTop=roiTop;
+          staticDirty=false;
+        }
+        if (!composeLiveGrid(gridBackdrop,capture,grid,roiLeft,roiTop,
+            roi.state.width,roi.state.height,dpr)) {
+          textureReady=false;return;
+        }
+      } else if (!rasterizePortal(root,capture,scratch,null,roiLeft,roiTop,
+          roi.state.width,roi.state.height,dpr)) {
+        textureReady=false;return;
       }
       if (renderer.upload(capture)) {
         // The sampled ROI always belongs to the pixels actually uploaded.
@@ -284,33 +334,21 @@ export function LiquidGlassCursor() {
       }
       return parts.join("\\n");
     };
-    const animatedCanvasInRoi = () => {
-      if (document.hidden || !Number.isFinite(roi.state.left) || !Number.isFinite(roi.state.top)) return false;
-      for (const element of root.querySelectorAll<HTMLCanvasElement>(".pb-landing .pb-field-canvas")) {
-        const style = getComputedStyle(element);
-        if (style.display === "none" || style.visibility !== "visible") continue;
-        if (intersects(element.getBoundingClientRect(),roi.state.left,roi.state.top,
-          roi.state.width,roi.state.height)) return true;
-      }
-      return false;
-    };
     const checkDynamicScene = () => {
       sceneTimer = 0;
       if (!pointerInside) return;
       const now = performance.now();
       const signature = dynamicSignature();
       const animating = now < animationWatchUntil;
-      // Canvas paints do not mutate the DOM. Only recapture the grid while
-      // it intersects the optical ROI; a stationary glass lens still sees
-      // the rotating network, while unrelated pages remain event-driven.
-      const liveCanvas = animatedCanvasInRoi();
-      if (signature !== lastSceneSignature ||
-          ((animating || liveCanvas) && now - lastCapture >= DYNAMIC_SCENE_CHECK_MS)) {
+      // Native topology draws now emit powerbid:grid-frame directly; keep
+      // the normal 85ms observer for ordinary animated DOM and tooltips.
+      if (signature !== lastSceneSignature || (animating && now-lastCapture >= DYNAMIC_SCENE_CHECK_MS)) {
         lastSceneSignature = signature;
+        staticDirty = true;
         rasterDirty = true;
         ensureFrame();
       }
-      if (signature || animating || liveCanvas) sceneTimer = window.setTimeout(checkDynamicScene, DYNAMIC_SCENE_CHECK_MS);
+      if (signature || animating) sceneTimer = window.setTimeout(checkDynamicScene,DYNAMIC_SCENE_CHECK_MS);
     };
     const watchScene = () => {
       if (pointerInside && !sceneTimer) sceneTimer = window.setTimeout(checkDynamicScene, DYNAMIC_SCENE_CHECK_MS);
@@ -327,6 +365,7 @@ export function LiquidGlassCursor() {
           !intersects(bounds, roi.state.left - margin, roi.state.top - margin,
             roi.state.width + margin * 2, roi.state.height + margin * 2)) return;
       animationWatchUntil = Math.max(animationWatchUntil, performance.now() + 1400);
+      staticDirty = true;
       rasterDirty = true;
       ensureFrame();
       watchScene();
@@ -406,12 +445,13 @@ export function LiquidGlassCursor() {
       snapDirty = true; rasterDirty = true; wake(); watchScene();
     };
     const handleScroll = () => {
-      roi.clearLock(); rasterDirty = true;urgentCapture=true; snapDirty = true; wake(); watchScene();
+      roi.clearLock(); staticDirty=true;rasterDirty = true;urgentCapture=true; snapDirty = true; wake(); watchScene();
     };
     // Editing changes input.value without mutating DOM text or attributes.
-    const handleInput = () => { rasterDirty = true;urgentCapture=true; wake(); };
+    const handleInput = () => {staticDirty=true; rasterDirty = true;urgentCapture=true; wake(); };
     const handleResize = () => {
       roi.reset();
+      staticDirty=true;
       rasterDirty = true;
       urgentCapture = true;
       snapDirty = true;
@@ -429,6 +469,7 @@ export function LiquidGlassCursor() {
         magnetism.refresh();
         snapDirty = true;
       }
+      staticDirty=true;
       rasterDirty = true;
       wake();
       watchScene();
@@ -439,11 +480,22 @@ export function LiquidGlassCursor() {
         "opacity", "fill", "stroke", "d", "x", "y", "cx", "cy", "r",
         "width", "height", "aria-hidden", "data-state", "disabled", "data-liquid-snap"],
     });
-    const resizeObserver = new ResizeObserver(() => { rasterDirty = true; snapDirty = true; wake(); });
+    const resizeObserver = new ResizeObserver(() => { staticDirty=true; rasterDirty = true; snapDirty = true; wake(); });
     resizeObserver.observe(root);
 
-    document.fonts?.ready.then(() => { rasterDirty = true; wake(); }).catch(() => {});
+    document.fonts?.ready.then(() => { staticDirty=true; rasterDirty = true; wake(); }).catch(() => {});
 
+    const handleGridPaint = (event:Event) => {
+      if (!pointerInside || document.hidden ||
+          !(event.target instanceof HTMLCanvasElement) ||
+          !event.target.matches(".pb-landing .pb-field-canvas")) return;
+      if (!Number.isFinite(roi.state.left) || !Number.isFinite(roi.state.top) ||
+          !intersects(event.target.getBoundingClientRect(),roi.state.left,
+            roi.state.top,roi.state.width,roi.state.height)) return;
+      rasterDirty=true;
+      ensureFrame();
+    };
+    root.addEventListener("powerbid:grid-frame",handleGridPaint);
     root.addEventListener("pointermove", handlePointerMove);
     root.addEventListener("pointerdown", handlePointerDown);
     root.addEventListener("pointerup", handlePointerUp);
@@ -469,6 +521,7 @@ export function LiquidGlassCursor() {
       window.clearTimeout(sceneTimer);
       observer.disconnect();
       resizeObserver.disconnect();
+      root.removeEventListener("powerbid:grid-frame",handleGridPaint);
       root.removeEventListener("pointermove", handlePointerMove);
       root.removeEventListener("pointerdown", handlePointerDown);
       root.removeEventListener("pointerup", handlePointerUp);

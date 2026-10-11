@@ -148,6 +148,9 @@ export default function PowerConstellation() {
           ctx.fillText(NODES[i].id,p.x+11,p.y-12);
         }
       });
+      // The optical lens can consume the exact frame that was just painted.
+      // A paint event avoids 85ms polling (12fps) and unnecessary DOM walks.
+      canvas!.dispatchEvent(new Event("powerbid:grid-frame", { bubbles:true }));
     }
 
     function resize() {
