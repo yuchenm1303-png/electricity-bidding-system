@@ -1,4 +1,4 @@
-"""PowerBid administrator's bounded PMSS/VPN connection controls.
+"""PowerBid authenticated members' bounded shared PMSS/VPN connection controls.
 
 Never accept a command, container name, URL or credentials from the browser.
 The optional Unix-socket operator owns *only* the exact EasyConnect container.
@@ -66,7 +66,7 @@ def _probe_bridge() -> str:
         now = time.monotonic()
         if now - _PROBE_CACHE[0] < 25:
             return _PROBE_CACHE[1]
-        outcome = "unreachable"
+        outcome = "unknown"
         try:
             query = (
                 "/pmss/web/project/list?permissionType=0&projectType=1"
@@ -85,7 +85,12 @@ def _probe_bridge() -> str:
                             outcome = "authorized"
                         elif data.get("retCode") == "T000":
                             outcome = "login_required"
-        except (OSError, URLError, HTTPError, ValueError, TimeoutError):
+        except HTTPError:
+            # An upstream HTTP response is not proof of a VPN transport outage.
+            pass
+        except (OSError, URLError, TimeoutError):
+            outcome = "unreachable"
+        except ValueError:
             pass
         _PROBE_CACHE = (time.monotonic(), outcome)
         return outcome
@@ -97,7 +102,7 @@ def _response(data: dict, status: int = 200) -> JSONResponse:
 
 @router.get("/status")
 def connection_status(request: Request):
-    require_user(request, admin=True)
+    require_user(request)
     operator_state = "unavailable"
     container = "unknown"
     cooldown = 0
@@ -108,10 +113,15 @@ def connection_status(request: Request):
         cooldown = int(details.get("retry_after_seconds", 0))
     except (OSError, RuntimeError, ValueError, KeyError):
         pass
+    pmss_access = _probe_bridge()
     return _response({
         "operator": operator_state,
         "vpn_container": container,
-        "pmss_access": _probe_bridge(),
+        "pmss_access": pmss_access,
+        "shared_connection": True,
+        "reconnect_allowed": (
+            operator_state == "ready" and pmss_access == "unreachable" and cooldown == 0
+        ),
         "retry_after_seconds": max(0, min(cooldown, 3600)),
         "private_case_catalog": (
             "configured" if (Path("/private/powerbid-pmss") / "catalog.json").is_file()
@@ -124,8 +134,18 @@ def connection_status(request: Request):
 
 
 @router.post("/reconnect")
-def reconnect(request: Request):
-    require_user(request, admin=True)
+async def reconnect(request: Request):
+    # No caller may pick a container, command, URL, or credentials.
+    require_user(request)
+    if await request.body():
+        raise HTTPException(422, detail="重连请求不接受任何参数")
+    access = _probe_bridge()
+    if access == "authorized":
+        raise HTTPException(409, detail="服务器 PMSS 连接正常，禁止中断其他用户")
+    if access == "login_required":
+        raise HTTPException(409, detail="学校平台需要重新认证，重启 VPN 无法替代登录")
+    if access != "unreachable":
+        raise HTTPException(503, detail="尚未确认 VPN 断线，请稍后重新检测")
     try:
         result = _operator("POST", "/reconnect")
     except RuntimeError as exc:
@@ -142,5 +162,5 @@ def reconnect(request: Request):
     return _response({
         "restart_requested": True,
         "vpn_authenticated": False,
-        "message": "服务器已尝试重新启动 VPN；需要重新登录时仍须管理员完成认证。",
+        "message": "共享 VPN 已尝试重启；需要学校重新认证时，仍须获授权的使用者完成登录。",
     })
