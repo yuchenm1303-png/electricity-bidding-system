@@ -25,7 +25,7 @@ const safePortal = (value: string): string | null => {
   } catch { return null; }
 };
 
-export function PMSSConnectionPanel({ enabled }: { enabled: boolean }) {
+export function PMSSConnectionPanel({ enabled, isAdmin }: { enabled: boolean; isAdmin: boolean }) {
   const [status, setStatus] = useState<ConnectionState | null>(null);
   const [busy, setBusy] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -33,14 +33,27 @@ export function PMSSConnectionPanel({ enabled }: { enabled: boolean }) {
   const [message, setMessage] = useState("");
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
+    const timeout = new AbortController();
+    const stop = () => timeout.abort();
+    if (signal?.aborted) timeout.abort();
+    else signal?.addEventListener("abort", stop, { once: true });
+    const timer = window.setTimeout(() => timeout.abort(), 8000);
     try {
-      const response = await fetch(STATUS, { method: "GET", cache: "no-store",
-        credentials: "same-origin", headers: { Accept: "application/json" }, signal });
-      if (!response.ok) throw new Error(response.status === 401 ? "请先登录 PowerBid 账号。" : "连接状态读取失败");
+      const response = await fetch(STATUS, {
+        method: "GET", cache: "no-store", credentials: "same-origin",
+        headers: { Accept: "application/json" }, signal: timeout.signal,
+      });
+      if (!response.ok) throw new Error(response.status === 401
+        ? "请先登录 PowerBid 账号。" : "服务器连接状态暂时无法读取");
       const result: ConnectionState = await response.json();
-      if (!signal?.aborted) {setStatus(result); setError("");}
+      if (!signal?.aborted) { setStatus(result); setError(""); }
     } catch (cause) {
-      if (!signal?.aborted) setError(cause instanceof Error ? cause.message : "状态读取失败");
+      if (!signal?.aborted) setError(timeout.signal.aborted
+        ? "连接状态检查超时，但不影响已授权历史案例的读取。"
+        : cause instanceof Error ? cause.message : "状态读取失败");
+    } finally {
+      window.clearTimeout(timer);
+      signal?.removeEventListener("abort", stop);
     }
   }, []);
 
@@ -75,46 +88,77 @@ export function PMSSConnectionPanel({ enabled }: { enabled: boolean }) {
 
   const working = status?.pmss_access === "authorized";
   const waiting = status?.pmss_access === "login_required";
+  const catalogReady = status?.private_case_catalog === "configured";
   const portal = safePortal(status?.external_login_url ?? "");
-  const connectionLabel = working ? "服务器数据通道可用" : waiting ? "学校登录已过期" : status?.operator === "unavailable"
-    ? "管理服务未配置" : status?.vpn_container === "stopped" ? "VPN 容器已停止" : "PMSS 连接未验证";
+  const liveStatus = working ? "学校实时数据已连接"
+    : waiting ? "学校实时会话待重新认证"
+      : "学校实时同步未验证";
+  const useStatus = catalogReady ? "已保存的历史案例可继续使用"
+    : "尚未导入授权历史案例";
 
-  return <section className="pmss-connection" aria-label="PMSS 连接管理">
+  return <section className="pmss-connection is-secondary" aria-label="学校数据维护状态">
     <div className="pmss-connection-top">
       <div>
-        <span className="pmss-connection-kicker"><ShieldCheck size={14}/> 所有已登录账号 · 共享连接</span>
-        <h3>学校 PMSS 连接管理</h3>
-        <p>所有 PowerBid 用户均可查看共享连接状态。学校工程数据仍需各自具备相应授权。</p>
+        <span className="pmss-connection-kicker"><ShieldCheck size={14}/> 数据服务 · 自动检测</span>
+        <h3>{useStatus}</h3>
+        <p>{catalogReady
+          ? "历史案例与学校实时登录相互独立。请在上方选择工程、日期，直接进行本地报价与研究。"
+          : "当前暂无已配置的私有案例。授权管理员可在后台准备数据源。"}
+        </p>
       </div>
-      <span className={"pmss-connection-badge" + (working ? " ready" : "")}>
-        {working ? <Wifi size={15}/> : <WifiOff size={15}/>} {connectionLabel}
+      <span className={"pmss-connection-badge" + (catalogReady ? " ready" : "")}>
+        {catalogReady ? <Database size={15}/> : <WifiOff size={15}/>}
+        {catalogReady ? "历史案例已配置" : "待配置案例"}
       </span>
     </div>
-    <div className="pmss-connection-status">
-      <div><span><Activity size={16}/> VPN 容器</span><strong>{status?.vpn_container === "running" ? "运行中" : status?.vpn_container === "stopped" ? "已停止" : "未确认"}</strong></div>
-      <div><span><Wifi size={16}/> 服务器 PMSS 通道</span><strong>{working ? "已验证" : waiting ? "需重新登录" : busy ? "检查中" : "不可用 / 未验证"}</strong></div>
-      <div><span><Database size={16}/> 历史案例目录</span><strong>{status?.private_case_catalog === "configured" ? "已配置" : "尚未配置"}</strong></div>
-    </div>
-    <div className="pmss-connection-actions">
-      <button type="button" disabled={restarting || !status?.reconnect_allowed}
-        className="pmss-connection-restart" onClick={() => void reconnect()}>
-        <RefreshCw size={16} className={restarting ? "is-spinning" : ""}/>
-        {restarting ? "正在重启…" : "VPN 故障时重连"}
-      </button>
-      <button type="button" className="pmss-connection-check" disabled={busy} onClick={() => {
-        setBusy(true); void refresh().finally(() => setBusy(false));
-      }}><Activity size={16}/> 重新检测</button>
-      {portal && <a className="pmss-connection-portal" href={portal} target="_blank" rel="noopener noreferrer">
-        <ExternalLink size={15}/> 学校登录门户
-      </a>}
-    </div>
-    {working && <p className="pmss-connection-small">服务器通道正常时，为避免中断其他成员，重连操作自动禁用。</p>}
-    {waiting && <p className="pmss-connection-small">需要重新完成学校认证；重启容器无法绕过登录。</p>}
-    {status?.retry_after_seconds ? <p className="pmss-connection-small">为保护学校会话，重连操作有冷却时间（约 {Math.ceil(status.retry_after_seconds / 60)} 分钟）。</p> : null}
-    {error && <p className="pmss-connection-error" role="alert">{error}</p>}
-    {message && <p className="pmss-connection-success" role="status">{message}</p>}
-    <p className="pmss-connection-notice"><LockKeyhole size={14}/>
-      打开学校门户只会登录你当前的浏览器，不等于服务器 VPN 已恢复。所有人的学校平台权限仍由学校独立控制；本页不会共享学校账号、自动提交凭据或报价。
-    </p>
+    <details className="pmss-connection-details">
+      <summary> <Activity size={15}/> {isAdmin ? "学校实时同步与管理员维护" : "学校实时连接详情"}
+        <span>{working ? "已连接" : waiting ? "同步暂停" : "待检查"}</span>
+      </summary>
+      <div className="pmss-connection-expanded">
+        <p className="pmss-connection-small">{liveStatus}。
+          {working ? "后续新案例可在授权范围内同步。" :
+            "这不影响已经导入的历史案例。学校强制重新认证时，必须由授权管理员完成。"}
+        </p>
+        <div className="pmss-connection-status">
+          <div><span><Activity size={16}/> VPN 容器</span>
+            <strong>{status?.vpn_container === "running" ? "运行中" :
+              status?.vpn_container === "stopped" ? "已停止" : "未确认"}</strong></div>
+          <div><span><Wifi size={16}/> 学校实时数据</span>
+            <strong>{working ? "已验证" : waiting ? "待学校认证" : "未验证"}</strong></div>
+          <div><span><Database size={16}/> 已存档案例</span>
+            <strong>{catalogReady ? "已配置" : "尚未配置"}</strong></div>
+        </div>
+        <div className="pmss-connection-actions">
+          <button type="button" className="pmss-connection-check" disabled={busy}
+            onClick={() => { setBusy(true); void refresh().finally(() => setBusy(false)); }}>
+            <Activity size={16}/> 重新检测
+          </button>
+          {isAdmin && <button type="button"
+            disabled={restarting || !status?.reconnect_allowed}
+            className="pmss-connection-restart" onClick={() => void reconnect()}>
+            <RefreshCw size={16} className={restarting ? "is-spinning" : ""}/>
+            {restarting ? "正在重连…" : "确认断线后重启 VPN"}
+          </button>}
+          {isAdmin && portal && <a className="pmss-connection-portal"
+            href={portal} target="_blank" rel="noopener noreferrer">
+            <ExternalLink size={15}/> 查看学校个人门户
+          </a>}
+        </div>
+        {isAdmin && waiting && <p className="pmss-connection-small">
+          管理员提示：学校平台要求重新认证。个人浏览器的网页登录不会自动更新服务器端会话，
+          目前尚不支持在 PowerBid 内完成服务器的交互式认证，请使用已有受保护的维护渠道。
+          不要重启已正常运行的 VPN 容器来尝试绕过认证。
+        </p>}
+        {isAdmin && <p className="pmss-connection-notice"><LockKeyhole size={14}/>
+          VPN 重连仅在确认网络不可达时开放；学校账号、Cookie 和服务器远程桌面不会交给普通组员。
+        </p>}
+        {status?.retry_after_seconds ? <p className="pmss-connection-small">
+          重连冷却约 {Math.ceil(status.retry_after_seconds / 60)} 分钟。
+        </p> : null}
+        {error && <p className="pmss-connection-error" role="alert">{error}</p>}
+        {message && <p className="pmss-connection-success" role="status">{message}</p>}
+      </div>
+    </details>
   </section>;
 }

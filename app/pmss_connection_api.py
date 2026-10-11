@@ -102,7 +102,7 @@ def _response(data: dict, status: int = 200) -> JSONResponse:
 
 @router.get("/status")
 def connection_status(request: Request):
-    require_user(request)
+    user = require_user(request)
     operator_state = "unavailable"
     container = "unknown"
     cooldown = 0
@@ -120,7 +120,8 @@ def connection_status(request: Request):
         "pmss_access": pmss_access,
         "shared_connection": True,
         "reconnect_allowed": (
-            operator_state == "ready" and pmss_access == "unreachable" and cooldown == 0
+            user["role"] == "admin" and operator_state == "ready"
+            and pmss_access == "unreachable" and cooldown == 0
         ),
         "retry_after_seconds": max(0, min(cooldown, 3600)),
         "private_case_catalog": (
@@ -136,7 +137,7 @@ def connection_status(request: Request):
 @router.post("/reconnect")
 async def reconnect(request: Request):
     # No caller may pick a container, command, URL, or credentials.
-    require_user(request)
+    require_user(request, admin=True)
     if await request.body():
         raise HTTPException(422, detail="重连请求不接受任何参数")
     access = _probe_bridge()
