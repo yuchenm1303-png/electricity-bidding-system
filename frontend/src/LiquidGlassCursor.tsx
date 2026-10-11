@@ -180,7 +180,7 @@ export function LiquidGlassCursor() {
       const lens = {left:x.value-halfWidth,top:y.value-halfHeight,
         right:x.value+halfWidth,bottom:y.value+halfHeight};
       for (const overlay of root.querySelectorAll<HTMLElement>(
-        ".pb-hero-hud, .pb-constellation-header, .pb-constellation-detail, .pb-constellation-hint, .pb-hero-copy, .pb-hero-content")) {
+        ".pb-hero-hud, .pb-constellation-header, .pb-constellation-detail, .pb-constellation-hint, .pb-hero-copy")) {
         const style = getComputedStyle(overlay);
         if (style.display === "none" || style.visibility === "hidden") continue;
         const r=overlay.getBoundingClientRect();
@@ -239,7 +239,7 @@ export function LiquidGlassCursor() {
     };
 
     const frame = (now: number) => {
-      const dt = Math.min(0.032, Math.max(0.001, (now - lastTime) / 1000));
+      const dt = Math.min(0.064, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
       const magneticSettled = magnetism.update(dt);
       updateLensIntent();
