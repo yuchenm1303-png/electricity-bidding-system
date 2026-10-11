@@ -30,7 +30,7 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
     getPMSSProjects(ctrl.signal).then(items => {
       setProjects(items);
       setConnected(true);
-      setMessage(items.length ? "" : "目前没有授权可读取的工程。");
+      setMessage(items.length ? "" : "当前账号尚无获授权共享的 PMSS 历史案例。普通报价策略和离线快照分析仍可使用；如需此工程，请联系管理员确认课程共享授权。");
     }).catch(error => {
       if (!ctrl.signal.aborted) {
         setConnected(false);
