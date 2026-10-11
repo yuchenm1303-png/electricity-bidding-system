@@ -38,7 +38,7 @@ function scene({selectors=[],grid=null,overlays=[],insideRoot=true}={}) {
 test("published four-mode geometry has predictable dimensions",()=>{
   assert.deepEqual(Object.keys(VISUAL_LENS_SIZE),["free","chart","hero","grid"]);
   assert.deepEqual(VISUAL_LENS_SIZE.free,{width:80,height:54});
-  assert.deepEqual(VISUAL_LENS_SIZE.chart,{width:120,height:120});
+  assert.deepEqual(VISUAL_LENS_SIZE.chart,{width:156,height:156});
   assert.deepEqual(VISUAL_LENS_SIZE.hero,{width:128,height:128});
   assert.deepEqual(VISUAL_LENS_SIZE.grid,{width:250,height:250});
 });
@@ -61,6 +61,14 @@ test("interactive controls take precedence even inside charts and Hero",()=>{
   assert.equal(resolveVisualMode(scene({selectors:[".pb-hero","a[href]"]}),350,320,true),"free");
   assert.equal(resolveVisualMode(scene({selectors:[".pmss-chart","[role='slider']"]}),350,320,true),"free");
   assert.equal(resolveVisualMode(scene({selectors:[".pb-hero-copy",".pb-hero"]}),350,320,true),"free");
+});
+
+test("data-card icon surfaces provide visible hero morph without touching numbers",()=>{
+  for(const indicator of [".ta-stat-icon",".ta-card-icon",".pb-risk-halo"]) {
+    assert.equal(resolveVisualMode(scene({selectors:[indicator]}),350,320,true),"hero",indicator);
+  }
+  assert.equal(resolveVisualMode(scene({selectors:[".ta-stat-bottom"]}),350,320,true),"free");
+  assert.equal(resolveVisualMode(scene({selectors:[".ta-card-icon","button"]}),350,320,true),"free");
 });
 
 test("network and decorative Hero content use expressive refraction",()=>{
