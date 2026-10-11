@@ -1,3 +1,4 @@
+import { GlassSelect } from "./GlassSelect";
 import { useMemo, useState } from "react";
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Activity, ChevronLeft, ChevronRight, Clock3, Download, Factory, Search, TrendingUp } from "lucide-react";
@@ -93,11 +94,11 @@ export function MarketExplorer({inspection}: {inspection: PMSSInspection}) {
       </div>
       <div className="pmss-unit-toolbar">
         <label className="pmss-unit-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜索机组名称或编号" aria-label="搜索 PMSS 机组"/></label>
-        <label className="pmss-unit-order">排序
-          <select value={order} onChange={e=>setOrder(e.target.value as typeof order)}>
-            <option value="unit">机组编号</option><option value="capacity">容量从大到小</option><option value="cost">成本从低到高</option>
-          </select>
-        </label>
+        <div className="pmss-unit-order glass-select-field">排序
+          <GlassSelect ariaLabel="机组排序" value={order}
+            options={[{value:"unit",label:"机组编号"},{value:"capacity",label:"容量从大到小"},{value:"cost",label:"成本从低到高"}]}
+            onValueChange={v=>setOrder(v as typeof order)}/>
+        </div>
       </div>
       <div className="pmss-table-scroll">
         <table className="pmss-table">

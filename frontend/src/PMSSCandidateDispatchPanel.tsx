@@ -1,3 +1,4 @@
+import { GlassSelect } from "./GlassSelect";
 import { useState } from "react";
 import { Activity, ArrowRight, Download, ShieldCheck } from "lucide-react";
 import {
@@ -101,15 +102,12 @@ export function PMSSCandidateDispatchPanel({
     </div>
 
     <div className="pmss-toolbar">
-      <label className="pmss-rank-control">
-        选择已生成的候选曲线
-        <select aria-label="选择候选报价方案" value={effectiveChoice}
-          onChange={event => {setChoice(event.target.value as Selection);setError("");}}
-          disabled={busy || otherBusy}>
-          <option value="ranked" disabled={!networkCurve}>网络优先风险排序最高候选</option>
-          <option value="five-segment" disabled={!fiveCurve}>五段报价搜索候选</option>
-        </select>
-      </label>
+      <div className="pmss-rank-control glass-select-field">选择已生成的候选曲线
+        <GlassSelect ariaLabel="选择候选报价方案" value={effectiveChoice} disabled={busy || otherBusy}
+          options={[{value:"ranked",label:"网络优先风险排序最高候选",disabled:!networkCurve},
+                    {value:"five-segment",label:"五段报价搜索候选",disabled:!fiveCurve}]}
+          onValueChange={v=>{setChoice(v as Selection);setError("");}}/>
+      </div>
       <button className="pmss-run-button" type="button"
         disabled={!inspection.dc_grid_available || !plan || busy || otherBusy || !target}
         onClick={() => void run()}>

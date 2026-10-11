@@ -1,3 +1,4 @@
+import { GlassSelect } from "./GlassSelect";
 import { useMemo, useState } from "react";
 import { Activity, GitBranch, Zap } from "lucide-react";
 import { numeric, type PMSSInspection } from "./types";
@@ -114,11 +115,11 @@ export function PMSSGridOverview({snapshot, inspection, target}: {
           </svg>
         </div>
         <div className="pmss-grid-footer">
-          <label>检查时段
-            <select value={hour} onChange={e=>setHour(Number(e.target.value))}>
-              {Array.from({length:24},(_,i)=><option key={i+1} value={i+1}>{String(i+1).padStart(2,"0")} 时段</option>)}
-            </select>
-          </label>
+          <div className="glass-select-field">检查时段
+            <GlassSelect ariaLabel="检查时段" value={hour}
+              options={Array.from({length:24},(_,i)=>({value:String(i+1),label:String(i+1).padStart(2,"0")+" 时段"}))}
+              onValueChange={v=>setHour(Number(v))}/>
+          </div>
           <div><span>选择节点</span><strong>{activeBus||"—"}</strong></div>
           <div><span>本时段节点负荷</span><strong>{activeBus?numeric(grid.demand[activeBus][hour-1],2)+" MW":"—"}</strong></div>
           <div><span>目标机组接入节点</span><strong>{typeof attachedBus==="string"?attachedBus:"未关联"}</strong></div>

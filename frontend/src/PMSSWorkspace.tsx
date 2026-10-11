@@ -1,3 +1,4 @@
+import { GlassSelect } from "./GlassSelect";
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { Activity, ArrowRight, Database, Download, FileJson2, ShieldCheck, UploadCloud } from "lucide-react";
 import {
@@ -306,14 +307,11 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
       <div className="pmss-market-context">
         <div><span>当前研究对象</span><strong>{fileName || "已校验的历史市场快照"}</strong>
           <small>切换机组会清除旧机组的本地优化与审核结果，保留所选案例</small></div>
-        <label>目标机组
-          <select value={target} disabled={busy || networkBusy || rankBusy}
-            onChange={e => chooseUnit(e.target.value)}>
-            {inspection.units.map(unit => <option key={unit.unit_id} value={unit.unit_id}>
-              {unit.name || unit.unit_id} · {unit.unit_id}
-            </option>)}
-          </select>
-        </label>
+        <div className="glass-select-field">目标机组
+          <GlassSelect ariaLabel="PMSS 当前目标机组" value={target} searchable disabled={busy || networkBusy || rankBusy}
+            options={inspection.units.map(unit=>({value:unit.unit_id,label:(unit.name||unit.unit_id)+" · "+unit.unit_id}))}
+            onValueChange={chooseUnit}/>
+        </div>
       </div>
       <div className="pmss-privacy">
         <ShieldCheck size={17}/>
@@ -464,15 +462,11 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
           <span className="pmss-state-label">离线策略研究</span>
         </div>
         <div className="pmss-toolbar">
-          <label className="pmss-rank-control">
-            风险厌恶程度
-            <select value={riskAversion}
-              onChange={e => {setRiskAversion(Number(e.target.value));setRankResult(null);setProposal(null);setManualReviewReady(false);}}>
-              <option value={0}>0 · 关注平均模拟利润</option>
-              <option value={0.5}>0.5 · 平衡收益与下行</option>
-              <option value={1}>1 · 关注下行情景</option>
-            </select>
-          </label>
+          <div className="pmss-rank-control glass-select-field">风险厌恶程度
+            <GlassSelect ariaLabel="风险厌恶程度" value={riskAversion}
+              options={[{value:"0",label:"0 · 关注平均模拟利润"},{value:"0.5",label:"0.5 · 平衡收益与下行"},{value:"1",label:"1 · 关注下行情景"}]}
+              onValueChange={v=>{setRiskAversion(Number(v));setRankResult(null);setProposal(null);setManualReviewReady(false);}}/>
+          </div>
           <button className="pmss-run-button" type="button"
             disabled={!inspection.dc_grid_available || busy || networkBusy || rankBusy || !target}
             onClick={() => void runRank()}>
@@ -569,15 +563,19 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
           <span className="pmss-state-label">本地模拟</span>
         </div>
         <div className="pmss-controls">
-          <label>目标机组<select disabled={busy || networkBusy || rankBusy} value={target} onChange={e => chooseUnit(e.target.value)}>
-            {inspection.units.map(item => <option key={item.unit_id} value={item.unit_id}>{item.name}</option>)}
-          </select></label>
+          <div className="glass-select-field">目标机组
+            <GlassSelect ariaLabel="五段报价目标机组" value={target} searchable disabled={busy || networkBusy || rankBusy}
+              options={inspection.units.map(item=>({value:item.unit_id,label:item.name||item.unit_id}))}
+              onValueChange={chooseUnit}/>
+          </div>
           <label>最低报价<input type="number" disabled={busy || networkBusy || rankBusy} min="0" max="10000" value={minimum} onChange={e => {setMinimum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
           <label>最高报价<input type="number" disabled={busy || networkBusy || rankBusy} min="0" max="10000" value={maximum} onChange={e => {setMaximum(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
           <label>报价步长<input type="number" disabled={busy || networkBusy || rankBusy} min="1" value={step} onChange={e => {setStep(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/></label>
-          <label>局部迭代<select disabled={busy || networkBusy || rankBusy} value={iterations} onChange={e => {setIterations(Number(e.target.value));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}>
-            <option value={1}>1轮</option><option value={2}>2轮</option><option value={3}>3轮</option>
-          </select></label>
+          <div className="glass-select-field">局部迭代
+            <GlassSelect ariaLabel="局部迭代次数" disabled={busy || networkBusy || rankBusy} value={iterations}
+              options={[{value:"1",label:"1轮"},{value:"2",label:"2轮"},{value:"3",label:"3轮"}]}
+              onValueChange={v=>{setIterations(Number(v));setAnalysis(null);setNetworkResult(null);setProposal(null);setManualReviewReady(false);}}/>
+          </div>
         </div>
         <div className="pmss-toolbar">
           <p>最多 {inspection.max_segments} 段 · 24时段同一曲线 · 报价范围需服从课程规则</p>

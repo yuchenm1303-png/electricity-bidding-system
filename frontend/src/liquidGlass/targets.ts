@@ -46,7 +46,7 @@ export const SNAP_SELECTOR = [
 // the lens, but stay in place so text layout and hit areas remain stable.
 export const MAGNETIC_SELECTOR = [
   ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
-  ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
+  ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay):not(.glass-select-trigger)",
   ".app a[href]:not(.brand-home-link)",
   // Tiny public controls get subtle physical magnetism; broad CTAs only
   // change glass shape to avoid moving input hit boxes or whole page columns.

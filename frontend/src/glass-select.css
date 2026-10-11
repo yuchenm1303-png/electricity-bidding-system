@@ -1,0 +1,57 @@
+/* Pure DOM popover, so the existing optical ROI can read every option pixel. */
+.glass-select-trigger {
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;height:40px;min-width:0;padding:0 12px;
+  font:inherit;font-size:12px;font-weight:550;text-align:left;
+  background:var(--ta-field,#14223b);color:var(--ta-ink,#e9efff);
+  border:1px solid var(--ta-border,#30425e);border-radius:10px;
+  cursor:pointer;transition:border-color .2s,background-color .2s,box-shadow .2s;
+}
+.glass-select-trigger:hover:not(:disabled) {border-color:var(--ta-primary,#6f82eb);}
+.glass-select-trigger:focus-visible,.glass-select-trigger[data-open="true"]{
+  outline:none;border-color:var(--ta-primary,#7d93f6);
+  box-shadow:0 0 0 3px var(--ta-primary-soft,rgba(113,139,242,.14));
+}
+.glass-select-trigger:disabled{cursor:not-allowed;opacity:.48;}
+.glass-select-value{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.glass-select-chevron{flex:none;color:var(--ta-muted,#9cabcd);transition:transform .24s cubic-bezier(.22,1,.36,1);}
+.glass-select-trigger[data-open="true"] .glass-select-chevron{transform:rotate(180deg);}
+.glass-select-popover{
+  position:fixed;z-index:2000;display:flex;flex-direction:column;overflow:hidden;
+  padding:6px;border-radius:15px;
+  background:var(--ta-panel,#17253b);color:var(--ta-ink,#eff3ff);
+  border:1px solid var(--ta-border,#344765);
+  box-shadow:0 18px 50px rgba(3,10,29,.36),0 4px 14px rgba(3,10,29,.18);
+  transform-origin:top center;animation:glass-select-appear .16s cubic-bezier(.22,1,.36,1) both;
+}
+.glass-select-search{display:flex;align-items:center;gap:9px;flex:none;
+  height:40px;margin:2px 2px 7px;padding:0 11px;border:1px solid var(--ta-border,#344765);
+  border-radius:9px;color:var(--ta-muted,#a5b6cf);background:var(--ta-field,#102033);}
+.glass-select-search input{border:none;outline:none;min-width:0;flex:1;color:var(--ta-ink,#edf3ff);background:transparent;font:inherit;font-size:12px;}
+.glass-select-options{min-height:0;overflow:auto;overscroll-behavior:contain;padding:2px;scrollbar-width:thin;scrollbar-color:var(--ta-border,#445a7a) transparent;}
+.glass-select-option{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  min-height:37px;padding:8px 11px;border-radius:9px;cursor:pointer;
+  color:var(--ta-ink-2,var(--ta-ink,#e5eeff));font-size:12px;line-height:1.35;
+  transition:background-color .12s,color .12s;}
+.glass-select-option span{overflow-wrap:anywhere;min-width:0;}
+.glass-select-option svg{flex:none;color:var(--ta-primary,#8da4ff);}
+.glass-select-option[data-active="true"],.glass-select-option:hover{background:var(--ta-hover,rgba(109,133,239,.14));color:var(--ta-ink,#fff);}
+.glass-select-option[aria-selected="true"]{font-weight:650;color:var(--ta-primary,#8fa6ff);}
+.glass-select-option[aria-disabled="true"]{opacity:.35;cursor:not-allowed;}
+.glass-select-empty{padding:18px 11px;text-align:center;font-size:12px;color:var(--ta-muted,#aab6cb);}
+@keyframes glass-select-appear{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.glass-select-popover{animation:none}.glass-select-chevron,.glass-select-option{transition:none}}
+/* Existing settings panel button rules must not stretch the compact trigger. */
+.select-wrap>.glass-select-trigger{width:100%;height:100%;background:transparent;border:0;border-radius:inherit;padding:0 10px;font-size:12.5px;box-shadow:none;}
+.select-wrap>.glass-select-trigger:focus-visible{outline:2px solid var(--ta-primary,#7d93f6);outline-offset:-2px;}
+/* PMSS controls used to style native selects; match the new button control. */
+.pmss-controls .glass-select-trigger,.pmss-source-fields .glass-select-trigger,
+.pmss-market-context .glass-select-trigger,.pmss-grid-footer .glass-select-trigger,
+.pmss-rank-control .glass-select-trigger,.pmss-unit-order .glass-select-trigger,
+.pmss-unit-toolbar .glass-select-trigger{width:100%;min-width:0;height:40px;font-size:12px;}
+.pmss-source-fields .glass-select-trigger{padding:0 12px;filter:none!important;}
+
+.glass-select-field{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:11px;color:var(--ta-muted,#9cabcd);font-weight:650;}
+.pmss-market-context .glass-select-field{width:100%;}
+.pmss-controls>.glass-select-field{min-width:0;}
+.pmss-rank-control.glass-select-field{min-width:190px;}

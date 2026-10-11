@@ -1,5 +1,6 @@
+import { GlassSelect } from "./GlassSelect";
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronLeft, SlidersHorizontal, Activity, Gauge, CircleHelp } from "lucide-react";
+import { ChevronLeft, SlidersHorizontal, Activity, Gauge, CircleHelp } from "lucide-react";
 import type { Settings, Mode } from "./types";
 
 type Props = {
@@ -75,14 +76,16 @@ export function SettingsPanel({ config, onChange, onClose, collapsed, onModeChan
           <div className="setting-section-head"><Activity size={15}/><span>市场环境</span><small>01</small></div>
           <NumberField label="市场负荷" value={config.demand_mw} step={10} suffix="MW" onCommit={v => set("demand_mw", v)}/>
           <NumberField label="结算时长" value={config.interval_hours} step={0.25} min={0.25} suffix="h" onCommit={v => set("interval_hours", v)}/>
-          <label className="field"><span className="field-label">目标机组</span><span className="select-wrap">
-            <select value={config.target_unit_id} onChange={e => set("target_unit_id", e.target.value)}>
-              {config.offers.map(o => <option key={o.unit_id} value={o.unit_id}>{o.unit_id}</option>)}
-            </select><ChevronDown size={15}/></span></label>
-          <label className="field"><span className="field-label">出清引擎</span><span className="select-wrap">
-            <select value={config.engine} onChange={e => set("engine", e.target.value as Settings["engine"])}>
-              <option value="uniform">统一出清价</option><option value="pypsa">PyPSA（需安装）</option>
-            </select><ChevronDown size={15}/></span></label>
+          <div className="field"><span className="field-label">目标机组</span><span className="select-wrap">
+            <GlassSelect ariaLabel="目标机组" value={config.target_unit_id} searchable
+              options={config.offers.map(o => ({value:o.unit_id,label:o.unit_id}))}
+              onValueChange={value => set("target_unit_id",value)}/>
+          </span></div>
+          <div className="field"><span className="field-label">出清引擎</span><span className="select-wrap">
+            <GlassSelect ariaLabel="出清引擎" value={config.engine}
+              options={[{value:"uniform",label:"统一出清价"},{value:"pypsa",label:"PyPSA（需安装）"}]}
+              onValueChange={value => set("engine",value as Settings["engine"])}/>
+          </span></div>
         </div>
         <div className="setting-section">
           <div className="setting-section-head"><Gauge size={15}/><span>报价策略</span><small>02</small></div>

@@ -1,3 +1,4 @@
+import { GlassSelect } from "./GlassSelect";
 import { useEffect, useRef, useState } from "react";
 import { Database, RefreshCw, ShieldCheck } from "lucide-react";
 import {
@@ -102,20 +103,16 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
         {loadingProjects ? "正在检查数据源" : connected ? "可查询工程" : "只读接口未就绪"}</span>
     </div>
     <div className="pmss-source-fields">
-      <label>市场工程
-        <select value={projectId} disabled={!connected || loadingProjects || loadingSnapshot}
-          onChange={e => chooseProject(e.target.value)}>
-          <option value="">选择授权工程</option>
-          {projects.map(project => <option value={project.project_id} key={project.project_id}>{project.name}</option>)}
-        </select>
-      </label>
-      <label>历史案例日期
-        <select value={caseDate} disabled={!projectId || loadingCases || loadingSnapshot}
-          onChange={e => chooseDate(e.target.value)}>
-          <option value="">{loadingCases ? "正在读取日期..." : "选择案例日期"}</option>
-          {cases.map(item => <option value={item.case_date} key={item.case_date}>{item.label || item.case_date}</option>)}
-        </select>
-      </label>
+      <div className="glass-select-field">市场工程
+        <GlassSelect ariaLabel="市场工程" value={projectId} disabled={!connected || loadingProjects || loadingSnapshot}
+          options={[{value:"",label:"选择授权工程"},...projects.map(project=>({value:project.project_id,label:project.name}))]}
+          onValueChange={chooseProject}/>
+      </div>
+      <div className="glass-select-field">历史案例日期
+        <GlassSelect ariaLabel="历史案例日期" value={caseDate} disabled={!projectId || loadingCases || loadingSnapshot}
+          options={[{value:"",label:loadingCases?"正在读取日期...":"选择案例日期"},...cases.map(item=>({value:item.case_date,label:item.label||item.case_date}))]}
+          onValueChange={chooseDate}/>
+      </div>
       <button type="button" className="pmss-source-load"
         disabled={!projectId || !caseDate || loadingSnapshot || loadingCases}
         onClick={() => void load()}>
