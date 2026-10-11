@@ -34,6 +34,7 @@ export function createProgram(gl: WebGLRenderingContext) {
     uniform float u_aberration;
     uniform float u_zoom;
     uniform float u_wobble;
+    uniform float u_reflection;
     uniform float u_cornerRadius;
     uniform float u_time;
 
@@ -100,11 +101,11 @@ export function createProgram(gl: WebGLRenderingContext) {
       // Keep the surface almost optically clear.
       float edge = smoothstep(0.76, 1.0, distNorm);
       vec3 reflected = texture2D(u_texture, clamp(sampleUv + normal * 0.008 * edge, 0.0, 1.0)).rgb;
-      color = mix(color, reflected, edge * 0.035);
+      color = mix(color, reflected, edge * 0.035 * u_reflection);
 
       vec2 lightDir = normalize(vec2(-0.62, -0.78));
       float directional = pow(max(dot(normal, lightDir), 0.0), 7.0);
-      float rim = edge * (0.008 + directional * 0.070);
+      float rim = edge * (0.008 + directional * 0.070) * u_reflection;
       color += vec3(0.62, 0.78, 0.88) * rim;
 
       float mask = 1.0 - smoothstep(-1.15, 0.9, d);
