@@ -348,6 +348,7 @@ export function LiquidGlassCursor() {
 
       // Pointer/input/layout events wake the loop. A stationary cursor does
       // not need continuous DOM measurements and WebGL draws once springs settle.
+      if (tooltipAnimationUntil > now && liveChartTooltip()) rasterDirty=true;
       if (settled && !rasterDirty && !snapDirty) {
         running = false;
         return;
@@ -362,7 +363,8 @@ export function LiquidGlassCursor() {
       if (!pointerInside || !Number.isFinite(roi.state.left) || !Number.isFinite(roi.state.top)) return "";
       const parts: string[] = [];
       for (const node of root.querySelectorAll<Element>(DYNAMIC_SCENE_SELECTOR)) {
-        if (node.closest("[data-powerbid-liquid-cursor='true']")) continue;
+        if (node.closest("[data-powerbid-liquid-cursor='true']") ||
+            node.matches(".recharts-tooltip-wrapper")) continue;
         const st = getComputedStyle(node);
         if (st.display === "none" || st.visibility === "hidden" || Number(st.opacity) < 0.01) continue;
         const r = node.getBoundingClientRect();
@@ -397,6 +399,10 @@ export function LiquidGlassCursor() {
     const onSceneAnimation = (event: Event) => {
       if (!(event.target instanceof Element) ||
           event.target.closest("[data-powerbid-liquid-cursor='true']")) return;
+      if (event.target.closest(".recharts-tooltip-wrapper")) {
+        tooltipAnimationUntil=performance.now()+500;
+        rasterDirty=true;ensureFrame();return;
+      }
       const bounds = event.target.getBoundingClientRect();
       // Decorative animations elsewhere in the dashboard must not trigger
       // endless ROI redraws. Include a generous outer margin so transitions
@@ -441,6 +447,7 @@ export function LiquidGlassCursor() {
       if (chartLens || event.target instanceof Element &&
           Boolean(event.target.closest(".recharts-wrapper, .ta-supply-chart, .ta-bars, .ta-gauge-wrap, .pmss-chart, .pb-field-canvas"))) {
         rasterDirty = true;
+        if (chartLens) tooltipAnimationUntil=performance.now()+500;
       }
       wake();
       watchScene();
@@ -476,6 +483,7 @@ export function LiquidGlassCursor() {
       snapDirty = true;
       lastSceneSignature = "";
       animationWatchUntil = 0;
+      tooltipAnimationUntil = 0;
       window.clearTimeout(sceneTimer);
       sceneTimer = 0;
       wake();
