@@ -677,6 +677,7 @@ async def assess_strategy_risk(request: Request) -> dict[str, Any]:
         params = StrategyGuardInput.model_validate(await _read_payload(request))
         for case in params.history_cases:
             _screen_snapshot(case)
+        _screen_snapshot({"results": {"candidates": params.candidates}})
         if not _NETWORK_LIMITER.acquire(blocking=False):
             raise HTTPException(429, "已有网络策略计算在运行")
         try:
