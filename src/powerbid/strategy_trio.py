@@ -15,7 +15,7 @@ from powerbid.joint_strategy import evaluate_joint_bid
 from powerbid.network_dispatch import DcNetwork
 from powerbid.network_strategy import NetworkBidResult, evaluate_network_plan, verify_network_inputs
 from powerbid.pmss_bid_rule_safety import validate_new_curve
-from powerbid.pmss_integration import PMSSSnapshot, PeriodBid, curve_for_period
+from powerbid.pmss_integration import PeriodBid, PMSSSnapshot, curve_for_period
 from powerbid.strategy_lab import BidPolicy, DemandStress, generate_policy_plan
 from powerbid.unit_commitment import TerminalMode, ThermalConstraints
 
