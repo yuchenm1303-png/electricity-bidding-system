@@ -27,10 +27,13 @@ const CHART_PLOT = [
 ].join(",");
 
 /** Only decorative grid pixels qualify for the 250px mode. */
-function insideBox(element:Element,x:number,y:number) {
+function insideBox(element:Element,x:number,y:number,halfLens=0) {
   const r=element.getBoundingClientRect();
-  return x>=r.left && x<=r.right && y>=r.top && y<=r.bottom &&
-    r.width>1 && r.height>1;
+  // Match the existing live Canvas sampler: the *whole* lens, not merely
+  // the pointer, must fit within the underlying grid texture.
+  return x-halfLens>=r.left && x+halfLens<=r.right &&
+    y-halfLens>=r.top && y+halfLens<=r.bottom &&
+    r.width>halfLens*2 && r.height>halfLens*2;
 }
 function rectangleOverlap(a:DOMRect,b:DOMRect,pad=6) {
   return a.left-pad<b.right && a.right+pad>b.left &&
@@ -47,7 +50,7 @@ export function resolveVisualMode(root:HTMLElement,x:number,y:number,inside:bool
   // The Canvas itself usually has pointer-events:none. Detect its projected
   // display rect instead; reject visible text/HUD overlap before magnifying.
   const grid=root.querySelector<HTMLCanvasElement>(".pb-landing .pb-field-canvas");
-  if (grid && insideBox(grid,x,y) && !hit.closest(DECORATIVE_OCCLUSION)) {
+  if (grid && insideBox(grid,x,y,VISUAL_LENS_SIZE.grid.width/2) && !hit.closest(DECORATIVE_OCCLUSION)) {
     const centerRect=new DOMRect(x-125,y-125,250,250);
     const obscured=[...root.querySelectorAll<HTMLElement>(DECORATIVE_OCCLUSION)].some(el=>{
       const style=getComputedStyle(el);
