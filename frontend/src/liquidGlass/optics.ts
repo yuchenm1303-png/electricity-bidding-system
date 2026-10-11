@@ -34,14 +34,19 @@ export function opticalRadius(
 ) {
   const half=Math.max(2,Math.min(width,height)/2);
   if(mode==="free"||mode==="chart")return half;
-  if(mode==="brand")return Math.min(18,half);
-  if(!element)return Math.min(16,half);
+  // The full Smirel wordmark remains a softly rounded, independent surface.
+  if(mode==="brand")return Math.min(24,half);
+  if(!element)return Math.min(half,Math.max(12,half*0.92));
   const style=getComputedStyle(element);
-  const raw=style.borderTopLeftRadius;
+  const raw=style.borderTopLeftRadius||"0";
   const parsed=Number.parseFloat(raw);
   const radius=raw.includes("%")
     ? Math.min(width,height)*(Number.isFinite(parsed)?parsed:25)/100
     : (Number.isFinite(parsed)?parsed:12);
-  // A little padding makes the lens edge sit *outside* the control corner.
-  return Math.max(8,Math.min(half,radius+6));
+  // Glass extends beyond the CSS box. A control's original corner radius
+  // is therefore too square for the larger glass geometry. A near-pill
+  // radius respects its *lens* height, with no overshoot on compact targets.
+  if(mode==="control")return Math.min(half,Math.max(radius+12,half*0.94));
+  // Keep typing areas slightly squarer so their frame stays easy to read.
+  return Math.min(half,Math.max(radius+9,half*0.72));
 }

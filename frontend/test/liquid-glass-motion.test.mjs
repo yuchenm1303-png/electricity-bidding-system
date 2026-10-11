@@ -49,12 +49,15 @@ test("optics have distinct but restrained mode targets",()=>{
 test("morph corner stays compatible with circular and rounded targets",()=>{
   assert.equal(opticalRadius("chart",118,118),59);
   assert.equal(opticalRadius("free",80,54),27);
-  assert.equal(opticalRadius("brand",270,70),18);
+  assert.equal(opticalRadius("brand",270,70),24);
   const prev=globalThis.getComputedStyle;
   globalThis.getComputedStyle=()=>({borderTopLeftRadius:"14px"});
   try{
-    assert.equal(opticalRadius("control",150,50,{}),20);
+    assert.equal(opticalRadius("control",150,50,{}),25);
     assert.equal(opticalRadius("reading",50,30,{}),15);
+    assert.ok(opticalRadius("control",300,88,{})>=41);
+    assert.equal(opticalRadius("control",40,20,{}),10);
+    assert.ok(opticalRadius("reading",300,88,{})<opticalRadius("control",300,88,{}));
   }finally{
     if(prev===undefined)delete globalThis.getComputedStyle;
     else globalThis.getComputedStyle=prev;
