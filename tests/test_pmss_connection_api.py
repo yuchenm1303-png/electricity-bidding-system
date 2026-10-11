@@ -103,7 +103,11 @@ def test_member_can_reconnect_only_during_confirmed_outage(clients, monkeypatch)
 )
 def test_member_cannot_interrupt_non_outage(clients, monkeypatch, probe, code):
     calls = []
-    monkeypatch.setattr(pmss_connection_api, "_operator", lambda *args: calls.append(args))
+    def operator(method, path):
+        calls.append((method, path))
+        return {"running": True, "retry_after_seconds": 0}
+
+    monkeypatch.setattr(pmss_connection_api, "_operator", operator)
     monkeypatch.setattr(pmss_connection_api, "_probe_bridge", lambda: probe)
     with clients("pmssmember") as member:
         state = member.get("/api/pmss/connection/status").json()
@@ -114,7 +118,7 @@ def test_member_cannot_interrupt_non_outage(clients, monkeypatch, probe, code):
             headers={"X-PowerBid-Request": "1"},
         )
         assert result.status_code == code
-    assert calls == []
+    assert calls == [("GET", "/status")]
 
 
 def test_admin_status_has_no_credentials_and_exact_state(clients, monkeypatch):
