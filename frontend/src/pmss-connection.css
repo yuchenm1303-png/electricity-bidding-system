@@ -24,3 +24,16 @@
 .pmss-connection .is-spinning{animation:pb-vpn-spin 1.2s linear infinite}
 @keyframes pb-vpn-spin{to{transform:rotate(360deg)}}
 @media(max-width:760px){.pmss-connection{padding:18px}.pmss-connection-top{flex-direction:column}.pmss-connection-status{grid-template-columns:1fr}.pmss-connection-status>div+div{border-left:0;border-top:1px solid var(--ta-border,rgba(174,185,204,.13))}}
+
+/* Keep infrastructure maintenance secondary to the usable classroom workflow. */
+.pmss-connection.is-secondary{padding:18px 22px;gap:12px;margin:16px 0 24px}
+.pmss-connection.is-secondary .pmss-connection-top h3{font-size:15px;margin:5px 0}
+.pmss-connection-details{border-top:1px solid var(--ta-border,rgba(174,185,204,.15));padding-top:9px}
+.pmss-connection-details>summary{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--ta-muted,#8491a8);font-size:12px;min-height:34px}
+.pmss-connection-details>summary::-webkit-details-marker{display:none}
+.pmss-connection-details>summary:focus-visible{outline:2px solid var(--ta-ink,#e8eef9);outline-offset:3px;border-radius:6px}
+.pmss-connection-details>summary span{margin-left:auto;color:var(--ta-muted,#8491a8)}
+.pmss-connection-details[open]>summary{color:var(--ta-ink,#e8eef9);margin-bottom:12px}
+.pmss-connection-expanded{display:flex;flex-direction:column;gap:14px}
+.pmss-connection.is-secondary .pmss-connection-status{margin:0}
+@media(max-width:760px){.pmss-connection.is-secondary{padding:16px}}
