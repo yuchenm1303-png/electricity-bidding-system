@@ -11,7 +11,7 @@ import { MarketExplorer, OptimizationHourReview } from "./PMSSInsights";
 import { PMSSCandidateDispatchPanel } from "./PMSSCandidateDispatchPanel";
 import { PMSSHoldoutGatePanel } from "./PMSSHoldoutGatePanel";
 import { PMSSManualClearingPanel } from "./PMSSManualClearingPanel";
-import { PMSSBiddingFlowPanel } from "./PMSSBiddingFlowPanel";
+import { PMSSSmartBidPanel } from "./PMSSSmartBidPanel";
 import type { PMSSBidProposal } from "./pmssBiddingFlow";
 import { PMSSSourcePicker } from "./PMSSSourcePicker";
 import { PMSSConnectionPanel } from "./PMSSConnectionPanel";
@@ -88,7 +88,7 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
   const [step, setStep] = useState(200);
   const [iterations, setIterations] = useState(2);
   const [busy, setBusy] = useState(false);
-  const [activeTask, setActiveTask] = useState<"import"|"optimize"|null>(null);
+  const [activeTask, setActiveTask] = useState<"import"|"optimize"|"smart"|null>(null);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
 
@@ -196,6 +196,38 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
     }
   };
 
+  /** One action, existing research engines only; no PMSS platform write. */
+  const runSmart = async () => {
+    if (!snapshot || !inspection || !target || busy || rankBusy || networkBusy) return;
+    const hasLoad = inspection.load_mw.length === 24 &&
+      inspection.load_mw.every(value => Number.isFinite(value) && value >= 0);
+    if (!hasLoad) {setError("缺少完整24小时负荷，无法自动生成报价");return;}
+    setAnalysis(null); setRankResult(null); setNetworkResult(null);
+    setProposal(null); setManualReviewReady(false); setError("");
+    setBusy(true); setActiveTask("smart");
+    try {
+      if (inspection.dc_grid_available && inspection.historical_only) {
+        // Existing network strategy engine owns candidate generation and ranking.
+        setRankResult(await rankPMSSNetwork(snapshot, target, 0.5, 0.05));
+      } else {
+        // Honest reduced-capability fallback: ONE surrogate study, never 3 invented candidates.
+        const floor = inspection.historical_bid_rule_audit.price_floor;
+        const ceiling = inspection.historical_bid_rule_audit.price_ceiling;
+        if (floor == null || ceiling == null || !Number.isFinite(floor) ||
+            !Number.isFinite(ceiling) || ceiling <= floor || floor < 0 || ceiling > 10000) {
+          throw new Error("缺少可核验的市场报价上下限，不能自动填充模拟价格");
+        }
+        const candidatePrices = Array.from({length: 6}, (_, i) =>
+          Number((floor + (ceiling - floor) * i / 5).toFixed(6)));
+        setAnalysis(await optimizePMSS(snapshot, target, candidatePrices, 2));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "智能报价研究失败");
+    } finally {
+      setBusy(false); setActiveTask(null);
+    }
+  };
+
   const runNetwork = async () => {
     if (!snapshot || (!analysis && !proposal) || !target || !inspection?.dc_grid_available ||
         busy || networkBusy || rankBusy) return;
@@ -284,17 +316,35 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
       <button type="button" onClick={() => picker.current?.click()}>选择 JSON 文件 <ArrowRight size={15}/></button>
     </div>}
     {inspection && <>
-      <PMSSBiddingFlowPanel
+      <div className="pmss-smart-target">
+        <div><strong>选择目标机组</strong><small>先在上方选择工程、日期，再选择这一组的研究机组</small></div>
+        <div className="glass-select-field">
+          <GlassSelect ariaLabel="智能报价目标机组" value={target} searchable
+            disabled={busy || networkBusy || rankBusy}
+            options={inspection.units.map(unit => ({value:unit.unit_id,label:(unit.name||unit.unit_id)+" · "+unit.unit_id}))}
+            onValueChange={chooseUnit}/>
+        </div>
+      </div>
+      <PMSSSmartBidPanel
         inspection={inspection} target={target} analysis={analysis} rankResult={rankResult}
         proposal={proposal} manualReviewReady={manualReviewReady}
         pending={busy || networkBusy || rankBusy}
         onImport={() => picker.current?.click()}
-        onOptimize={() => void run()}
-        onRank={() => void runRank()}
+        onGenerate={() => void runSmart()}
         onChoose={candidate => {
           setProposal(candidate); setNetworkResult(null); setManualReviewReady(false);
         }}
       />
+      {proposal && <PMSSManualClearingPanel
+        key={fileName + ":" + target + ":" + inspection.case_date + ":" + JSON.stringify(proposal.segments)}
+        snapshot={snapshot!} caseDate={inspection.case_date}
+        proposal={proposal}
+        onReviewed={result => {
+          if (activeProposalRef.current === proposal) setManualReviewReady(result !== null);
+        }}
+      />}
+      <details className="pmss-advanced">
+        <summary>高级策略研究与技术细节 · 网络约束、历史回测、机组模型和逐时段诊断</summary>
       <div className="pmss-section-head"><div><small>01 / MARKET SNAPSHOT</small><h3>历史市场场景</h3>
         <p>{inspection.case_date || "未标注日期"} · {inspection.forecast_source}</p>
       </div><span className="pmss-status">字段已验证</span></div>
@@ -619,14 +669,6 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
           <p className="pmss-footnote">新推荐没有在 PMSS 中提交或出清。历史 MAE 只评价原报价的模型拟合，不是新报价的真实收益保证。</p>
         </>}
       </div>
-      {proposal && <PMSSManualClearingPanel
-        key={target + ":" + inspection.case_date + ":" + JSON.stringify(proposal.segments)}
-        snapshot={snapshot!} caseDate={inspection.case_date}
-        proposal={proposal}
-        onReviewed={result => {
-          if (activeProposalRef.current === proposal) setManualReviewReady(result !== null);
-        }}
-      />}
       <div className="pmss-panel">
         <div className="pmss-panel-head">
           <div>
@@ -780,6 +822,7 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
         rankResult={rankResult}
         otherBusy={busy || networkBusy || rankBusy}
       />}
+      </details>
     </>}
     <PMSSHoldoutGatePanel/>
   </section>;
