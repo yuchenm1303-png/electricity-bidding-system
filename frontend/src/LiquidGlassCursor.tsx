@@ -284,18 +284,33 @@ export function LiquidGlassCursor() {
       }
       return parts.join("\\n");
     };
+    const animatedCanvasInRoi = () => {
+      if (document.hidden || !Number.isFinite(roi.state.left) || !Number.isFinite(roi.state.top)) return false;
+      for (const element of root.querySelectorAll<HTMLCanvasElement>(".pb-landing .pb-field-canvas")) {
+        const style = getComputedStyle(element);
+        if (style.display === "none" || style.visibility !== "visible") continue;
+        if (intersects(element.getBoundingClientRect(),roi.state.left,roi.state.top,
+          roi.state.width,roi.state.height)) return true;
+      }
+      return false;
+    };
     const checkDynamicScene = () => {
       sceneTimer = 0;
       if (!pointerInside) return;
       const now = performance.now();
       const signature = dynamicSignature();
       const animating = now < animationWatchUntil;
-      if (signature !== lastSceneSignature || (animating && now - lastCapture >= DYNAMIC_SCENE_CHECK_MS)) {
+      // Canvas paints do not mutate the DOM. Only recapture the grid while
+      // it intersects the optical ROI; a stationary glass lens still sees
+      // the rotating network, while unrelated pages remain event-driven.
+      const liveCanvas = animatedCanvasInRoi();
+      if (signature !== lastSceneSignature ||
+          ((animating || liveCanvas) && now - lastCapture >= DYNAMIC_SCENE_CHECK_MS)) {
         lastSceneSignature = signature;
         rasterDirty = true;
         ensureFrame();
       }
-      if (signature || animating) sceneTimer = window.setTimeout(checkDynamicScene, DYNAMIC_SCENE_CHECK_MS);
+      if (signature || animating || liveCanvas) sceneTimer = window.setTimeout(checkDynamicScene, DYNAMIC_SCENE_CHECK_MS);
     };
     const watchScene = () => {
       if (pointerInside && !sceneTimer) sceneTimer = window.setTimeout(checkDynamicScene, DYNAMIC_SCENE_CHECK_MS);
@@ -344,7 +359,7 @@ export function LiquidGlassCursor() {
       // Static page pixels do not change when the pointer merely moves.
       // Chart tooltips are compositor-driven and still need rapid repaint.
       if (chartLens || event.target instanceof Element &&
-          Boolean(event.target.closest(".recharts-wrapper, .ta-supply-chart, .ta-bars, .ta-gauge-wrap, .pmss-chart"))) {
+          Boolean(event.target.closest(".recharts-wrapper, .ta-supply-chart, .ta-bars, .ta-gauge-wrap, .pmss-chart, .pb-field-canvas"))) {
         rasterDirty = true;
       }
       wake();

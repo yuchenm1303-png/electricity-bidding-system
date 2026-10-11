@@ -4,7 +4,7 @@ export const BASE_WIDTH = 80;
 export const BASE_HEIGHT = 54;
 // The existing optical lens becomes a larger, perfectly circular viewport over charts.
 export const CHART_LENS_SIZE = 118;
-export const CHART_LENS_SELECTOR = ".ta-gauge-wrap, .ta-bars, .ta-supply-chart, .recharts-wrapper, .pmss-chart, .pb-landing .pb-interactive-chart, .pb-landing .pb-feature-visual .pb-curve-graphic";
+export const CHART_LENS_SELECTOR = ".ta-gauge-wrap, .ta-bars, .ta-supply-chart, .recharts-wrapper, .pmss-chart, .pb-landing .pb-field-canvas, .pb-landing .pb-interactive-chart, .pb-landing .pb-feature-visual .pb-curve-graphic";
 export const FREE_OFFSET_Y = -32;
 export const SNAP_DISTANCE = 10;
 export const RELEASE_DISTANCE = 15;

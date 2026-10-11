@@ -90,6 +90,44 @@ function drawImageFit(
   }
 }
 
+/**
+ * The landing's interactive grid is painted into a native Canvas 2D surface.
+ * The DOM traversal cannot inspect its child pixels (it has no DOM children),
+ * so copy only the visible overlapping source pixels to the optical ROI.
+ * Crop in source device pixels and map back to viewport CSS pixels: this
+ * prevents scaling/offset mistakes at high-DPI and while the page is resized.
+ */
+function drawInteractiveCanvas(
+  ctx: CanvasRenderingContext2D,
+  surface: HTMLCanvasElement,
+  rect: DOMRect,
+  roiLeft: number,
+  roiTop: number,
+  roiWidth: number,
+  roiHeight: number,
+  opacity: number,
+) {
+  if (!surface.width || !surface.height || !rect.width || !rect.height) return;
+  const left = Math.max(roiLeft, rect.left);
+  const top = Math.max(roiTop, rect.top);
+  const right = Math.min(roiLeft + roiWidth, rect.right);
+  const bottom = Math.min(roiTop + roiHeight, rect.bottom);
+  if (right <= left || bottom <= top) return;
+  const scaleX = surface.width / rect.width;
+  const scaleY = surface.height / rect.height;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  try {
+    ctx.drawImage(surface,
+      (left - rect.left) * scaleX, (top - rect.top) * scaleY,
+      (right - left) * scaleX, (bottom - top) * scaleY,
+      left - roiLeft, top - roiTop, right - left, bottom - top);
+  } catch {
+    // An unavailable/tainted source must not break the entire optical scene.
+  }
+  ctx.restore();
+}
+
 // PowerBid-only background adapter. The original Loom background image
 // has no counterpart here; the original shader and raster traversal follow.
 function drawWallpaper(
@@ -303,6 +341,13 @@ export function rasterizePortal(
       );
       ctx.stroke();
       ctx.restore();
+    }
+
+    // Sample the actual animated topology pixels rather than rasterizing
+    // only its surrounding DOM. Keep the source interactive: the glass
+    // overlay remains pointer-events:none, so canvas drag/selection works.
+    if (el instanceof HTMLCanvasElement && el.matches(".pb-landing .pb-field-canvas")) {
+      drawInteractiveCanvas(ctx,el,rect,roiLeft,roiTop,roiWidth,roiHeight,opacity);
     }
 
     if (el instanceof HTMLImageElement && safeImageForCanvas(el)) {
