@@ -9,7 +9,7 @@ export type CursorVisualMode = "free" | "chart" | "hero" | "grid";
 
 export const VISUAL_LENS_SIZE = {
   free: {width:80,height:54},
-  chart: {width:120,height:120},
+  chart: {width:156,height:156},
   hero: {width:128,height:128},
   grid: {width:250,height:250},
 } as const;
@@ -21,9 +21,12 @@ const DECORATIVE_OCCLUSION = [
 ].join(",");
 
 const INTERACTIVE = "button, a[href], input, textarea, select, [contenteditable='true'], [role='slider'], [data-liquid-snap='false']";
+const EXPRESSION_SURFACES = ".ta-stat-icon, .ta-card-icon, .pb-risk-halo";
+
 const CHART_PLOT = [
   ".ta-gauge-wrap", ".ta-bars", ".ta-supply-chart", ".recharts-wrapper",
   ".pmss-chart", ".pb-interactive-chart", ".pb-feature-visual .pb-curve-graphic",
+  ".pb-browser-chart-panel .pb-curve-graphic",
 ].join(",");
 
 /** Only decorative grid pixels qualify for the 250px mode. */
@@ -47,6 +50,10 @@ export function resolveVisualMode(root:HTMLElement,x:number,y:number,inside:bool
   if (!(hit instanceof Element) || !root.contains(hit)) return "free";
   if (hit.closest(INTERACTIVE)) return "free";
   if (hit.closest(CHART_PLOT)) return "chart";
+  // Most work happens inside /app. Decorative KPI/icon surfaces provide an
+  // immediately discoverable, compact strong-refraction mode without
+  // distorting KPI values, labels, form fields or any actionable controls.
+  if (hit.closest(EXPRESSION_SURFACES)) return "hero";
   // The Canvas itself usually has pointer-events:none. Detect its projected
   // display rect instead; reject visible text/HUD overlap before magnifying.
   const grid=root.querySelector<HTMLCanvasElement>(".pb-landing .pb-field-canvas");
@@ -71,9 +78,9 @@ export function resolveVisualMode(root:HTMLElement,x:number,y:number,inside:bool
 export function lensMotion(mode:CursorVisualMode,wasLarge:boolean) {
   // Fractionally under-damped springs for a single soft overshoot.
   // Shrinking large lenses is deliberately a little quicker than expansion.
-  if (mode==="grid") return {stiffness:190,damping:17};
-  if (mode==="hero") return {stiffness:225,damping:18};
-  if (mode==="chart") return {stiffness:235,damping:19};
+  if (mode==="grid") return {stiffness:190,damping:15};
+  if (mode==="hero") return {stiffness:225,damping:15};
+  if (mode==="chart") return {stiffness:255,damping:14};
   if (wasLarge) return {stiffness:260,damping:25};
   return {stiffness:310,damping:32};
 }
