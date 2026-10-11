@@ -265,7 +265,7 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
       <input ref={picker} type="file" accept=".json,application/json" hidden
         aria-label="导入 PMSS 脱敏 JSON" onChange={onFile}/>
     </div>
-    <PMSSConnectionPanel enabled={account?.role === "admin"}/>
+    <PMSSConnectionPanel enabled={Boolean(account)}/>
     <PMSSSourcePicker onLoaded={importServerSnapshot} onReset={clearMarket} inspection={inspection}/>
     <div className="pmss-process-steps" aria-label="PMSS 研究工作流程">
       <span className={inspection ? "complete" : "current"}><b>01</b> 选择工程 / 历史日期</span>
