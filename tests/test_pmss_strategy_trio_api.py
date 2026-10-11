@@ -1,6 +1,5 @@
 """Public API contract: local profile generation never gains PMSS-write rights."""
 import pytest
-
 from test_pmss_web_api import _synthetic_network_case, client
 
 
