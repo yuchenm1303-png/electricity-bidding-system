@@ -514,11 +514,17 @@ export function LiquidGlassCursor() {
         return !el?.closest("[data-powerbid-liquid-cursor='true']");
       });
       if (!updates.length) return;
-      if (updates.some(affectsMagneticTargets)) {
+      const tooltipOnly = updates.every(record=>{
+        const el=record.target instanceof Element
+          ? record.target : record.target.parentElement;
+        return Boolean(el?.closest(".recharts-tooltip-wrapper"));
+      });
+      if (!tooltipOnly && updates.some(affectsMagneticTargets)) {
         magnetism.refresh();
         snapDirty = true;
       }
-      staticDirty=true;
+      if (!tooltipOnly) staticDirty=true;
+      else tooltipAnimationUntil=performance.now()+450;
       rasterDirty = true;
       wake();
       watchScene();
