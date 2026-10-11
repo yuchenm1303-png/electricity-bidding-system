@@ -17,7 +17,7 @@ export const VISUAL_LENS_SIZE = {
 const DECORATIVE_OCCLUSION = [
   ".pb-hero-copy", ".pb-hero-hud", ".pb-hero-bottom",
   ".pb-constellation-header", ".pb-constellation-detail", ".pb-constellation-hint",
-  ".pb-hero-content", ".pb-header", ".pb-feature-bottom",
+  ".pb-header", ".pb-feature-bottom",
 ].join(",");
 
 const INTERACTIVE = "button, a[href], input, textarea, select, [contenteditable='true'], [role='slider'], [data-liquid-snap='false']";
