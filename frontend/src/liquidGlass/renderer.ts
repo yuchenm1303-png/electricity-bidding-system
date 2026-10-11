@@ -3,7 +3,7 @@ import { createProgram } from "./shader";
 export type GlassFrame = {
   canvasWidth:number;canvasHeight:number;x:number;y:number;width:number;height:number;
   roiLeft:number;roiTop:number;dpr:number;
-  strength:number;pinch:number;aberration:number;zoom:number;wobble:number;cornerRadius:number;time:number;
+  strength:number;pinch:number;aberration:number;zoom:number;wobble:number;reflection:number;cornerRadius:number;time:number;
 };
 
 /** Owns the GPU objects and uploaded texture; never reads DOM layout. */
@@ -46,6 +46,7 @@ export function createGlassRenderer(canvas:HTMLCanvasElement) {
     aberration:gl.getUniformLocation(program,"u_aberration"),
     zoom:gl.getUniformLocation(program,"u_zoom"),
     wobble:gl.getUniformLocation(program,"u_wobble"),
+    reflection:gl.getUniformLocation(program,"u_reflection"),
     cornerRadius:gl.getUniformLocation(program,"u_cornerRadius"),
     time:gl.getUniformLocation(program,"u_time"),
   };
@@ -83,6 +84,7 @@ export function createGlassRenderer(canvas:HTMLCanvasElement) {
     gl.uniform1f(uniforms.aberration,frame.aberration);
     gl.uniform1f(uniforms.zoom,frame.zoom);
     gl.uniform1f(uniforms.wobble,frame.wobble);
+    gl.uniform1f(uniforms.reflection,frame.reflection);
     gl.uniform1f(uniforms.cornerRadius,frame.cornerRadius*frame.dpr);
     gl.uniform1f(uniforms.time,frame.time);
     gl.drawArrays(gl.TRIANGLES,0,6);
