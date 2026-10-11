@@ -29,6 +29,9 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
     setLoadingProjects(true);
     getPMSSProjects(ctrl.signal).then(items => {
       setProjects(items);
+      // One authorized project is the common classroom case; select it automatically.
+      setProjectId(current => items.some(p => p.project_id === current)
+        ? current : items.length === 1 ? items[0].project_id : "");
       setConnected(true);
       setMessage(items.length ? "" : "当前账号尚无获授权共享的 PMSS 历史案例。普通报价策略和离线快照分析仍可使用；如需此工程，请联系管理员确认课程共享授权。");
     }).catch(error => {
@@ -48,6 +51,9 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
     setCaseDate("");
     getPMSSCases(projectId, ctrl.signal).then(items => {
       setCases(items);
+      // A new session opens on the latest authorized historical date by default.
+      if (items.length) setCaseDate([...items].sort((a, b) =>
+        a.case_date.localeCompare(b.case_date)).at(-1)?.case_date ?? "");
       if (!items.length) setMessage("该工程没有可授权读取的历史案例日期。");
       else setMessage("");
     }).catch(error => {
@@ -89,7 +95,7 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
     <div className="pmss-source-heading">
       <div><span className="pmss-source-eyebrow"><Database size={14}/> 授权数据源 · 优先使用</span>
         <h3>选择 PMSS 工程与市场日期</h3>
-        <p>通过 PowerBid 同源后端只读查询，浏览器不连接 VPN、不接收 Cookie 或平台密钥。</p></div>
+        <p>选择已经授权保存的真实教学案例即可使用。不需要连接学校 VPN，也不用重新登录老师平台。</p></div>
       <span className="pmss-source-state"><span className={connected ? "pmss-source-dot online" : "pmss-source-dot"}/>
         {loadingProjects ? "正在检查数据源" : connected ? "可查询工程" : "只读接口未就绪"}</span>
     </div>
@@ -122,6 +128,6 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
     {message && <p className="pmss-source-message" role="status">{message}</p>}
     {inspection && <p className="pmss-source-coverage"><ShieldCheck size={14}/>
       {inspection.case_date || "日期未标注"} · {describePMSSCoverage(inspection)} · 未执行平台出清</p>}
-    <p className="pmss-source-fallback">尚未接入授权只读服务时，可用右上角“导入快照”进行离线研究；不显示虚构工程或模拟历史结果。</p>
+    <p className="pmss-source-fallback">学校实时登录过期不影响已授权历史案例。没有可用案例时，仍可通过“导入快照”研究，不会提供虚构结果。</p>
   </div>;
 }
