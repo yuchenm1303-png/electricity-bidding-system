@@ -193,13 +193,18 @@ export function LiquidGlassCursor() {
 
     const liveChartTooltip = () => {
       if (!chartLens || !pointerInside || document.hidden) return null;
-      const tip=root.querySelector<HTMLElement>(".recharts-tooltip-wrapper");
-      if (!tip) return null;
-      const st=getComputedStyle(tip);
-      if (st.display === "none" || st.visibility === "hidden" || Number(st.opacity) < 0.002) return null;
-      if (!intersects(tip.getBoundingClientRect(),roi.state.left,roi.state.top,
-        roi.state.width,roi.state.height)) return null;
-      return tip;
+      // A dashboard can have several Recharts charts, each with its own
+      // tooltip wrapper. Pick the currently visible one, not the first DOM
+      // match (which may belong to a non-hovered chart).
+      for (const tip of root.querySelectorAll<HTMLElement>(".recharts-tooltip-wrapper")) {
+        const st=getComputedStyle(tip);
+        if (st.display === "none" || st.visibility === "hidden" ||
+            Number(st.opacity) < 0.002) continue;
+        if (!intersects(tip.getBoundingClientRect(),roi.state.left,roi.state.top,
+            roi.state.width,roi.state.height)) continue;
+        return tip;
+      }
+      return null;
     };
 
     const uploadTexture = (roiLeft: number, roiTop: number, now: number) => {
