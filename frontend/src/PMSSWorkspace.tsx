@@ -13,6 +13,8 @@ import { PMSSManualClearingPanel } from "./PMSSManualClearingPanel";
 import { PMSSBiddingFlowPanel } from "./PMSSBiddingFlowPanel";
 import type { PMSSBidProposal } from "./pmssBiddingFlow";
 import { PMSSSourcePicker } from "./PMSSSourcePicker";
+import { PMSSConnectionPanel } from "./PMSSConnectionPanel";
+import type { AccountUser } from "./AccountGate";
 import { PMSSGridOverview } from "./PMSSGridOverview";
 
 const tooltipStyle = {
@@ -65,7 +67,7 @@ function saveTechnicalTemplate(inspection: PMSSInspection) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function PMSSWorkspace() {
+export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
   const picker = useRef<HTMLInputElement | null>(null);
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(null);
   const [inspection, setInspection] = useState<PMSSInspection | null>(null);
@@ -263,6 +265,7 @@ export function PMSSWorkspace() {
       <input ref={picker} type="file" accept=".json,application/json" hidden
         aria-label="导入 PMSS 脱敏 JSON" onChange={onFile}/>
     </div>
+    <PMSSConnectionPanel enabled={account?.role === "admin"}/>
     <PMSSSourcePicker onLoaded={importServerSnapshot} onReset={clearMarket} inspection={inspection}/>
     <div className="pmss-process-steps" aria-label="PMSS 研究工作流程">
       <span className={inspection ? "complete" : "current"}><b>01</b> 选择工程 / 历史日期</span>

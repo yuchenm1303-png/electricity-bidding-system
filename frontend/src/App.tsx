@@ -362,7 +362,7 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
         {view === "trials" && <TrialDetails report={report} analyzedSettings={analyzedSettings}/>}
         </div>
         {pmssVisited && <div className="pmss-persistent-stage" data-motion-direction={viewDirection} data-active={view === "pmss" ? "true" : "false"} style={{display:view === "pmss" ? "block" : "none"}}>
-          <PMSSWorkspace/>
+          <PMSSWorkspace account={account}/>
         </div>}
         <footer className="app-footer"><span>POWERBID STUDIO · 市场策略研究</span><span>Simulation only · Not for live trading</span></footer>
       </div>}
