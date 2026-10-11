@@ -218,7 +218,8 @@ def test_private_catalog_assigned_user_ids_do_not_grant_all_members(environment)
         db.execute(
             "INSERT INTO users(username,email,password_hash,role,active,created_at) "
             "VALUES(?,?,?,'member',1,1)",
-            ("teammate", "teammate@example.com", account_auth.HASHER.hash("A-long-private-passphrase")),
+            ("teammate", "teammate@example.com",
+             account_auth.HASHER.hash("A-long-private-passphrase")),
         )
         student_id = db.execute("SELECT id FROM users WHERE username='student'").fetchone()["id"]
         teammate_id = db.execute("SELECT id FROM users WHERE username='teammate'").fetchone()["id"]
