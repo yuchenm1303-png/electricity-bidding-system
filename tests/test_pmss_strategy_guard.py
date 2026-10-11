@@ -4,11 +4,11 @@ from __future__ import annotations
 import copy
 
 import pytest
+from test_historical_validation import _fixture
 
 from powerbid.network_dispatch import DcOffer, dc_clear_hour, network_from_dict
 from powerbid.pmss_integration import curve_for_period, snapshot_from_pmss
 from powerbid.pmss_strategy_guard import assess_pmss_strategy_candidates
-from test_historical_validation import _fixture
 
 
 def _candidate(name: str, price: float) -> dict:
@@ -141,6 +141,7 @@ def test_reject_date_leakage_missing_real_results_and_false_candidates():
 def test_api_strategy_guard_rejects_secrets_and_never_clears_pmss():
     pytest.importorskip("fastapi")
     from fastapi.testclient import TestClient
+
     from app.web_server import app
 
     client = TestClient(app)
