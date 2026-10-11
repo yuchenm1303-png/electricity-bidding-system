@@ -52,8 +52,10 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
     getPMSSCases(projectId, ctrl.signal).then(items => {
       setCases(items);
       // A new session opens on the latest authorized historical date by default.
-      if (items.length) setCaseDate([...items].sort((a, b) =>
-        a.case_date.localeCompare(b.case_date)).at(-1)?.case_date ?? "");
+      if (items.length) {
+        const newest = [...items].sort((a, b) => a.case_date.localeCompare(b.case_date));
+        setCaseDate(newest[newest.length - 1].case_date);
+      }
       if (!items.length) setMessage("该工程没有可授权读取的历史案例日期。");
       else setMessage("");
     }).catch(error => {
