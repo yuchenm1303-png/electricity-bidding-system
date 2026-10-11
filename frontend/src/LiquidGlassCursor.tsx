@@ -334,8 +334,8 @@ export function LiquidGlassCursor() {
         renderer.render({
           canvasWidth:canvas.width,canvasHeight:canvas.height,
           x:x.value,y:y.value,
-          width:width.value * (1 + 0.025 * deformation),
-          height:height.value * (1 - 0.085 * deformation),
+          width:width.value * (1 + 0.065 * deformation),
+          height:height.value * (1 - 0.155 * deformation),
           roiLeft:lastRoiLeft,roiTop:lastRoiTop,dpr,
           strength:optical.strength.value,pinch:optical.pinch.value,
           aberration:optical.aberration.value,zoom:optical.zoom.value,
