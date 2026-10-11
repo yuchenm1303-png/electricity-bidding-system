@@ -73,13 +73,19 @@ def _dated_cases(cases: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
     return [indexed[key] for key in sorted(indexed)]
 
 
-def _offer_digest(raw: Mapping[str, Any]) -> str:
-    """Ignore the date and scope; detect identical across-day original bids."""
-    offers = raw.get("unitBids")
-    if not isinstance(offers, dict):
-        raise ValueError("Case missing original PMSS bids")
-    encoded = json.dumps(offers, sort_keys=True, ensure_ascii=True,
-                         separators=(",", ":"), allow_nan=False)
+def _offer_digest(snapshot: Any) -> str:
+    """Hash normalized bid curves, never scope IDs, metadata or case dates."""
+    curves = {
+        unit: [
+            [period.start_period, period.end_period, [
+                [block.start_power, block.end_power, block.price]
+                for block in period.segments
+            ]]
+            for period in periods
+        ]
+        for unit, periods in sorted(snapshot.bids.items())
+    }
+    encoded = json.dumps(curves, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return sha256(encoded.encode("utf-8")).hexdigest()
 
 
@@ -173,7 +179,7 @@ def assess_pmss_strategy_candidates(
         min_distinct_dates=3, holdout_dates=1,
     )
     historical = judge_historical_model(days, policy)
-    offer_hashes = [_offer_digest(raw) for raw in ordered]
+    offer_hashes = [_offer_digest(snap) for snap in snapshots]
     # Repeated days are different demand observations, NOT independent offer curves.
     holdout_reused_bid = offer_hashes[-1] in set(offer_hashes[:-1])
     training_distinct_bids = len(set(offer_hashes[:-1]))
