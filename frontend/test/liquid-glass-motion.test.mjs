@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { stepSpring, springSettled } from "../src/liquidGlass/motion.ts";
 import { opticalProfile, opticalRadius } from "../src/liquidGlass/optics.ts";
+import { getLensBounds } from "../src/liquidGlass/targets.ts";
 
 function runSpring(dt, duration, initial = 0, target = 100) {
   const s={value:initial,velocity:0,target};
@@ -61,5 +62,25 @@ test("morph corner stays compatible with circular and rounded targets",()=>{
   }finally{
     if(prev===undefined)delete globalThis.getComputedStyle;
     else globalThis.getComputedStyle=prev;
+  }
+});
+
+test("sidebar wordmark uses a snug, single centered optical mount",()=>{
+  const previousWindow=globalThis.window;
+  globalThis.window={innerWidth:1400,innerHeight:900};
+  try {
+    const target={
+      matches:(selector)=>selector.includes(".brand-home-link"),
+      getBoundingClientRect:()=>({left:42,top:18,right:308,bottom:61,width:266,height:43}),
+    };
+    const lens=getLensBounds(target,180,36);
+    assert.equal(lens.width,278); // 266px branding + 6px on both sides
+    assert.equal(lens.height,59); // 43px branding + 8px on both sides
+    assert.equal(lens.centerX,175);
+    assert.equal(lens.centerY,39.5);
+    assert.ok(lens.width<300);
+  } finally {
+    if(previousWindow===undefined)delete globalThis.window;
+    else globalThis.window=previousWindow;
   }
 });

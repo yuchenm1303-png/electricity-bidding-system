@@ -63,8 +63,10 @@ export function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY
   const rect = element.getBoundingClientRect();
   const brand = element.matches(".brand-home-link, .mobile-brand-home");
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
-  const paddingX = brand ? 18 : compact ? 6 : 8;
-  const paddingY = brand ? 15 : compact ? 6 : 8;
+  // A narrow, content-hugging brand capsule gives the rasterized logo and
+  // wordmark enough optical margin without wasting sampled area on empty space.
+  const paddingX = brand ? 6 : compact ? 6 : 8;
+  const paddingY = brand ? 8 : compact ? 6 : 8;
 
   // The viewport may crop part of a control near its edges; frame the
   // entire *visible* control rather than moving the center away and
@@ -74,7 +76,7 @@ export function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY
   const top = Math.max(0, rect.top - paddingY);
   const bottom = Math.min(window.innerHeight, rect.bottom + paddingY);
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
-  const height = Math.max(1, Math.min(window.innerHeight, Math.max(brand ? 60 : MIN_LENS_HEIGHT, bottom - top)));
+  const height = Math.max(1, Math.min(window.innerHeight, Math.max(brand ? 50 : MIN_LENS_HEIGHT, bottom - top)));
   return {
     width,
     height,
