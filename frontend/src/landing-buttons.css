@@ -126,3 +126,74 @@
   .pb-landing :is(a,button),.pb-landing .pb-header-cta svg {transition:none!important}
   .pb-landing :is(a,button):hover,.pb-landing :is(a,button):active {transform:none!important}
 }
+
+
+/* Hero / primary action — one continuous surface, no separate white arrow tile.
+   The entire CTA is a single optical target for the shared liquid cursor. */
+.pb-landing .pb-button-main {
+  display:inline-flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  width:max-content;
+  min-width:253px;
+  min-height:58px;
+  padding:0 23px 0 25px;
+  border-radius:15px;
+  border:1px solid rgba(199,211,255,.28);
+  background:linear-gradient(118deg,#7487ef 0%,#5a70e5 100%);
+  box-shadow:0 11px 28px rgba(43,67,176,.22),inset 0 1px 0 rgba(255,255,255,.1);
+  font-size:14px;
+  font-weight:680;
+  letter-spacing:.008em;
+  white-space:nowrap;
+  color:#fff!important;
+}
+.pb-landing .pb-button-main::before {content:none;}
+.pb-landing .pb-button-main>.pb-button-main-arrow {
+  flex:none;
+  width:19px;
+  height:19px;
+  color:rgba(255,255,255,.95);
+  transform:none;
+  transition:transform 280ms cubic-bezier(.22,1,.36,1),opacity 240ms ease;
+}
+.pb-landing .pb-button-main:hover {
+  transform:translateY(-2px);
+  background:linear-gradient(118deg,#8194fb,#6179eb);
+  border-color:rgba(218,226,255,.46);
+  box-shadow:0 16px 32px rgba(45,71,193,.26),inset 0 1px 0 rgba(255,255,255,.13);
+}
+.pb-landing .pb-button-main:hover>.pb-button-main-arrow {transform:translate(3px,-3px);}
+:root[data-theme="dark"] .pb-landing .pb-button-main {
+  min-width:253px;
+  min-height:58px;
+  padding:0 23px 0 25px;
+  border-radius:15px;
+  border-color:rgba(199,211,255,.28);
+  background:linear-gradient(118deg,#7487ef 0%,#5a70e5 100%);
+  box-shadow:0 11px 28px rgba(43,67,176,.22),inset 0 1px 0 rgba(255,255,255,.1);
+  font-size:14px;
+}
+:root[data-theme="dark"] .pb-landing .pb-button-main::before {content:none;}
+:root[data-theme="dark"] .pb-landing .pb-button-main:hover {
+  background:linear-gradient(118deg,#8194fb,#6179eb);
+  border-color:rgba(218,226,255,.46);
+  box-shadow:0 16px 32px rgba(45,71,193,.26),inset 0 1px 0 rgba(255,255,255,.13);
+}
+@media(max-width:650px){
+  .pb-landing .pb-button-main,
+  :root[data-theme="dark"] .pb-landing .pb-button-main {
+    min-width:0;
+    min-height:50px;
+    gap:15px;
+    padding:0 17px 0 19px;
+    font-size:12px;
+    border-radius:12px;
+  }
+  .pb-landing .pb-button-main>.pb-button-main-arrow {width:17px;height:17px;}
+}
+@media(prefers-reduced-motion:reduce){
+  .pb-landing .pb-button-main>.pb-button-main-arrow {transition:none!important;}
+  .pb-landing .pb-button-main:hover>.pb-button-main-arrow {transform:none!important;}
+}

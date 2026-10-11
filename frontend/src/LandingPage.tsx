@@ -138,7 +138,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
             <div className="pb-hero-eyebrow"><span className="pb-eyebrow-line"/>POWER MARKET INTELLIGENCE<span className="pb-eyebrow-number">© 2026</span></div>
             <h1 id="pb-hero-title">电力报价系统<br/><em>小组作业</em></h1>
             <p className="pb-hero-subtitle">从每一度电的流动，到每一次报价的选择。<br/>探索电力市场复杂系统背后，更清晰的决策路径。</p>
-            <div className="pb-hero-actions"><a className="pb-button-main" href={workspaceHref}>开启决策实验室 <span><ArrowUpRight size={21}/></span></a><a className="pb-text-link" href="#philosophy">探索设计 <ArrowDown size={16}/></a></div>
+            <div className="pb-hero-actions"><a className="pb-button-main" href={workspaceHref}>开启决策实验室 <ArrowUpRight className="pb-button-main-arrow" size={19} aria-hidden="true"/></a><a className="pb-text-link" href="#philosophy">探索设计 <ArrowDown size={16}/></a></div>
             <div className="pb-hero-proof" aria-label="系统研究方向">
               <div className="pb-hero-proof-item"><strong>24H</strong><span>多时段研究</span></div>
               <div className="pb-hero-proof-item"><strong>5 段</strong><span>报价方案探索</span></div>
