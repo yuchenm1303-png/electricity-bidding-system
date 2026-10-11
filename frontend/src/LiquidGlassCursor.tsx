@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  BASE_WIDTH, BASE_HEIGHT, CHART_LENS_SIZE, CHART_LENS_SELECTOR,
+  BASE_WIDTH, BASE_HEIGHT,
   DYNAMIC_SCENE_CHECK_MS, DYNAMIC_SCENE_SELECTOR,
   FREE_ROI_SIZE, FREE_OFFSET_Y,
   getLensBounds, intersects, resolveSnapTarget
 } from "./liquidGlass/targets";
 import { stepSpring, springSettled, type SpringValue } from "./liquidGlass/motion";
 import { opticalProfile, opticalRadius, type LensMode } from "./liquidGlass/optics";
+import { resolveVisualMode, VISUAL_LENS_SIZE, lensMotion, type CursorVisualMode } from "./liquidGlass/lensModes";
 import { createMagneticController, affectsMagneticTargets } from "./liquidGlass/magnetism";
 import { rasterizePortal, composeLiveGrid } from "./liquidGlass/sceneRaster";
 import { createGlassRenderer } from "./liquidGlass/renderer";
@@ -59,6 +60,7 @@ export function LiquidGlassCursor() {
     let pressed = false;
     const pressure: SpringValue = { value: 0, velocity: 0, target: 0 };
     let activeTarget: HTMLElement | null = null;
+    let visualMode:CursorVisualMode = "free";
     let chartLens = false;
     let raf = 0;
     let lastTime = performance.now();
@@ -96,6 +98,7 @@ export function LiquidGlassCursor() {
       aberration:{value:initialOptics.aberration,velocity:0,target:initialOptics.aberration},
       zoom:{value:initialOptics.zoom,velocity:0,target:initialOptics.zoom},
       wobble:{value:initialOptics.wobble,velocity:0,target:initialOptics.wobble},
+      reflection:{value:initialOptics.reflection,velocity:0,target:initialOptics.reflection},
     } satisfies Record<keyof typeof initialOptics,SpringValue>;
 
     const magnetism = createMagneticController(
@@ -105,16 +108,17 @@ export function LiquidGlassCursor() {
       () => {staticDirty=true;rasterDirty=true;snapDirty=true;},
     );
 
-    // Chart mode changes the original glass geometry, not its rendering layer.
-    // Keep native graph hit-testing intact and prioritize actual controls.
-    const updateChartLens = () => {
-      const element = document.elementFromPoint(pointerX, pointerY);
-      const next = pointerInside && Boolean(element?.closest(CHART_LENS_SELECTOR)) &&
-        !Boolean(element?.closest("button, a, input, textarea, select, [contenteditable='true'], [data-liquid-snap='false']"));
-      if (next === chartLens) return;
-      chartLens = next;
+    // The four Framer-inspired visual states share this original WebGL lens.
+    // Only the intent and targets change here; geometry/optics are sprung in
+    // the same requestAnimationFrame and never use CSS scale overlays.
+    const updateLensIntent = () => {
+      const next = resolveVisualMode(root,pointerX,pointerY,pointerInside);
+      if (next === visualMode) return;
+      visualMode = next;
+      chartLens = next==="chart" || next==="grid";
       snapDirty = true;
       rasterDirty = true;
+      staticDirty = true;
     };
 
     const updateTargets = () => {
@@ -140,13 +144,14 @@ export function LiquidGlassCursor() {
         width.target = lens.width;
         height.target = lens.height;
         snap.target = 1;
-      } else if (chartLens) {
-        // Unlike the offset freeform cursor, a circular lens stays centered
-        // exactly beneath the pointer; the same shader samples the same ROI.
-        x.target = Math.max(CHART_LENS_SIZE / 2 + 4, Math.min(window.innerWidth - CHART_LENS_SIZE / 2 - 4, pointerX));
-        y.target = Math.max(CHART_LENS_SIZE / 2 + 4, Math.min(window.innerHeight - CHART_LENS_SIZE / 2 - 4, pointerY));
-        width.target = CHART_LENS_SIZE;
-        height.target = CHART_LENS_SIZE;
+      } else if (visualMode !== "free") {
+        // Circle modes follow the cursor directly; the ROI and shader center
+        // both use the exact same viewport CSS-pixel coordinate system.
+        const geometry = VISUAL_LENS_SIZE[visualMode];
+        x.target = Math.max(geometry.width / 2 + 4, Math.min(window.innerWidth - geometry.width / 2 - 4, pointerX));
+        y.target = Math.max(geometry.height / 2 + 4, Math.min(window.innerHeight - geometry.height / 2 - 4, pointerY));
+        width.target = geometry.width;
+        height.target = geometry.height;
         snap.target = 0;
       } else {
         // Keep the unsnapped lens wholly on-screen near the top/bottom.
@@ -237,24 +242,28 @@ export function LiquidGlassCursor() {
       const dt = Math.min(0.032, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
       const magneticSettled = magnetism.update(dt);
-      updateChartLens();
+      updateLensIntent();
       updateTargets();
 
       const snapping = Boolean(activeTarget) || snap.target > 0.001;
       stepSpring(x, dt, snapping ? 300 : 500, snapping ? 25 : 60);
       stepSpring(y, dt, snapping ? 300 : 500, snapping ? 25 : 60);
-      stepSpring(width, dt, snapping ? 235 : 310, snapping ? 19 : 32);
-      stepSpring(height, dt, snapping ? 235 : 310, snapping ? 19 : 32);
+      const geometrySpring = snapping
+        ? {stiffness:235,damping:19}
+        : lensMotion(visualMode,width.value>140);
+      stepSpring(width,dt,geometrySpring.stiffness,geometrySpring.damping);
+      stepSpring(height,dt,geometrySpring.stiffness,geometrySpring.damping);
       stepSpring(snap, dt, 220, 18);
       // Firm compression on contact, then one softer elastic release.
       stepSpring(pressure, dt, pressed ? 620 : 400, pressed ? 38 : 23);
       const deformation = Math.max(-0.22, Math.min(1.08, pressure.value));
       const pressWeight = Math.max(0,Math.min(1,deformation));
       const releaseWeight = Math.max(0,-deformation);
-      const mode:LensMode = chartLens ? "chart"
-        : activeTarget?.matches(".brand-home-link, .mobile-brand-home, .pb-logo-link, .pb-identity-brand") ? "brand"
+      const mode:LensMode = activeTarget?.matches(".brand-home-link, .mobile-brand-home, .pb-logo-link, .pb-identity-brand") ? "brand"
         : activeTarget?.matches(".ta-global-search, .pb-identity-input-wrap, input, textarea, select, [contenteditable='true']") ? "reading"
-        : activeTarget ? "control" : "free";
+        : activeTarget ? "control" : visualMode;
+      // Readable profile names make QA possible without another DOM overlay.
+      canvas.dataset.glassMode = mode;
       // Shape, position and optics all spring towards the *same* target mode.
       // A fast target-to-target move thus continues from its visible state
       // rather than abruptly switching the refraction before the lens arrives.
@@ -284,7 +293,8 @@ export function LiquidGlassCursor() {
           roiLeft:lastRoiLeft,roiTop:lastRoiTop,dpr,
           strength:optical.strength.value,pinch:optical.pinch.value,
           aberration:optical.aberration.value,zoom:optical.zoom.value,
-          wobble:optical.wobble.value,cornerRadius:Math.max(2,cornerRadius.value),
+          wobble:optical.wobble.value,reflection:optical.reflection.value,
+          cornerRadius:Math.max(2,cornerRadius.value),
           time:now/1000,
         });
       }
@@ -428,6 +438,7 @@ export function LiquidGlassCursor() {
       pointerInside = false;
       pointerRef.current.inside=false;
       chartLens = false;
+      visualMode = "free";
       pressed = false;
       pressure.target = 0;
       activeTarget = null;
