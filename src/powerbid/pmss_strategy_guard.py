@@ -160,14 +160,20 @@ def assess_pmss_strategy_candidates(
     ids = [item[0] for item in specs]
     if len(set(ids)) != len(ids):
         raise ValueError("Candidate identifiers must be unique")
+    # Bound expensive 24-hour LP replay BEFORE launching any historical solves.
+    snapshots = [_snapshot(raw) for raw in ordered]
+    networks = [network_from_dict(raw["dcNetwork"]) for raw in ordered]
+    if any(
+        len(snap.units) > 30 or len(net.buses) > 60 or len(net.lines) > 90
+        for snap, net in zip(snapshots, networks, strict=True)
+    ):
+        raise ValueError("Online DC history exceeds bounded network size")
     days = [validate_historical_day(raw) for raw in ordered]
     if len({day.grid_fingerprint for day in days}) != 1:
         raise ValueError("Cannot pool mismatching DC topology/parameters")
     if len({day.unit_count for day in days}) != 1:
         raise ValueError("Generator count changed between cases")
 
-    snapshots = [_snapshot(raw) for raw in ordered]
-    networks = [network_from_dict(raw["dcNetwork"]) for raw in ordered]
     capacity = snapshots[0].unit(target_unit_id).capacity_mw
     for snap, net in zip(snapshots, networks, strict=True):
         verify_network_inputs(snap, net, target_unit_id)
