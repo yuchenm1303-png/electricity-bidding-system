@@ -4,6 +4,8 @@ import "./pmss-connection.css";
 
 type ConnectionState = {
   operator: "ready" | "unavailable";
+  shared_connection: true;
+  reconnect_allowed: boolean;
   vpn_container: "running" | "stopped" | "unknown";
   pmss_access: "authorized" | "login_required" | "unreachable" | "unknown";
   retry_after_seconds: number;
@@ -34,7 +36,7 @@ export function PMSSConnectionPanel({ enabled }: { enabled: boolean }) {
     try {
       const response = await fetch(STATUS, { method: "GET", cache: "no-store",
         credentials: "same-origin", headers: { Accept: "application/json" }, signal });
-      if (!response.ok) throw new Error(response.status === 403 ? "仅管理员能够管理学校 VPN。" : "连接状态读取失败");
+      if (!response.ok) throw new Error(response.status === 401 ? "请先登录 PowerBid 账号。" : "连接状态读取失败");
       const result: ConnectionState = await response.json();
       if (!signal?.aborted) {setStatus(result); setError("");}
     } catch (cause) {
@@ -55,8 +57,8 @@ export function PMSSConnectionPanel({ enabled }: { enabled: boolean }) {
   if (!enabled) return null;
 
   const reconnect = async () => {
-    if (restarting || !status || status.operator !== "ready" || status.retry_after_seconds > 0) return;
-    if (!window.confirm("仅重启服务器上的学校 EasyConnect VPN 容器，不会操作老师的报价或出清。是否继续？")) return;
+    if (restarting || !status?.reconnect_allowed) return;
+    if (!window.confirm("学校 VPN 为多人共享。仅在 PMSS 无法访问时，才会重启服务器 EasyConnect。可能短暂影响其他用户，是否继续？")) return;
     setRestarting(true); setMessage(""); setError("");
     try {
       const response = await fetch(RECONNECT, {
@@ -74,15 +76,15 @@ export function PMSSConnectionPanel({ enabled }: { enabled: boolean }) {
   const working = status?.pmss_access === "authorized";
   const waiting = status?.pmss_access === "login_required";
   const portal = safePortal(status?.external_login_url ?? "");
-  const connectionLabel = working ? "PMSS 已授权可读" : waiting ? "学校登录已过期" : status?.operator === "unavailable"
+  const connectionLabel = working ? "服务器数据通道可用" : waiting ? "学校登录已过期" : status?.operator === "unavailable"
     ? "管理服务未配置" : status?.vpn_container === "stopped" ? "VPN 容器已停止" : "PMSS 连接未验证";
 
   return <section className="pmss-connection" aria-label="PMSS 连接管理">
     <div className="pmss-connection-top">
       <div>
-        <span className="pmss-connection-kicker"><ShieldCheck size={14}/> 管理员 · 服务器连接管理</span>
+        <span className="pmss-connection-kicker"><ShieldCheck size={14}/> 所有已登录账号 · 共享连接</span>
         <h3>学校 PMSS 连接管理</h3>
-        <p>连接状态由服务器检查，网页不会接收 VPN 密码或学校会话 Cookie。</p>
+        <p>所有 PowerBid 用户均可查看共享连接状态。学校工程数据仍需各自具备相应授权。</p>
       </div>
       <span className={"pmss-connection-badge" + (working ? " ready" : "")}>
         {working ? <Wifi size={15}/> : <WifiOff size={15}/>} {connectionLabel}
@@ -90,14 +92,14 @@ export function PMSSConnectionPanel({ enabled }: { enabled: boolean }) {
     </div>
     <div className="pmss-connection-status">
       <div><span><Activity size={16}/> VPN 容器</span><strong>{status?.vpn_container === "running" ? "运行中" : status?.vpn_container === "stopped" ? "已停止" : "未确认"}</strong></div>
-      <div><span><Wifi size={16}/> PMSS 授权读取</span><strong>{working ? "已验证" : waiting ? "需重新登录" : busy ? "检查中" : "不可用 / 未验证"}</strong></div>
+      <div><span><Wifi size={16}/> 服务器 PMSS 通道</span><strong>{working ? "已验证" : waiting ? "需重新登录" : busy ? "检查中" : "不可用 / 未验证"}</strong></div>
       <div><span><Database size={16}/> 历史案例目录</span><strong>{status?.private_case_catalog === "configured" ? "已配置" : "尚未配置"}</strong></div>
     </div>
     <div className="pmss-connection-actions">
-      <button type="button" disabled={restarting || !status || status.operator !== "ready" || status.retry_after_seconds > 0}
+      <button type="button" disabled={restarting || !status?.reconnect_allowed}
         className="pmss-connection-restart" onClick={() => void reconnect()}>
         <RefreshCw size={16} className={restarting ? "is-spinning" : ""}/>
-        {restarting ? "正在重启…" : "一键重连服务器 VPN"}
+        {restarting ? "正在重启…" : "VPN 故障时重连"}
       </button>
       <button type="button" className="pmss-connection-check" disabled={busy} onClick={() => {
         setBusy(true); void refresh().finally(() => setBusy(false));
@@ -106,11 +108,13 @@ export function PMSSConnectionPanel({ enabled }: { enabled: boolean }) {
         <ExternalLink size={15}/> 学校登录门户
       </a>}
     </div>
+    {working && <p className="pmss-connection-small">服务器通道正常时，为避免中断其他成员，重连操作自动禁用。</p>}
+    {waiting && <p className="pmss-connection-small">需要重新完成学校认证；重启容器无法绕过登录。</p>}
     {status?.retry_after_seconds ? <p className="pmss-connection-small">为保护学校会话，重连操作有冷却时间（约 {Math.ceil(status.retry_after_seconds / 60)} 分钟）。</p> : null}
     {error && <p className="pmss-connection-error" role="alert">{error}</p>}
     {message && <p className="pmss-connection-success" role="status">{message}</p>}
     <p className="pmss-connection-notice"><LockKeyhole size={14}/>
-      打开学校门户只会登录你当前的浏览器，不等于服务器 VPN 已恢复。需要交互式验证码/重新认证时，还需管理员使用服务器安全登录窗口；本页不自动提交凭据或报价。
+      打开学校门户只会登录你当前的浏览器，不等于服务器 VPN 已恢复。所有人的学校平台权限仍由学校独立控制；本页不会共享学校账号、自动提交凭据或报价。
     </p>
   </section>;
 }
