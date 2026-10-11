@@ -329,3 +329,20 @@
 @media(prefers-reduced-motion:reduce) {
   :root[data-theme="dark"] .app :is(.ta-stat-card,.ta-chart-card,.ta-capacity) {transition:none}
 }
+
+/* Sidebar brand lockup: the entire Smirel + PowerBid group is centered.
+   The redundant in-brand collapse icon is removed in JSX; the main header
+   still owns the accessible expand/collapse control. */
+:root .sidebar .brand {
+  justify-content: center;
+  padding-inline: 12px;
+}
+:root .sidebar .brand-home-link {
+  flex: 0 1 auto;
+  justify-content: center;
+  max-width: 100%;
+}
+@media (min-width: 961px) and (max-width: 1200px) {
+  :root .sidebar .brand { padding-inline: 0; }
+}
+:root .sidebar.collapsed .brand { padding-inline: 0; }
