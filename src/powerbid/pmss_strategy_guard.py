@@ -196,7 +196,7 @@ def assess_pmss_strategy_candidates(
         warnings: list[str] = []
         if abs(blocks[0].start_power) > 1e-6:
             issues.append("BID_DOES_NOT_START_AT_ZERO")
-        if any(a.price > b.price + 1e-8 for a, b in zip(blocks, blocks[1:])):
+        if any(a.price > b.price + 1e-8 for a, b in zip(blocks, blocks[1:], strict=False)):
             issues.append("DECREASING_BLOCK_PRICES")
         if all(abs(block.price) <= 1e-9 for block in blocks):
             issues.append("ALL_ZERO_PRICES")
@@ -220,9 +220,15 @@ def assess_pmss_strategy_candidates(
         if not issues:
             plan = (PeriodBid(1, 24, blocks),)
             for index, (snap, net) in enumerate(zip(snapshots, networks, strict=True)):
-                trial = evaluate_network_plan(
-                    snap, net, target_unit_id, name, plan, _SCENARIO
-                )
+                try:
+                    trial = evaluate_network_plan(
+                        snap, net, target_unit_id, name, plan, _SCENARIO
+                    )
+                except (ValueError, RuntimeError):
+                    issues.append("LOCAL_DC_EVALUATION_FAILED")
+                    train_margins.clear()
+                    diagnostic_holdout_margin = None
+                    break
                 modeled_day = trial.scenarios[0]
                 if all(
                     hour.dispatched_mw >= capacity - max(0.01, capacity * 1e-4)
