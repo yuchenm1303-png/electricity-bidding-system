@@ -1,0 +1,6 @@
+# Offline-only host operator. It has no TCP listener or arbitrary command API.
+FROM python:3.11-alpine
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /opt/operator
+COPY ops/pmss_vpn_operator.py /opt/operator/vpn_operator.py
+CMD ["python3", "/opt/operator/vpn_operator.py"]
