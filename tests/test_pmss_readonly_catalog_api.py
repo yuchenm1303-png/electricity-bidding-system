@@ -44,7 +44,7 @@ def environment(tmp_path, monkeypatch):
     return root, login
 
 
-def populate(root: Path, *, snapshot: dict | None = None):
+def populate(root: Path, *, snapshot: dict | None = None, visibility: str | None = None):
     market = _synthetic_network_case() if snapshot is None else snapshot
     standard = dict(market)
     standard["schemaVersion"] = "powerbid.pmss.standard.v1"
@@ -52,16 +52,19 @@ def populate(root: Path, *, snapshot: dict | None = None):
     (root / "group_2025-09-01.json").write_text(
         json.dumps(standard, ensure_ascii=False), encoding="utf-8"
     )
-    (root / "catalog.json").write_text(json.dumps({
-        "projects": [{
-            "project_id": "pmss-group-2",
-            "name": "授权小组研究项目",
-            "cases": [{"case_date": "2025-09-01", "file": "group_2025-09-01.json"}],
-        }]
-    }, ensure_ascii=False), encoding="utf-8")
+    project = {
+        "project_id": "pmss-group-2",
+        "name": "授权小组研究项目",
+        "cases": [{"case_date": "2025-09-01", "file": "group_2025-09-01.json"}],
+    }
+    if visibility is not None:
+        project["visibility"] = visibility
+    (root / "catalog.json").write_text(
+        json.dumps({"projects": [project]}, ensure_ascii=False), encoding="utf-8"
+    )
 
 
-def test_readonly_routes_require_admin_and_explicit_configuration(environment, monkeypatch):
+def test_readonly_routes_require_login_and_explicit_configuration(environment, monkeypatch):
     root, login = environment
     with TestClient(app) as anonymous:
         assert anonymous.get("/api/pmss/read-only/projects").status_code == 401
@@ -69,10 +72,8 @@ def test_readonly_routes_require_admin_and_explicit_configuration(environment, m
             "project_id": "pmss-group-2", "case_date": "2025-09-01",
         }).status_code == 401
     with login("student") as member:
-        assert member.get("/api/pmss/read-only/projects").status_code == 403
-        assert member.get("/api/pmss/read-only/cases", params={
-            "project_id": "pmss-group-2",
-        }).status_code == 403
+        # Not yet configured is not the same as forbidden.
+        assert member.get("/api/pmss/read-only/projects").status_code == 503
     with login("owner") as admin:
         # Empty private directory cannot turn into a fake connection.
         assert admin.get("/api/pmss/read-only/projects").status_code == 503
@@ -157,4 +158,52 @@ def test_file_symlink_and_duplicate_project_are_rejected(environment):
         catalog = json.loads((root / "catalog.json").read_text())
         catalog["projects"].append(dict(catalog["projects"][0]))
         (root / "catalog.json").write_text(json.dumps(catalog))
+        assert admin.get("/api/pmss/read-only/projects").status_code == 503
+
+
+def test_members_can_read_only_explicitly_shared_projects(environment):
+    root, login = environment
+    populate(root, visibility="authenticated")
+    with login("student") as member:
+        projects = member.get("/api/pmss/read-only/projects")
+        assert projects.status_code == 200
+        assert projects.json()["projects"] == [
+            {"project_id": "pmss-group-2", "name": "授权小组研究项目"}
+        ]
+        cases = member.get("/api/pmss/read-only/cases", params={"project_id": "pmss-group-2"})
+        assert cases.status_code == 200
+        assert cases.json()["cases"][0]["case_date"] == "2025-09-01"
+        snap = member.get("/api/pmss/read-only/snapshot", params={
+            "project_id": "pmss-group-2", "case_date": "2025-09-01",
+        })
+        assert snap.status_code == 200
+        assert snap.json()["read_only"] is True
+        assert "importValidation" not in snap.json()["snapshot"]
+    with TestClient(app) as anonymous:
+        assert anonymous.get("/api/pmss/read-only/projects").status_code == 401
+
+
+def test_private_projects_not_visible_to_members(environment):
+    root, login = environment
+    populate(root)
+    with login("student") as member:
+        projects = member.get("/api/pmss/read-only/projects")
+        assert projects.status_code == 200
+        assert projects.json()["projects"] == []
+        assert member.get("/api/pmss/read-only/cases", params={
+            "project_id": "pmss-group-2",
+        }).status_code == 403
+        assert member.get("/api/pmss/read-only/snapshot", params={
+            "project_id": "pmss-group-2", "case_date": "2025-09-01",
+        }).status_code == 403
+    with login("owner") as admin:
+        assert admin.get("/api/pmss/read-only/projects").json()["projects"]
+
+
+def test_invalid_visibility_cannot_open_cases(environment):
+    root, login = environment
+    populate(root, visibility="public")
+    with login("student") as member:
+        assert member.get("/api/pmss/read-only/projects").status_code == 503
+    with login("owner") as admin:
         assert admin.get("/api/pmss/read-only/projects").status_code == 503
