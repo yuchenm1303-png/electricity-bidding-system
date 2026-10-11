@@ -202,8 +202,8 @@ export function LiquidGlassCursor() {
       const pressWeight = Math.max(0,Math.min(1,deformation));
       const releaseWeight = Math.max(0,-deformation);
       const mode:LensMode = chartLens ? "chart"
-        : activeTarget?.matches(".brand-home-link, .mobile-brand-home") ? "brand"
-        : activeTarget?.matches(".ta-global-search, input, textarea, select, [contenteditable='true']") ? "reading"
+        : activeTarget?.matches(".brand-home-link, .mobile-brand-home, .pb-logo-link, .pb-identity-brand") ? "brand"
+        : activeTarget?.matches(".ta-global-search, .pb-identity-input-wrap, input, textarea, select, [contenteditable='true']") ? "reading"
         : activeTarget ? "control" : "free";
       // Shape, position and optics all spring towards the *same* target mode.
       // A fast target-to-target move thus continues from its visible state

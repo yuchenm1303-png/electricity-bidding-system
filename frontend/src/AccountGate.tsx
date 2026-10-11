@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Activity, ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2,
   ChevronRight, Eye, EyeOff, Fingerprint, Github, LockKeyhole, Mail,
@@ -33,6 +33,7 @@ type AuthConfig = {
 type AuthView = "login" | "register";
 type UserFilter = "all" | "active" | "disabled";
 const base = import.meta.env.BASE_URL;
+const PublicLiquidGlass = lazy(() => import("./PublicLiquidGlass"));
 
 async function request<T>(path: string, method = "GET", data?: unknown): Promise<T> {
   const response = await fetch(base + "api/auth/" + path, {
@@ -166,7 +167,7 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
       setBusy(false);
     }
   };
-  return <main className="pb-identity-screen" data-auth-view={isRegister ? "register" : "login"}>
+  return <><main className="pb-identity-screen" data-auth-view={isRegister ? "register" : "login"}>
     <div className="pb-identity-grain" aria-hidden="true"/>
     <div className="pb-identity-layout">
       <aside className="pb-identity-story">
@@ -304,7 +305,7 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
         <footer className="pb-identity-access-footer"><ShieldCheck size={14}/> 安全连接 · 仅用于教学与研究</footer>
       </section>
     </div>
-  </main>;
+  </main><Suspense fallback={null}><PublicLiquidGlass/></Suspense></>;
 }
 
 function ProfilePanel({ user, close }: { user: AccountUser; close: () => void }) {

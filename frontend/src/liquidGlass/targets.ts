@@ -4,7 +4,7 @@ export const BASE_WIDTH = 80;
 export const BASE_HEIGHT = 54;
 // The existing optical lens becomes a larger, perfectly circular viewport over charts.
 export const CHART_LENS_SIZE = 118;
-export const CHART_LENS_SELECTOR = ".ta-gauge-wrap, .ta-bars, .ta-supply-chart, .recharts-wrapper, .pmss-chart";
+export const CHART_LENS_SELECTOR = ".ta-gauge-wrap, .ta-bars, .ta-supply-chart, .recharts-wrapper, .pmss-chart, .pb-landing .pb-interactive-chart, .pb-landing .pb-feature-visual .pb-curve-graphic";
 export const FREE_OFFSET_Y = -32;
 export const SNAP_DISTANCE = 10;
 export const RELEASE_DISTANCE = 15;
@@ -23,6 +23,21 @@ export const SNAP_SELECTOR = [
   ".app a[href]",
   ".app input:not([type='range']):not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']):not([type='color']):not([type='password'])",
   ".app textarea", ".app select", ".app [contenteditable='true']",
+  // Explicit public-page hit targets, not whole decorative containers.
+  ".pb-landing .pb-logo-link",
+  ".pb-landing .pb-header-links a[href]", ".pb-landing .pb-header-actions a[href]",
+  ".pb-landing .pb-menu-toggle", ".pb-landing .pb-mobile-auth-quick",
+  ".pb-landing .pb-hero-actions a[href]", ".pb-landing .pb-hero-bottom a[href]",
+  ".pb-landing .pb-product-link", ".pb-landing .pb-finale-bottom a[href]",
+  ".pb-landing .pb-footer a[href]", ".pb-landing .pb-lab-reset:not(:disabled)",
+  ".pb-landing .pb-lab-stepper button:not(:disabled)", ".pb-landing .pb-lab-footer a[href]",
+  ".pb-identity-screen .pb-identity-brand", ".pb-identity-screen .pb-identity-back",
+  ".pb-identity-screen .pb-identity-tabs button",
+  ".pb-identity-screen .pb-identity-input-wrap", ".pb-identity-screen .pb-identity-eye",
+  ".pb-identity-screen .pb-identity-primary:not(:disabled)",
+  ".pb-identity-screen .pb-social-button:not(.is-disabled)",
+  ".pb-identity-screen .pb-identity-card-bottom button",
+  ".pb-identity-screen .pb-identity-demo-link",
   "[data-liquid-snap='true']",
 ].join(",");
 
@@ -33,6 +48,17 @@ export const MAGNETIC_SELECTOR = [
   ".sidebar-collapse", ".nav-entry", ".ta-menu-toggle", ".ta-header-icon",
   ".app button:not(:disabled):not(.mobile-backdrop):not(.ta-settings-overlay)",
   ".app a[href]:not(.brand-home-link)",
+  // Tiny public controls get subtle physical magnetism; broad CTAs only
+  // change glass shape to avoid moving input hit boxes or whole page columns.
+  ".pb-landing .pb-header-links a[href]", ".pb-landing .pb-header-actions a[href]",
+  ".pb-landing .pb-menu-toggle", ".pb-landing .pb-mobile-auth-quick",
+  ".pb-landing .pb-hero-actions .pb-text-link",
+  ".pb-landing .pb-lab-reset:not(:disabled)",
+  ".pb-landing .pb-lab-stepper button:not(:disabled)",
+  ".pb-identity-screen .pb-identity-back",
+  ".pb-identity-screen .pb-identity-tabs button",
+  ".pb-identity-screen .pb-social-button:not(.is-disabled)",
+  ".pb-identity-screen .pb-identity-card-bottom button",
   "[data-magnetic-hover='true']",
 ].join(",");
 
@@ -61,7 +87,7 @@ export function isEligibleSurface(element: HTMLElement) {
 // wordmark; no extra mount or second lens is created.
 export function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
   const rect = element.getBoundingClientRect();
-  const brand = element.matches(".brand-home-link, .mobile-brand-home");
+  const brand = element.matches(".brand-home-link, .mobile-brand-home, .pb-logo-link, .pb-identity-brand");
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
   // A narrow, content-hugging brand capsule gives the rasterized logo and
   // wordmark enough optical margin without wasting sampled area on empty space.

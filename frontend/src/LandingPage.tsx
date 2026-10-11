@@ -1,5 +1,5 @@
 import smirelLogo from "./assets/smirel-logo.png";
-import { useEffect, useState, type ReactNode, type CSSProperties } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode, type CSSProperties } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, Activity, BarChart3, Check, ChevronRight, CircleDot, Compass, Gauge, Layers3, Menu, Minus, MousePointer2, MoveUpRight, Plus, RotateCcw, ShieldCheck, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import "./landing.css";
 import "./landing-dark.css";
@@ -8,6 +8,8 @@ import "./landing-buttons.css";
 import "./landing-showcase-polish.css";
 import "./icon-interactions.css";
 import PowerConstellation from "./PowerConstellation";
+
+const PublicLiquidGlass = lazy(() => import("./PublicLiquidGlass"));
 
 type LandingProps = { workspaceHref: string };
 const flowSteps = [
@@ -100,7 +102,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
   const marker = demoCurvePoint(bidPosition);
   const markerLabelX = Math.max(22, Math.min(460, marker.x - 40));
   const markerLabelY = marker.y < 76 ? marker.y + 18 : marker.y - 51;
-  return <div className="pb-landing" id="top">
+  return <><div className="pb-landing" id="top">
     <header className={"pb-site-header" + (scrolled ? " pb-header-scrolled" : "")}>
       <div className="pb-header-inner">
         <a href="#top" className="pb-logo-link" aria-label="PowerBid Lab 返回首页"><Brand /></a>
@@ -240,5 +242,5 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
       </section>
     </main>
     <footer className="pb-footer"><div className="pb-container pb-footer-inner"><Brand/><span>POWER MARKET RESEARCH · TEACHING & SIMULATION ONLY</span><a href="#top">返回顶部 ↑</a><span>© 2026 POWERBID LAB</span></div></footer>
-  </div>;
+  </div><Suspense fallback={null}><PublicLiquidGlass/></Suspense></>;
 }

@@ -366,10 +366,10 @@ export function rasterizePortal(
     // mounts it first. Repainting children in raw DOM order let offscreen
     // charts bleed through the header in the refracted ROI texture.
     const childNodes = Array.from(el.childNodes);
-    if (el.classList.contains("app-main")) {
+    if (el.classList.contains("app-main") || el.classList.contains("pb-landing")) {
       childNodes.sort((a, b) =>
-        Number(a instanceof HTMLElement && a.classList.contains("global-header")) -
-        Number(b instanceof HTMLElement && b.classList.contains("global-header")));
+        Number(a instanceof HTMLElement && (a.classList.contains("global-header") || a.classList.contains("pb-site-header"))) -
+        Number(b instanceof HTMLElement && (b.classList.contains("global-header") || b.classList.contains("pb-site-header"))));
     }
     for (const child of childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
