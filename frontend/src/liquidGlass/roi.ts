@@ -23,10 +23,13 @@ export function createRoiManager(
     onDirty();
   };
   const setSnapDimensions=(lensWidth:number,lensHeight:number)=>{
-    snappedRoiWidth=Math.min(window.innerWidth,
-      Math.max(FREE_ROI_SIZE,Math.ceil((lensWidth+SNAP_ROI_PADDING*2)/16)*16));
-    snappedRoiHeight=Math.min(window.innerHeight,
-      Math.max(FREE_ROI_SIZE,Math.ceil((lensHeight+SNAP_ROI_PADDING*2)/16)*16));
+    // Never shrink the backing texture while morphing between snap targets:
+    // that would upload/resize in the middle of the interpolation and flash.
+    // The extra area is released when the lens returns to free mode.
+    snappedRoiWidth=Math.max(snappedRoiWidth,Math.min(window.innerWidth,
+      Math.max(FREE_ROI_SIZE,Math.ceil((lensWidth+SNAP_ROI_PADDING*2)/16)*16)));
+    snappedRoiHeight=Math.max(snappedRoiHeight,Math.min(window.innerHeight,
+      Math.max(FREE_ROI_SIZE,Math.ceil((lensHeight+SNAP_ROI_PADDING*2)/16)*16)));
   };
     const update = (lensX:number,lensY:number,lensWidth:number,lensHeight:number,
       activeTarget:HTMLElement|null,snapValue:number) => {
@@ -68,11 +71,15 @@ export function createRoiManager(
         // subtracting magnetic appliedX/Y again shifted the ROI away from the
         // actual button while the lens kept drawing in its visual position.
         const bounds = getLensBounds(target, lensX, lensY);
-        const nextLeft = Math.round(Math.max(0, Math.min(maxLeft, bounds.centerX - roiWidth / 2)));
-        const nextTop = Math.round(Math.max(0, Math.min(maxTop, bounds.centerY - roiHeight / 2)));
-        // Small hysteresis absorbs half-pixel CSS translation rounding, but
-        // never permits an old 28px offset between capture and visible lens.
-        const recenterThreshold = 2;
+        // During a spring transition the glass is not at its destination yet.
+        // The sampled scene must follow its *visible* position, rather than
+        // jumping directly to the new target while old pixels still move.
+        const moving = Math.hypot(bounds.centerX-lensX,bounds.centerY-lensY)>2.5;
+        const centerX = moving ? lensX : bounds.centerX;
+        const centerY = moving ? lensY : bounds.centerY;
+        const nextLeft = Math.round(Math.max(0,Math.min(maxLeft,centerX-roiWidth/2)));
+        const nextTop = Math.round(Math.max(0,Math.min(maxTop,centerY-roiHeight/2)));
+        const recenterThreshold = moving ? 0 : 2;
         if (roiLockedTarget !== target || !Number.isFinite(roiLeft) || !Number.isFinite(roiTop) ||
             Math.abs(nextLeft - roiLeft) > recenterThreshold ||
             Math.abs(nextTop - roiTop) > recenterThreshold) {

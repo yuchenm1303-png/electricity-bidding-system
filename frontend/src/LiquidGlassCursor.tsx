@@ -5,7 +5,8 @@ import {
   FREE_ROI_SIZE, FREE_OFFSET_Y,
   getLensBounds, intersects, resolveSnapTarget
 } from "./liquidGlass/targets";
-import { stepSpring, type SpringValue } from "./liquidGlass/motion";
+import { stepSpring, springSettled, type SpringValue } from "./liquidGlass/motion";
+import { opticalProfile, opticalRadius, type LensMode } from "./liquidGlass/optics";
 import { createMagneticController, affectsMagneticTargets } from "./liquidGlass/magnetism";
 import { rasterizePortal } from "./liquidGlass/sceneRaster";
 import { createGlassRenderer } from "./liquidGlass/renderer";
@@ -82,6 +83,15 @@ export function LiquidGlassCursor() {
     const width: SpringValue = { value: BASE_WIDTH, velocity: 0, target: BASE_WIDTH };
     const height: SpringValue = { value: BASE_HEIGHT, velocity: 0, target: BASE_HEIGHT };
     const snap: SpringValue = { value: 0, velocity: 0, target: 0 };
+    const cornerRadius: SpringValue = { value: BASE_HEIGHT/2, velocity:0, target:BASE_HEIGHT/2 };
+    const initialOptics = opticalProfile("free",0,0,0);
+    const optical = {
+      strength:{value:initialOptics.strength,velocity:0,target:initialOptics.strength},
+      pinch:{value:initialOptics.pinch,velocity:0,target:initialOptics.pinch},
+      aberration:{value:initialOptics.aberration,velocity:0,target:initialOptics.aberration},
+      zoom:{value:initialOptics.zoom,velocity:0,target:initialOptics.zoom},
+      wobble:{value:initialOptics.wobble,velocity:0,target:initialOptics.wobble},
+    } satisfies Record<keyof typeof initialOptics,SpringValue>;
 
     const magnetism = createMagneticController(
       root,
@@ -189,6 +199,22 @@ export function LiquidGlassCursor() {
       // Firm compression on contact, then one softer elastic release.
       stepSpring(pressure, dt, pressed ? 620 : 400, pressed ? 38 : 23);
       const deformation = Math.max(-0.22, Math.min(1.08, pressure.value));
+      const pressWeight = Math.max(0,Math.min(1,deformation));
+      const releaseWeight = Math.max(0,-deformation);
+      const mode:LensMode = chartLens ? "chart"
+        : activeTarget?.matches(".brand-home-link, .mobile-brand-home") ? "brand"
+        : activeTarget?.matches(".ta-global-search, input, textarea, select, [contenteditable='true']") ? "reading"
+        : activeTarget ? "control" : "free";
+      // Shape, position and optics all spring towards the *same* target mode.
+      // A fast target-to-target move thus continues from its visible state
+      // rather than abruptly switching the refraction before the lens arrives.
+      cornerRadius.target = opticalRadius(mode,width.target,height.target,activeTarget);
+      stepSpring(cornerRadius,dt,310,35);
+      const desiredOptics = opticalProfile(mode,snap.value,pressWeight,releaseWeight);
+      for(const name of Object.keys(optical) as Array<keyof typeof optical>) {
+        optical[name].target = desiredOptics[name];
+        stepSpring(optical[name],dt,320,38);
+      }
 
       roi.update(x.value,y.value,width.value,height.value,activeTarget,snap.value);
       uploadTexture(roi.state.left, roi.state.top, now);
@@ -200,32 +226,16 @@ export function LiquidGlassCursor() {
       dot.style.opacity = pointerInside ? (snap.value > 0.4 ? ".42" : ".86") : "0";
 
       if (hasSample) {
-        const pressWeight = Math.max(0, Math.min(1, deformation));
-        const releaseWeight = Math.max(0, -deformation);
-        const brandSurface = Boolean(activeTarget?.matches(".brand-home-link, .mobile-brand-home"));
-        const readingSurface = Boolean(activeTarget?.matches(".ta-global-search, input, textarea, select, [contenteditable='true']"));
-        // Brand lettering is a high-contrast texture. Keep its single optical
-        // lens generously framed, with restrained refraction and nearly no
-        // chromatic splitting instead of applying the stronger button preset.
-        const strength = chartLens ? 0.78
-          : brandSurface ? 0.43 + 0.10 * pressWeight
-          : readingSurface ? 0.68 + 0.18 * pressWeight
-          : (0.95 + (1.14 - 0.95) * snap.value) + 0.62 * pressWeight;
-        const pinch = chartLens ? 8.1 : brandSurface ? 8.1 : (7.7 + (7.35 - 7.7) * snap.value) - 0.85 * pressWeight;
-        const aberration = chartLens ? 0.055 : brandSurface ? 0.015 : readingSurface ? 0.045 : 0.10 + (0.13 - 0.10) * Math.max(snap.value, pressWeight);
-        const zoom = chartLens ? 1.48
-          : brandSurface ? 1.007 + 0.005 * pressWeight
-          : readingSurface ? 1 + 0.015 * snap.value + 0.012 * pressWeight
-          : 1 + 0.055 * snap.value + 0.025 * pressWeight;
-        const wobble = chartLens ? 0.025 : brandSurface ? 0.022 + 0.012 * pressWeight : 0.12 + 0.05 * snap.value + 0.06 * pressWeight + 0.18 * releaseWeight;
-
         renderer.render({
           canvasWidth:canvas.width,canvasHeight:canvas.height,
           x:x.value,y:y.value,
           width:width.value * (1 + 0.025 * deformation),
           height:height.value * (1 - 0.085 * deformation),
           roiLeft:lastRoiLeft,roiTop:lastRoiTop,dpr,
-          strength,pinch,aberration,zoom,wobble,time:now/1000,
+          strength:optical.strength.value,pinch:optical.pinch.value,
+          aberration:optical.aberration.value,zoom:optical.zoom.value,
+          wobble:optical.wobble.value,cornerRadius:Math.max(2,cornerRadius.value),
+          time:now/1000,
         });
       }
 
@@ -241,6 +251,8 @@ export function LiquidGlassCursor() {
         Math.abs(height.velocity) < 0.08 &&
         Math.abs(pressure.target - pressure.value) < 0.001 &&
         Math.abs(pressure.velocity) < 0.01 &&
+        springSettled(cornerRadius,0.02,0.09) &&
+        Object.values(optical).every(state=>springSettled(state,0.0003,0.007)) &&
         magneticSettled;
 
       // Pointer/input/layout events wake the loop. A stationary cursor does

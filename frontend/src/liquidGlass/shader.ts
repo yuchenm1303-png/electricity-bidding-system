@@ -34,6 +34,7 @@ export function createProgram(gl: WebGLRenderingContext) {
     uniform float u_aberration;
     uniform float u_zoom;
     uniform float u_wobble;
+    uniform float u_cornerRadius;
     uniform float u_time;
 
     float sdRoundBox(vec2 p, vec2 b, float r) {
@@ -58,16 +59,17 @@ export function createProgram(gl: WebGLRenderingContext) {
       vec2 pixel = screenUv * u_resolution;
       vec2 halfSize = max(u_lensSize * 0.5, vec2(2.0));
       float radius = max(2.0, min(halfSize.x, halfSize.y));
+      float shapeRadius = clamp(u_cornerRadius, 2.0, radius);
       vec2 local = warpPoint(pixel - u_lensCenter, radius);
-      float d = sdRoundBox(local, halfSize, radius);
+      float d = sdRoundBox(local, halfSize, shapeRadius);
       if (d > 1.5) {
         gl_FragColor = vec4(0.0);
         return;
       }
 
       float e = 1.0;
-      float dx = sdRoundBox(local + vec2(e, 0.0), halfSize, radius) - sdRoundBox(local - vec2(e, 0.0), halfSize, radius);
-      float dy = sdRoundBox(local + vec2(0.0, e), halfSize, radius) - sdRoundBox(local - vec2(0.0, e), halfSize, radius);
+      float dx = sdRoundBox(local + vec2(e, 0.0), halfSize, shapeRadius) - sdRoundBox(local - vec2(e, 0.0), halfSize, shapeRadius);
+      float dy = sdRoundBox(local + vec2(0.0, e), halfSize, shapeRadius) - sdRoundBox(local - vec2(0.0, e), halfSize, shapeRadius);
       vec2 normal = normalize(vec2(dx, dy) + vec2(0.00001));
       float distNorm = clamp(1.0 + d / radius, 0.0, 1.0);
       float effectivePinch = u_pinch * (radius / 100.0);
