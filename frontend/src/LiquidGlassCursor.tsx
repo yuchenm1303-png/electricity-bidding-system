@@ -35,6 +35,7 @@ export function LiquidGlassCursor() {
     const capture = document.createElement("canvas");
     const scratch = document.createElement("canvas");
     const gridBackdrop = document.createElement("canvas");
+    const tooltipBackdrop = document.createElement("canvas");
     const dpr = Math.min(
       Math.max(1, Math.min(window.devicePixelRatio || 1, 1.75)),
       renderer.maxTextureSize / Math.max(window.innerWidth, window.innerHeight, 1),
@@ -43,7 +44,7 @@ export function LiquidGlassCursor() {
       const nextWidth = Math.max(1, Math.round(cssWidth * dpr));
       const nextHeight = Math.max(1, Math.round(cssHeight * dpr));
       if (canvas.width === nextWidth && canvas.height === nextHeight) return false;
-      for (const target of [canvas, capture, scratch, gridBackdrop]) {
+      for (const target of [canvas, capture, scratch, gridBackdrop, tooltipBackdrop]) {
         target.width = nextWidth; target.height = nextHeight;
       }
       canvas.style.width = String(cssWidth)+"px";
@@ -67,6 +68,11 @@ export function LiquidGlassCursor() {
     let lastRoiTop = Number.NaN;
     let rasterDirty = true;
     let gridBackdropReady = false;
+    let tooltipBackdropReady = false;
+    let tooltipBackdropLeft = Number.NaN;
+    let tooltipBackdropTop = Number.NaN;
+    let lastTooltipBaseCapture = 0;
+    let tooltipAnimationUntil = 0;
     let gridBackdropLeft = Number.NaN;
     let gridBackdropTop = Number.NaN;
     let staticDirty = true;
@@ -80,7 +86,7 @@ export function LiquidGlassCursor() {
     const roi = createRoiManager(
       resizeSurfaces,
       () => {rasterDirty=true;},
-      () => {textureReady=false;lastRoiLeft=Number.NaN;lastRoiTop=Number.NaN;gridBackdropReady=false;},
+      () => {textureReady=false;lastRoiLeft=Number.NaN;lastRoiTop=Number.NaN;gridBackdropReady=false;tooltipBackdropReady=false;},
     );
 
     const x: SpringValue = { value: pointerX, velocity: 0, target: pointerX };
@@ -183,6 +189,17 @@ export function LiquidGlassCursor() {
             r.top < lens.bottom && r.bottom > lens.top) return null;
       }
       return grid;
+    };
+
+    const liveChartTooltip = () => {
+      if (!chartLens || !pointerInside || document.hidden) return null;
+      const tip=root.querySelector<HTMLElement>(".recharts-tooltip-wrapper");
+      if (!tip) return null;
+      const st=getComputedStyle(tip);
+      if (st.display === "none" || st.visibility === "hidden" || Number(st.opacity) < 0.002) return null;
+      if (!intersects(tip.getBoundingClientRect(),roi.state.left,roi.state.top,
+        roi.state.width,roi.state.height)) return null;
+      return tip;
     };
 
     const uploadTexture = (roiLeft: number, roiTop: number, now: number) => {
