@@ -30,7 +30,7 @@ from powerbid.pmss_diagnostics import analyze_historical_network, compare_baseli
 from powerbid.pmss_evidence_attachment import verify_pmss_evidence_binding
 from powerbid.pmss_holdout_gate import review_holdout_report
 from powerbid.pmss_integration import BidSegment, PeriodBid, snapshot_from_pmss
-from powerbid.pmss_joint_research import FIELDS, assess_joint_readiness
+from powerbid.pmss_joint_research import FIELDS, _spec, assess_joint_readiness
 from powerbid.pmss_manual_result_review import review_manual_result
 from powerbid.pmss_network_rank import rank_network_bid_strategies
 from powerbid.pmss_physical_lineage import validate_technical_lineage
@@ -39,6 +39,7 @@ from powerbid.pmss_strategy import optimize_segmented_bid
 from powerbid.pmss_technical_evidence import validate_client_technical_evidence
 from powerbid.pmss_uc_evidence_gaps import audit_pmss_uc_evidence_gaps
 from powerbid.strategy_lab import DemandStress
+from powerbid.strategy_trio import recommend_strategy_trio
 
 router = APIRouter(prefix="/api/pmss")
 _NETWORK_LIMITER = BoundedSemaphore(value=1)
@@ -74,6 +75,18 @@ class NetworkRankInput(SnapshotInput):
     peer_price_deviation: float = Field(
         default=0.05, ge=0, le=0.15, allow_inf_nan=False
     )
+
+
+class StrategyTrioInput(SnapshotInput):
+    """Dedicated local candidate research endpoint; no teacher-platform writes."""
+
+    target_unit_id: str = Field(min_length=1, max_length=120)
+    peer_price_deviation: float = Field(default=0.05, ge=0, le=0.15, allow_inf_nan=False)
+    technical: dict[str, dict[str, Any]] | None = Field(default=None, max_length=30)
+    technical_source: str | None = Field(default=None, max_length=60)
+    technical_source_description: str = Field(default="", max_length=500)
+    technical_lineage: dict[str, Any] | None = None
+    terminal_mode: str = Field(default="carryover", pattern="^(carryover|complete)$")
 
 
 class SegmentInput(BaseModel):
@@ -461,6 +474,76 @@ async def rank_pmss_network_bids(request: Request) -> dict[str, Any]:
         "safe_for_live_submission": False,
     }
 
+
+
+@router.post("/strategy-trio")
+async def generate_strategy_trio(request: Request) -> dict[str, Any]:
+    """Three explainable LOCAL strategies; optional complete/attested DC+UC checks."""
+    try:
+        params = StrategyTrioInput.model_validate(await _read_payload(request))
+        raw = params.snapshot
+        if raw.get("historicalBacktestOnly") is not True:
+            raise ValueError("Only sanitized, explicitly historical teaching snapshots are supported")
+        snapshot = _parse_snapshot(raw)
+        if raw.get("dcNetwork") is None:
+            raise ValueError("Cannot recommend without the actual mapped DC network")
+        network = network_from_dict(raw["dcNetwork"])
+        verify_network_inputs(snapshot, network, params.target_unit_id)
+
+        lineage = None
+        specs = None
+        if params.technical is None:
+            if (params.technical_source is not None or params.technical_lineage is not None
+                    or params.technical_source_description):
+                raise ValueError("Incomplete technical-input declaration; do not infer UC constraints")
+        else:
+            if params.technical_source not in ("synthetic", "course_verified_by_user"):
+                raise ValueError("Physical source must be synthetic or separately evidenced course data")
+            if not params.technical_source_description.strip():
+                raise ValueError("Provide an explicit description of the thermal-parameter source")
+            readiness = assess_joint_readiness(
+                snapshot, params.technical, source=params.technical_source
+            )
+            if not readiness.ready:
+                raise ValueError("Incomplete or invalid unit-specific technical parameters: "
+                                 + repr(asdict(readiness))[:1000])
+            if params.technical_source == "course_verified_by_user":
+                if params.technical_lineage is None:
+                    raise ValueError("Every course-sourced physical parameter requires case-bound lineage")
+                lineage = validate_technical_lineage(
+                    snapshot, params.technical, params.technical_lineage,
+                    case_date=str(raw.get("caseDate") or ""),
+                )
+            elif params.technical_lineage is not None:
+                raise ValueError("Synthetic records cannot claim real course-source provenance")
+            specs = {uid: _spec(uid, row) for uid, row in params.technical.items()}
+
+        if not _NETWORK_LIMITER.acquire(blocking=False):
+            raise HTTPException(429, "Another DC network study is already running")
+        try:
+            outcome = await run_in_threadpool(
+                recommend_strategy_trio, snapshot, network, params.target_unit_id,
+                technical=specs,
+                peer_price_deviation=params.peer_price_deviation,
+                terminal_mode=params.terminal_mode,
+            )
+        finally:
+            _NETWORK_LIMITER.release()
+    except (ValidationError, KeyError, TypeError, ValueError, StopIteration) as exc:
+        raise HTTPException(422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            422, detail="The local physical optimization did not prove a valid result"
+        ) from exc
+    return {
+        **asdict(outcome),
+        "technical_source": params.technical_source,
+        "technical_lineage_audit": asdict(lineage) if lineage else None,
+        "historical_original_bid_is_candidate": False,
+        "study_only": True,
+        "pmss_write_performed": False,
+        "pmss_clearing_executed": False,
+    }
 
 
 @router.post("/network-dispatch-range")
