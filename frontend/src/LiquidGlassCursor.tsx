@@ -209,9 +209,10 @@ export function LiquidGlassCursor() {
       // coordinate origin to an old texture. Moving to a new ROI bypasses the
       // ordinary 32ms stationary-cache throttle.
       const grid = liveGridForLens();
-      // Source grid paints ~30fps. Reuse its cadence for the optical lens,
-      // rather than redrawing the full DOM at 85ms intervals.
-      const minCaptureInterval = grid ? 24 : activeTarget ? 16 : 32;
+      const tip = !grid ? liveChartTooltip() : null;
+      // The tip is cheap to render separately; its static chart backdrop
+      // stays cached while the hover position or value changes.
+      const minCaptureInterval = tip ? 30 : grid ? 24 : activeTarget ? 16 : 32;
       if (!moved && !urgentCapture && now - lastCapture < minCaptureInterval) return;
       lastCapture = now;
       if (grid) {
@@ -227,6 +228,29 @@ export function LiquidGlassCursor() {
         }
         if (!composeLiveGrid(gridBackdrop,capture,grid,roiLeft,roiTop,
             roi.state.width,roi.state.height,dpr)) {
+          textureReady=false;return;
+        }
+      } else if (tip) {
+        if (!tooltipBackdropReady || staticDirty ||
+            tooltipBackdropLeft !== roiLeft || tooltipBackdropTop !== roiTop ||
+            now-lastTooltipBaseCapture > 180) {
+          if (!rasterizePortal(root,tooltipBackdrop,scratch,null,roiLeft,roiTop,
+              roi.state.width,roi.state.height,dpr,false,"background")) {
+            textureReady=false;return;
+          }
+          tooltipBackdropReady=true;
+          tooltipBackdropLeft=roiLeft;tooltipBackdropTop=roiTop;
+          lastTooltipBaseCapture=now;
+          staticDirty=false;
+        }
+        const ctx=capture.getContext("2d");
+        if (!ctx) {textureReady=false;return;}
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.globalAlpha=1;
+        ctx.clearRect(0,0,capture.width,capture.height);
+        ctx.drawImage(tooltipBackdrop,0,0);
+        if (!rasterizePortal(root,capture,scratch,null,roiLeft,roiTop,
+            roi.state.width,roi.state.height,dpr,false,"overlay")) {
           textureReady=false;return;
         }
       } else if (!rasterizePortal(root,capture,scratch,null,roiLeft,roiTop,
