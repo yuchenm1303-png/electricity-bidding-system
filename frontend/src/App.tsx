@@ -40,9 +40,9 @@ function validate(config: Settings): string | null {
   if (config.step <= 0 || (config.stop - config.start) / config.step > 500) return "报价步长必须大于零，候选数量不能超过 501";
   return null;
 }
-function Sidebar({ active, change, report, compact, toggle, source }: {
+function Sidebar({ active, change, report, compact, source }: {
   active: WorkspaceView; change: (view: WorkspaceView) => void; report: Report | null;
-  compact: boolean; toggle: () => void; source: string;
+  compact: boolean; source: string;
 }) {
   return <aside className={"sidebar " + (compact ? "collapsed" : "")}>
     <div className="brand">
@@ -50,7 +50,6 @@ function Sidebar({ active, change, report, compact, toggle, source }: {
         <div className="brand-mark brand-mark-smirel"><img src={smirelLogo} alt="Smirel" width={91} height={30} /></div>
         {!compact && <div className="brand-name"><strong>PowerBid</strong><small>STUDIO / MARKET LAB</small></div>}
       </a>
-      <button type="button" className="sidebar-collapse" title="折叠导航" aria-label="折叠导航" onClick={toggle}><Menu size={17}/></button>
     </div>
     {!compact && <div className="sidebar-section-label">WORKSPACE <span>工作空间</span></div>}
     <nav className="sidebar-nav" aria-label="主导航">
@@ -297,7 +296,7 @@ export default function App({account,onLogout,onOpenAdmin,onOpenProfile}:{accoun
     {mobileNav && <button type="button" className="mobile-backdrop" aria-label="关闭菜单" onClick={() => setMobileNav(false)}/>}
     <div className={"mobile-sidebar-shell" + (mobileNav ? " mobile-sidebar-visible" : "")}>
       <Sidebar active={view} change={changeView} report={report} compact={sidebarCompact}
-        toggle={() => setSidebarCompact(v => !v)} source={view === "pmss" ? "PMSS / 脱敏快照" : sourceMap[scenario?.data_source ?? "unknown"] ?? "来源未标记"}/>
+        source={view === "pmss" ? "PMSS / 脱敏快照" : sourceMap[scenario?.data_source ?? "unknown"] ?? "来源未标记"}/>
       {mobileNav && <button type="button" className="mobile-close" onClick={() => setMobileNav(false)} aria-label="关闭菜单"><X size={21}/></button>}
     </div>
     <div className="app-main">
