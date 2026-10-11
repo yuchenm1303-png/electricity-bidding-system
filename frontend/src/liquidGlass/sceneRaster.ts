@@ -268,20 +268,26 @@ export function rasterizePortal(
   roiHeight: number,
   dpr: number,
   omitLiveGrid = false,
+  tooltipMode: "all" | "background" | "overlay" = "all",
 ) {
   const ctx = canvas.getContext("2d", { alpha: true });
   const scratchCtx = scratch.getContext("2d", { alpha: true });
   if (!ctx || !scratchCtx) return false;
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (tooltipMode !== "overlay") ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawWallpaper(ctx, wallpaper, roiLeft, roiTop, window.innerWidth, window.innerHeight, roiWidth, roiHeight);
+  if (tooltipMode !== "overlay") {
+    drawWallpaper(ctx, wallpaper, roiLeft, roiTop, window.innerWidth, window.innerHeight, roiWidth, roiHeight);
+  }
 
   const content = root.querySelector<HTMLElement>(".app") ?? root;
 
   const renderElement = (el: HTMLElement, parentOpacity: number) => {
     if (el.dataset.powerbidLiquidCursor === "true" || el.closest("[data-powerbid-liquid-cursor='true']")) return;
+    // Omit the moving tooltip from the cached chart backdrop, then draw
+    // it separately at its current compositor-transformed position.
+    if (tooltipMode === "background" && el.matches(".recharts-tooltip-wrapper")) return;
     if (el.closest(".cosmos") || el.classList.contains("beach-wallpaper")) return;
     const style = getComputedStyle(el);
     if (style.display === "none" || style.visibility === "hidden") return;
@@ -432,7 +438,15 @@ export function rasterizePortal(
     if (clipsChildren) ctx.restore();
   };
 
-  renderElement(content, 1);
+  if (tooltipMode === "overlay") {
+    for (const tip of root.querySelectorAll<HTMLElement>(".recharts-tooltip-wrapper")) {
+      const style = getComputedStyle(tip);
+      if (style.visibility === "hidden" || style.display === "none" ||
+          Number(style.opacity) <= 0.002) continue;
+      if (!intersects(tip.getBoundingClientRect(),roiLeft,roiTop,roiWidth,roiHeight)) continue;
+      renderElement(tip, 1);
+    }
+  } else renderElement(content, 1);
   return true;
 }
 

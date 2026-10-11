@@ -36,6 +36,7 @@ export function LiquidGlassCursor() {
     const capture = document.createElement("canvas");
     const scratch = document.createElement("canvas");
     const gridBackdrop = document.createElement("canvas");
+    const tooltipBackdrop = document.createElement("canvas");
     const dpr = Math.min(
       Math.max(1, Math.min(window.devicePixelRatio || 1, 1.75)),
       renderer.maxTextureSize / Math.max(window.innerWidth, window.innerHeight, 1),
@@ -44,7 +45,7 @@ export function LiquidGlassCursor() {
       const nextWidth = Math.max(1, Math.round(cssWidth * dpr));
       const nextHeight = Math.max(1, Math.round(cssHeight * dpr));
       if (canvas.width === nextWidth && canvas.height === nextHeight) return false;
-      for (const target of [canvas, capture, scratch, gridBackdrop]) {
+      for (const target of [canvas, capture, scratch, gridBackdrop, tooltipBackdrop]) {
         target.width = nextWidth; target.height = nextHeight;
       }
       canvas.style.width = String(cssWidth)+"px";
@@ -69,6 +70,11 @@ export function LiquidGlassCursor() {
     let lastRoiTop = Number.NaN;
     let rasterDirty = true;
     let gridBackdropReady = false;
+    let tooltipBackdropReady = false;
+    let tooltipBackdropLeft = Number.NaN;
+    let tooltipBackdropTop = Number.NaN;
+    let lastTooltipBaseCapture = 0;
+    let tooltipAnimationUntil = 0;
     let gridBackdropLeft = Number.NaN;
     let gridBackdropTop = Number.NaN;
     let staticDirty = true;
@@ -82,7 +88,7 @@ export function LiquidGlassCursor() {
     const roi = createRoiManager(
       resizeSurfaces,
       () => {rasterDirty=true;},
-      () => {textureReady=false;lastRoiLeft=Number.NaN;lastRoiTop=Number.NaN;gridBackdropReady=false;},
+      () => {textureReady=false;lastRoiLeft=Number.NaN;lastRoiTop=Number.NaN;gridBackdropReady=false;tooltipBackdropReady=false;},
     );
 
     const x: SpringValue = { value: pointerX, velocity: 0, target: pointerX };
@@ -190,6 +196,22 @@ export function LiquidGlassCursor() {
       return grid;
     };
 
+    const liveChartTooltip = () => {
+      if (!chartLens || !pointerInside || document.hidden) return null;
+      // A dashboard can have several Recharts charts, each with its own
+      // tooltip wrapper. Pick the currently visible one, not the first DOM
+      // match (which may belong to a non-hovered chart).
+      for (const tip of root.querySelectorAll<HTMLElement>(".recharts-tooltip-wrapper")) {
+        const st=getComputedStyle(tip);
+        if (st.display === "none" || st.visibility === "hidden" ||
+            Number(st.opacity) < 0.002) continue;
+        if (!intersects(tip.getBoundingClientRect(),roi.state.left,roi.state.top,
+            roi.state.width,roi.state.height)) continue;
+        return tip;
+      }
+      return null;
+    };
+
     const uploadTexture = (roiLeft: number, roiTop: number, now: number) => {
       const moved = Math.abs(roiLeft - lastRoiLeft) >= 0.75 || Math.abs(roiTop - lastRoiTop) >= 0.75;
       if (!rasterDirty && !moved) return;
@@ -197,9 +219,10 @@ export function LiquidGlassCursor() {
       // coordinate origin to an old texture. Moving to a new ROI bypasses the
       // ordinary 32ms stationary-cache throttle.
       const grid = liveGridForLens();
-      // Source grid paints ~30fps. Reuse its cadence for the optical lens,
-      // rather than redrawing the full DOM at 85ms intervals.
-      const minCaptureInterval = grid ? 24 : activeTarget ? 16 : 32;
+      const tip = !grid ? liveChartTooltip() : null;
+      // The tip is cheap to render separately; its static chart backdrop
+      // stays cached while the hover position or value changes.
+      const minCaptureInterval = tip ? 30 : grid ? 24 : activeTarget ? 16 : 32;
       if (!moved && !urgentCapture && now - lastCapture < minCaptureInterval) return;
       lastCapture = now;
       if (grid) {
@@ -215,6 +238,29 @@ export function LiquidGlassCursor() {
         }
         if (!composeLiveGrid(gridBackdrop,capture,grid,roiLeft,roiTop,
             roi.state.width,roi.state.height,dpr)) {
+          textureReady=false;return;
+        }
+      } else if (tip) {
+        if (!tooltipBackdropReady || staticDirty ||
+            tooltipBackdropLeft !== roiLeft || tooltipBackdropTop !== roiTop ||
+            now-lastTooltipBaseCapture > 180) {
+          if (!rasterizePortal(root,tooltipBackdrop,scratch,null,roiLeft,roiTop,
+              roi.state.width,roi.state.height,dpr,false,"background")) {
+            textureReady=false;return;
+          }
+          tooltipBackdropReady=true;
+          tooltipBackdropLeft=roiLeft;tooltipBackdropTop=roiTop;
+          lastTooltipBaseCapture=now;
+          staticDirty=false;
+        }
+        const ctx=capture.getContext("2d");
+        if (!ctx) {textureReady=false;return;}
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.globalAlpha=1;
+        ctx.clearRect(0,0,capture.width,capture.height);
+        ctx.drawImage(tooltipBackdrop,0,0);
+        if (!rasterizePortal(root,capture,scratch,null,roiLeft,roiTop,
+            roi.state.width,roi.state.height,dpr,false,"overlay")) {
           textureReady=false;return;
         }
       } else if (!rasterizePortal(root,capture,scratch,null,roiLeft,roiTop,
@@ -317,6 +363,7 @@ export function LiquidGlassCursor() {
 
       // Pointer/input/layout events wake the loop. A stationary cursor does
       // not need continuous DOM measurements and WebGL draws once springs settle.
+      if (tooltipAnimationUntil > now && liveChartTooltip()) rasterDirty=true;
       if (settled && !rasterDirty && !snapDirty) {
         running = false;
         return;
@@ -331,7 +378,8 @@ export function LiquidGlassCursor() {
       if (!pointerInside || !Number.isFinite(roi.state.left) || !Number.isFinite(roi.state.top)) return "";
       const parts: string[] = [];
       for (const node of root.querySelectorAll<Element>(DYNAMIC_SCENE_SELECTOR)) {
-        if (node.closest("[data-powerbid-liquid-cursor='true']")) continue;
+        if (node.closest("[data-powerbid-liquid-cursor='true']") ||
+            node.matches(".recharts-tooltip-wrapper")) continue;
         const st = getComputedStyle(node);
         if (st.display === "none" || st.visibility === "hidden" || Number(st.opacity) < 0.01) continue;
         const r = node.getBoundingClientRect();
@@ -366,6 +414,10 @@ export function LiquidGlassCursor() {
     const onSceneAnimation = (event: Event) => {
       if (!(event.target instanceof Element) ||
           event.target.closest("[data-powerbid-liquid-cursor='true']")) return;
+      if (event.target.closest(".recharts-tooltip-wrapper")) {
+        tooltipAnimationUntil=performance.now()+500;
+        rasterDirty=true;ensureFrame();return;
+      }
       const bounds = event.target.getBoundingClientRect();
       // Decorative animations elsewhere in the dashboard must not trigger
       // endless ROI redraws. Include a generous outer margin so transitions
@@ -410,6 +462,7 @@ export function LiquidGlassCursor() {
       if (chartLens || event.target instanceof Element &&
           Boolean(event.target.closest(".recharts-wrapper, .ta-supply-chart, .ta-bars, .ta-gauge-wrap, .pmss-chart, .pb-field-canvas"))) {
         rasterDirty = true;
+        if (chartLens) tooltipAnimationUntil=performance.now()+500;
       }
       wake();
       watchScene();
@@ -446,6 +499,7 @@ export function LiquidGlassCursor() {
       snapDirty = true;
       lastSceneSignature = "";
       animationWatchUntil = 0;
+      tooltipAnimationUntil = 0;
       window.clearTimeout(sceneTimer);
       sceneTimer = 0;
       wake();
@@ -476,11 +530,17 @@ export function LiquidGlassCursor() {
         return !el?.closest("[data-powerbid-liquid-cursor='true']");
       });
       if (!updates.length) return;
-      if (updates.some(affectsMagneticTargets)) {
+      const tooltipOnly = updates.every(record=>{
+        const el=record.target instanceof Element
+          ? record.target : record.target.parentElement;
+        return Boolean(el?.closest(".recharts-tooltip-wrapper"));
+      });
+      if (!tooltipOnly && updates.some(affectsMagneticTargets)) {
         magnetism.refresh();
         snapDirty = true;
       }
-      staticDirty=true;
+      if (!tooltipOnly) staticDirty=true;
+      else tooltipAnimationUntil=performance.now()+450;
       rasterDirty = true;
       wake();
       watchScene();
