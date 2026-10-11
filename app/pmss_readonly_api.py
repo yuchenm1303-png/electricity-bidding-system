@@ -93,12 +93,23 @@ def _catalog() -> tuple[Path, list[dict[str, Any]]]:
         raise CatalogUnavailable()
     ids: set[str] = set()
     for p in projects:
-        if not isinstance(p, dict) or set(p) not in (
-            {"project_id", "name", "cases"},
-            {"project_id", "name", "cases", "visibility"},
-        ):
+        if not isinstance(p, dict):
             raise CatalogUnavailable()
-        if p.get("visibility", "admin_only") not in ("admin_only", "authenticated"):
+        keys = set(p)
+        if not {"project_id", "name", "cases"} <= keys or not keys <= {
+            "project_id", "name", "cases", "visibility", "allowed_user_ids",
+        }:
+            raise CatalogUnavailable()
+        visibility = p.get("visibility", "admin_only")
+        if visibility not in ("admin_only", "authenticated", "assigned"):
+            raise CatalogUnavailable()
+        if visibility == "assigned":
+            allowed = p.get("allowed_user_ids")
+            if (not isinstance(allowed, list) or not 1 <= len(allowed) <= 100
+                    or any(type(value) is not int or value <= 0 for value in allowed)
+                    or len(set(allowed)) != len(allowed)):
+                raise CatalogUnavailable()
+        elif "allowed_user_ids" in p:
             raise CatalogUnavailable()
         ident, label, cases = p["project_id"], p["name"], p["cases"]
         if (type(ident) is not str or not _ID.fullmatch(ident) or ident in ids
@@ -128,7 +139,12 @@ def _authorized(request: Request) -> dict:
 
 
 def _may_read(user: dict, project: dict[str, Any]) -> bool:
-    return user["role"] == "admin" or project.get("visibility", "admin_only") == "authenticated"
+    if user["role"] == "admin":
+        return True
+    visibility = project.get("visibility", "admin_only")
+    if visibility == "authenticated":
+        return True
+    return visibility == "assigned" and user["id"] in project["allowed_user_ids"]
 
 
 def _unavailable() -> HTTPException:
