@@ -13,28 +13,54 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
   v !== null && typeof v === "object" && !Array.isArray(v);
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Bound the entire request, including response JSON parsing, to avoid a permanent spinner. */
 async function readOnlyGet(path: string, signal: AbortSignal): Promise<unknown> {
-  const response = await fetch(PREFIX + path, {
-    method: "GET",
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-    signal,
-    redirect: "error",
-  });
-  if (!response.ok) {
-    if (response.status === 404 || response.status === 501) {
-      throw new Error("授权只读数据接口尚未启用，请由数据接入窗口完成后端部署。");
+  const timeout = new AbortController();
+  const forwardAbort = () => timeout.abort();
+  if (signal.aborted) timeout.abort();
+  else signal.addEventListener("abort", forwardAbort, { once: true });
+  const timer = window.setTimeout(() => timeout.abort(), 12000);
+  try {
+    const response = await fetch(PREFIX + path, {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: timeout.signal,
+      redirect: "error",
+    });
+    if (!response.ok) {
+      if (response.status === 404 || response.status === 501) {
+        throw new Error("授权只读数据接口尚未启用，请联系管理员。");
+      }
+      if (response.status === 401) {
+        throw new Error("PowerBid 登录已失效，请重新登录。");
+      }
+      if (response.status === 403) {
+        throw new Error("当前账号尚未获授权读取该学校工程，其他报价分析功能仍可使用。");
+      }
+      if (response.status === 502 || response.status === 503 || response.status === 504) {
+        throw new Error("PowerBid 数据服务暂时不可用（HTTP " + response.status + "），请稍后重试。VPN 正常不代表应用网关正常。");
+      }
+      throw new Error("只读数据接口暂不可用（HTTP " + response.status + "）。");
     }
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("没有当前工程的只读访问权限，请重新登录或联系管理员。");
+    if (!(response.headers.get("content-type") ?? "").includes("application/json")) {
+      throw new Error("只读接口未返回 JSON，不能将登录页识别为市场数据。");
     }
-    throw new Error("只读数据接口暂不可用（HTTP " + response.status + "）。");
+    return await response.json() as unknown;
+  } catch (error) {
+    if (signal.aborted) throw error;
+    if (timeout.signal.aborted) {
+      throw new Error("读取工程数据超过 12 秒，请稍后重试；无需重新连接学校 VPN。");
+    }
+    if (error instanceof TypeError) {
+      throw new Error("无法连接到 PowerBid 数据服务，请检查网站网络后重试。");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+    signal.removeEventListener("abort", forwardAbort);
   }
-  if (!(response.headers.get("content-type") ?? "").includes("application/json")) {
-    throw new Error("只读接口未返回 JSON，不能将登录页识别为市场数据。");
-  }
-  return response.json() as Promise<unknown>;
 }
 
 export async function getPMSSProjects(signal: AbortSignal): Promise<PMSSProjectRef[]> {
