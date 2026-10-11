@@ -1,4 +1,4 @@
-"""Admin-only PMSS historical case catalog backed by private, sanitized files.
+"""Permission-aware PMSS historical case catalog backed by private, sanitized files.
 
 Never connects to PMSS, handles teacher credentials, or writes a teacher bid.
 A trusted operator explicitly mounts a read-only private directory and sets
@@ -93,7 +93,12 @@ def _catalog() -> tuple[Path, list[dict[str, Any]]]:
         raise CatalogUnavailable()
     ids: set[str] = set()
     for p in projects:
-        if not isinstance(p, dict) or set(p) != {"project_id", "name", "cases"}:
+        if not isinstance(p, dict) or set(p) not in (
+            {"project_id", "name", "cases"},
+            {"project_id", "name", "cases", "visibility"},
+        ):
+            raise CatalogUnavailable()
+        if p.get("visibility", "admin_only") not in ("admin_only", "authenticated"):
             raise CatalogUnavailable()
         ident, label, cases = p["project_id"], p["name"], p["cases"]
         if (type(ident) is not str or not _ID.fullmatch(ident) or ident in ids
@@ -116,10 +121,14 @@ def _reply(data: dict[str, Any]) -> JSONResponse:
     return JSONResponse(content=data, headers=_HEADERS)
 
 
-def _authorized(request: Request) -> None:
-    # Membership alone is insufficient: classroom data is restricted to the
-    # explicitly provisioned PowerBid admin until per-user PMSS grants exist.
-    require_user(request, admin=True)
+def _authorized(request: Request) -> dict:
+    # Signing into PowerBid alone does not grant access to every PMSS project.
+    # A trusted operator must explicitly mark a project as shareable.
+    return require_user(request)
+
+
+def _may_read(user: dict, project: dict[str, Any]) -> bool:
+    return user["role"] == "admin" or project.get("visibility", "admin_only") == "authenticated"
 
 
 def _unavailable() -> HTTPException:
@@ -128,24 +137,27 @@ def _unavailable() -> HTTPException:
 
 @router.get("/projects")
 def projects(request: Request):
-    _authorized(request)
+    user = _authorized(request)
     try:
         _root_path, entries = _catalog()
     except CatalogUnavailable as exc:
         raise _unavailable() from exc
     return _reply({"projects": [
-        {"project_id": p["project_id"], "name": p["name"]} for p in entries
+        {"project_id": p["project_id"], "name": p["name"]}
+        for p in entries if _may_read(user, p)
     ]})
 
 
 @router.get("/cases")
 def cases(request: Request, project_id: str):
-    _authorized(request)
+    user = _authorized(request)
     try:
         _root_path, entries = _catalog()
         project = next((p for p in entries if p["project_id"] == project_id), None)
         if project is None:
             raise HTTPException(404, "此工程未在授权目录中")
+        if not _may_read(user, project):
+            raise HTTPException(403, "尚未获得此工程的共享读取授权")
     except CatalogUnavailable as exc:
         raise _unavailable() from exc
     return _reply({"cases": [
@@ -156,13 +168,15 @@ def cases(request: Request, project_id: str):
 
 @router.get("/snapshot")
 def snapshot(request: Request, project_id: str, case_date: str):
-    _authorized(request)
+    user = _authorized(request)
     try:
         selected_date = _date(case_date)
         root, entries = _catalog()
         project = next((p for p in entries if p["project_id"] == project_id), None)
         if project is None:
             raise HTTPException(404, "此工程未在授权目录中")
+        if not _may_read(user, project):
+            raise HTTPException(403, "尚未获得此工程的共享读取授权")
         case = next((c for c in project["cases"] if c["case_date"] == selected_date), None)
         if case is None:
             raise HTTPException(404, "此案例日期未获授权")
