@@ -317,7 +317,7 @@ export function LiquidGlassCursor() {
       const deformation = Math.max(-0.22, Math.min(1.08, pressure.value));
       const pressWeight = Math.max(0,Math.min(1,deformation));
       const releaseWeight = Math.max(0,-deformation);
-      const mode:LensMode = activeTarget?.matches(".brand-home-link, .mobile-brand-home, .pb-logo-link, .pb-identity-brand") ? "brand"
+      const mode:LensMode = activeTarget?.matches(".brand-home-link, .mobile-brand-home, .pb-logo-link, .pb-e-logo, .pb-identity-brand") ? "brand"
         : activeTarget?.matches(".ta-global-search, .pb-identity-input-wrap, input, textarea, select, [contenteditable='true']") ? "reading"
         : activeTarget ? "control" : visualMode;
       // Readable profile names make QA possible without another DOM overlay.
