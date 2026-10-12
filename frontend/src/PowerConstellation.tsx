@@ -124,15 +124,12 @@ export default function PowerConstellation() {
         const isActive = i===highlight;
         const radius = NODES[i].kind==="联络枢纽" ? 3.4 : 2.7;
         const visibility = Math.max(.55, Math.min(.95,.76-p.depth*.14));
-        if (isActive) {
-          ctx.beginPath();ctx.arc(p.x,p.y,21,0,Math.PI*2);
-          ctx.fillStyle=dark?"rgba(135,164,255,.12)":"rgba(110,125,240,.055)";ctx.fill();
-          ctx.beginPath();ctx.arc(p.x,p.y,12,0,Math.PI*2);
-          ctx.strokeStyle=dark?"rgba(145,172,255,.54)":"rgba(95,109,230,.30)";ctx.lineWidth=1;ctx.stroke();
-        }
+        // Highlight the selected node without a large white disk or focus ring.
         ctx.beginPath();
-        ctx.arc(p.x,p.y,radius + 3.5,0,Math.PI*2);
-        ctx.fillStyle=dark?"rgba(125,155,255,.20)":"rgba(95,110,226,.09)";
+        ctx.arc(p.x,p.y,radius + (isActive ? 4.6 : 3.2),0,Math.PI*2);
+        ctx.fillStyle=isActive
+          ? (dark ? "rgba(125,155,255,.22)" : "rgba(95,110,226,.12)")
+          : (dark ? "rgba(125,155,255,.13)" : "rgba(95,110,226,.07)");
         ctx.fill();
         ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);
         ctx.fillStyle = NODES[i].kind==="发电节点" ? (dark?"rgba(127,146,254,":"rgba(77,93,221,")+visibility+")"
@@ -250,8 +247,8 @@ export default function PowerConstellation() {
 
   return <div className="pb-constellation">
     <div className="pb-constellation-header" aria-hidden="true">
-      <span className="pb-constellation-kicker"><span className="pb-constellation-status"/> INTERACTIVE GRID / 3D</span>
-      <span className="pb-constellation-meta">DEMO TOPOLOGY</span>
+      <span className="pb-constellation-kicker"><span className="pb-constellation-status"/> 交互式电网 / 3D</span>
+      <span className="pb-constellation-meta">示意模型 · {NODES.length} 节点</span>
     </div>
     <canvas
       ref={canvasRef}
