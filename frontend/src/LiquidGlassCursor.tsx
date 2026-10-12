@@ -12,6 +12,7 @@ import { createMagneticController, affectsMagneticTargets } from "./liquidGlass/
 import { rasterizePortal, composeLiveGrid } from "./liquidGlass/sceneRaster";
 import { createGlassRenderer } from "./liquidGlass/renderer";
 import { createRoiManager } from "./liquidGlass/roi";
+import { createCaptureQualityGovernor } from "./liquidGlass/captureQuality";
 
 export function LiquidGlassCursor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,14 +38,24 @@ export function LiquidGlassCursor() {
     const scratch = document.createElement("canvas");
     const gridBackdrop = document.createElement("canvas");
     const tooltipBackdrop = document.createElement("canvas");
-    const dpr = Math.min(
-      Math.max(1, Math.min(window.devicePixelRatio || 1, 1.75)),
-      renderer.maxTextureSize / Math.max(window.innerWidth, window.innerHeight, 1),
+    // Candid-inspired adaptive ROI quality, independently implemented:
+    // optimize the texture actually sampled rather than capping it by the
+    // full browser viewport. Preserve the existing single WebGL renderer.
+    const isMobileViewport=() => window.matchMedia("(max-width: 760px)").matches;
+    const quality=createCaptureQualityGovernor(
+      window.devicePixelRatio || 1,renderer.maxTextureSize,isMobileViewport(),
     );
+    let dpr=1;
     const resizeSurfaces = (cssWidth: number, cssHeight: number) => {
-      const nextWidth = Math.max(1, Math.round(cssWidth * dpr));
-      const nextHeight = Math.max(1, Math.round(cssHeight * dpr));
-      if (canvas.width === nextWidth && canvas.height === nextHeight) return false;
+      quality.select(cssWidth,cssHeight,performance.now(),0);
+      const nextDpr=quality.scale;
+      const nextWidth = Math.max(1, Math.round(cssWidth * nextDpr));
+      const nextHeight = Math.max(1, Math.round(cssHeight * nextDpr));
+      if (canvas.width === nextWidth && canvas.height === nextHeight) {
+        dpr=nextDpr;
+        return false;
+      }
+      dpr=nextDpr;
       for (const target of [canvas, capture, scratch, gridBackdrop, tooltipBackdrop]) {
         target.width = nextWidth; target.height = nextHeight;
       }
@@ -285,7 +296,8 @@ export function LiquidGlassCursor() {
     };
 
     const frame = (now: number) => {
-      const dt = Math.min(0.064, Math.max(0.001, (now - lastTime) / 1000));
+      const elapsed = Math.max(0.001, (now - lastTime) / 1000);
+      const dt = Math.min(0.064, elapsed);
       lastTime = now;
       const magneticSettled = magnetism.update(dt);
       updateLensIntent();
@@ -322,6 +334,17 @@ export function LiquidGlassCursor() {
       }
 
       roi.update(x.value,y.value,width.value,height.value,activeTarget,snap.value);
+      // A density change invalidates every backing Canvas and the GPU texture
+      // together. Capture immediately from the *same* ROI, so no old texture
+      // can be drawn with a new scale/origin during spring transitions.
+      if(quality.select(roi.state.width,roi.state.height,now,elapsed) &&
+         resizeSurfaces(roi.state.width,roi.state.height)) {
+        textureReady=false;
+        lastRoiLeft=Number.NaN;lastRoiTop=Number.NaN;
+        gridBackdropReady=false;tooltipBackdropReady=false;
+        staticDirty=true;rasterDirty=true;urgentCapture=true;
+      }
+      canvas.dataset.captureScale=dpr.toFixed(2);
       uploadTexture(roi.state.left, roi.state.top, now);
 
       const hasSample = textureReady && Number.isFinite(lastRoiLeft) && Number.isFinite(lastRoiTop);
@@ -515,6 +538,7 @@ export function LiquidGlassCursor() {
     // Editing changes input.value without mutating DOM text or attributes.
     const handleInput = () => {staticDirty=true; rasterDirty = true;urgentCapture=true; wake(); };
     const handleResize = () => {
+      quality.setDisplay(window.devicePixelRatio || 1,isMobileViewport());
       roi.reset();
       staticDirty=true;
       rasterDirty = true;
