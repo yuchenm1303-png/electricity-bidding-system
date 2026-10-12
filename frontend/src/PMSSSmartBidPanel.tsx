@@ -180,7 +180,8 @@ export function PMSSSmartBidPanel({
       <div className="pmss-smart-decision-main">
         <div className="pmss-smart-kicker"><ShieldAlert size={15}/> DECISION & RISK GATE</div>
         <h4>{selectedProfile ? "研究参考：" + selectedProfile.title :
-          selectedId === "surrogate" && fallback ? "单区域近似 · 仅供研究" : "等待生成候选策略"}</h4>
+          selectedId === "surrogate" && fallback ? "单区域近似 · 仅供研究" :
+          profiles.length > 0 && !suggestion ? "已生成候选 · 暂未通过跨日期风控" : "等待生成候选策略"}</h4>
         <p>{selectedProfile ? selectedProfile.rationale :
           selectedId === "surrogate" ? "当前不具备独立网络复核与多策略比较结果。" :
           "选择历史案例与目标机组后，点击生成。模型结果需人工核验，不能直接当作真实收益证明。"}</p>
