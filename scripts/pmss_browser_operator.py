@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 
 _LOCK = threading.RLock()
 _HANDLE = None
+_DRIVER = None
 _FRAME_METRICS = None
 _SCHOOL_URL = "http://cq.university.netts-dev.tsintergy.com/"
 _HOST = "cq.university.netts-dev.tsintergy.com"
