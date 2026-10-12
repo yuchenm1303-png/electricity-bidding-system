@@ -14,8 +14,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install --no-cache-dir -e ".[web,strategy]"
-COPY app/pmss_connection_api.py app/pmss_readonly_api.py app/web_server.py app/pmss_api.py app/account_auth.py app/admin_setup.py app/social_auth.py app/turnstile_auth.py ./app/
+RUN pip install --no-cache-dir -e ".[web,strategy,platform]"
+COPY app/pmss_connection_api.py app/pmss_readonly_api.py app/pmss_live_api.py app/web_server.py app/pmss_api.py app/account_auth.py app/admin_setup.py app/social_auth.py app/turnstile_auth.py ./app/
 COPY data ./data
 COPY --from=frontend /build/dist ./frontend/dist
 EXPOSE 8000

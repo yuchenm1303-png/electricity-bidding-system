@@ -12,6 +12,7 @@ import { PMSSCandidateDispatchPanel } from "./PMSSCandidateDispatchPanel";
 import { PMSSHoldoutGatePanel } from "./PMSSHoldoutGatePanel";
 import { PMSSManualClearingPanel } from "./PMSSManualClearingPanel";
 import { PMSSSmartBidPanel } from "./PMSSSmartBidPanel";
+import { PMSSOfficialClearingPanel } from "./PMSSOfficialClearingPanel";
 import type { PMSSBidProposal } from "./pmssBiddingFlow";
 import { PMSSSourcePicker } from "./PMSSSourcePicker";
 import { getPMSSSnapshot } from "./pmssReadOnly";
@@ -372,6 +373,13 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
           setProposal(candidate); setNetworkResult(null); setManualReviewReady(false);
         }}
       />
+      {account?.role === "admin" && sourceMeta && trioResult && <PMSSOfficialClearingPanel
+        key={sourceMeta.projectId + ":" + inspection.case_date + ":" + target}
+        projectId={sourceMeta.projectId}
+        caseDate={inspection.case_date}
+        targetUnitId={target}
+        trio={trioResult}
+      />}
       {proposal && <PMSSManualClearingPanel
         key={fileName + ":" + target + ":" + inspection.case_date + ":" + JSON.stringify(proposal.segments)}
         snapshot={snapshot!} caseDate={inspection.case_date}
