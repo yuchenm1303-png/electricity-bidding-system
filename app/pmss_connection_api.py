@@ -277,4 +277,7 @@ def browser_action(request: Request, body: SchoolBrowserAction):
         confirmed_focus = json.loads(_raw).get("focused_input") is True
     except (ValueError, TypeError, AttributeError):
         confirmed_focus = False
-    return _response({"ok": True, "focused_input": confirmed_focus})
+    result = {"ok": True}
+    if body.action == "click":
+        result["focused_input"] = confirmed_focus
+    return _response(result)
