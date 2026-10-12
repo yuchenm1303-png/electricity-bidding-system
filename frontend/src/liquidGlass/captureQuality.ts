@@ -32,9 +32,11 @@ export function calculateCaptureScale(
   const budgetScale=Math.sqrt(QUALITY_LIMITS.maxPixels/(width*height));
   const textureScale=Math.max(0.25,(maxTextureSize-2)/Math.max(width,height));
   const high=Math.min(preferred,ceiling,budgetScale,textureScale);
-  // Degrade only after sustained high frame cost; never drop beneath a
-  // single native CSS pixel unless huge ROI would exceed the GPU limit.
-  const low=Math.min(high,Math.max(1,high*.78));
+  // Sustained load may lower supersampling, but never below the clarity
+  // offered by the previous implementation on typical 1x/2x desktops.
+  // Large snapped ROIs still obey their stricter texture/memory limits.
+  const visualFloor=mobile ? 1.5 : devicePixelRatio>=1.75 ? 1.75 : 1.65;
+  const low=Math.min(high,Math.max(visualFloor,high*.86));
   return Math.max(.01,Math.floor((degraded ? low : high)*100)/100);
 }
 
