@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Keyboard, LockKeyhole, RefreshCw, X } from "lucide-react";
 import "./pmss-school-login.css";
+import { browserImagePoint } from "./pmssBrowserCoordinates";
 
 const BASE = import.meta.env.BASE_URL + "api/pmss/connection/browser/";
 
@@ -22,6 +23,7 @@ export function PMSSBrowserLogin({
   const queue = useRef<Promise<void>>(Promise.resolve());
   const textBuffer = useRef("");
   const typingTimer = useRef<number | null>(null);
+  const lastInteraction = useRef(0);
 
   async function post(data: BrowserAction): Promise<void> {
     const response = await fetch(BASE + "action", {
@@ -33,7 +35,17 @@ export function PMSSBrowserLogin({
       const payload = await response.json().catch(() => ({})) as {detail?: string};
       throw new Error(payload.detail || "学校登录窗口暂时无法控制");
     }
-    setFrame(n => n + 1);
+    // Refresh on success; input focus is managed by the remote browser.
+    if (data.action === "click") {
+      const feedback = await response.json().catch(() => ({})) as {focused_input?: boolean};
+      setHint(feedback.focused_input
+        ? "已选中学校输入框。现在直接键入用户名或密码。"
+        : "点击已送达学校页面；如需输入，请点击对应输入框。");
+    }
+    lastInteraction.current = Date.now();
+    if (data.action === "open" || data.action === "key" && data.key === "Enter") {
+      setFrame(n => n + 1);
+    }
   }
 
   function send(data: BrowserAction) {
@@ -56,7 +68,9 @@ export function PMSSBrowserLogin({
     setError("");
     setHint("请在上方的学校原版页面完成身份验证。无需将密码交给 PowerBid 管理员。");
     void post({action: "open"}).catch(e => setError(String(e)));
-    const images = window.setInterval(() => setFrame(n => n + 1), 1800);
+    const images = window.setInterval(() => {
+      if (Date.now() - lastInteraction.current > 6500) setFrame(n => n + 1);
+    }, 4500);
     const checker = window.setInterval(() => {
       void onConnected().then(ok => {
         if (ok) { setHint("学校登录已经验证成功。"); onClose(); }
@@ -75,13 +89,16 @@ export function PMSSBrowserLogin({
   function click(event: React.MouseEvent<HTMLImageElement>) {
     const img = image.current;
     if (!img) return;
-    const rect = img.getBoundingClientRect();
-    const x = (event.clientX - rect.left) * img.naturalWidth / rect.width;
-    const y = (event.clientY - rect.top) * img.naturalHeight / rect.height;
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const point = browserImagePoint(
+      event.clientX, event.clientY, img.getBoundingClientRect(),
+      img.naturalWidth, img.naturalHeight,
+    );
+    if (!point) return;
     flushText();
     surface.current?.focus();
-    send({action: "click", x: Math.round(x), y: Math.round(y)});
+    lastInteraction.current = Date.now();
+    setHint("正在将点击发送到学校浏览器…");
+    send({action: "click", ...point});
   }
 
   function keyboard(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -94,6 +111,7 @@ export function PMSSBrowserLogin({
       send({action: "key", key: event.key});
     } else if (event.key.length === 1) {
       event.preventDefault();
+      lastInteraction.current = Date.now();
       textBuffer.current += event.key;
       if (textBuffer.current.length >= 100) flushText();
       else {
@@ -106,7 +124,10 @@ export function PMSSBrowserLogin({
   function paste(event: React.ClipboardEvent<HTMLDivElement>) {
     event.preventDefault();
     const value = event.clipboardData.getData("text").slice(0, 128);
-    if (value && !/[\r\n\x00-\x1f]/.test(value)) send({action: "text", text: value});
+    if (value && !/[\r\n\x00-\x1f]/.test(value)) {
+      flushText();
+      send({action: "text", text: value});
+    }
   }
 
   return <div className="pmss-browser-backdrop" role="presentation">

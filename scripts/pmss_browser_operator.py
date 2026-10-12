@@ -83,6 +83,7 @@ def _act(driver, payload):
             raise ValueError("Invalid coordinates")
         if not 0 <= x <= 2000 or not 0 <= y <= 1200:
             raise ValueError("Invalid coordinates")
+        driver.execute_cdp_cmd("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y})
         for event in ("mousePressed", "mouseReleased"):
             driver.execute_cdp_cmd("Input.dispatchMouseEvent", {
                 "type": event, "x": x, "y": y,
