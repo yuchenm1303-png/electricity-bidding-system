@@ -18,7 +18,7 @@ _LOCK = threading.RLock()
 _HANDLE = None
 _SCHOOL_URL = "http://cq.university.netts-dev.tsintergy.com/"
 _HOST = "cq.university.netts-dev.tsintergy.com"
-_TOKEN_FILE = "/srv/powerbid-platform/private-cases/.vpn-operator/pmss-browser-token"
+_TOKEN_FILE = "/srv/powerbid-platform/private-cases/.pmss-web-login-secret"
 _KEYS = {
     "Enter": ("Enter", "Enter", 13), "Tab": ("Tab", "Tab", 9),
     "Backspace": ("Backspace", "Backspace", 8),
