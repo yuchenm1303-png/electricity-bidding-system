@@ -141,12 +141,8 @@ export default function PowerConstellation() {
         ctx.fill();
         ctx.beginPath();ctx.arc(p.x,p.y,1.1,0,Math.PI*2);
         ctx.fillStyle="#fff";ctx.fill();
-        if ((isActive || i===0 || i===14 || i===19) && p.x > 38 && p.x < w - 55) {
-          ctx.font="600 10px Inter,system-ui,sans-serif";
-          ctx.letterSpacing="1px";
-          ctx.fillStyle=dark?(isActive?"rgba(203,216,255,.95)":"rgba(162,184,235,.83)"):(isActive?"rgba(67,82,156,.86)":"rgba(117,131,174,.64)");
-          ctx.fillText(NODES[i].id,p.x+11,p.y-12);
-        }
+        // Keep the model visually clean. Node details remain available to
+        // keyboard and screen-reader users via the live region below.
       });
       // The optical lens can consume the exact frame that was just painted.
       // A paint event avoids 85ms polling (12fps) and unnecessary DOM walks.
