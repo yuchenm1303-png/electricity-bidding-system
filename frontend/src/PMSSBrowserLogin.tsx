@@ -19,7 +19,8 @@ export function PMSSBrowserLogin({
   const [error, setError] = useState("");
   const [hint, setHint] = useState("点击画面里的输入框，然后在键盘上正常输入。");
   const image = useRef<HTMLImageElement>(null);
-  const surface = useRef<HTMLDivElement>(null);
+  const keyboardSink = useRef<HTMLInputElement>(null);
+  const composing = useRef(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const textBuffer = useRef("");
   const typingTimer = useRef<number | null>(null);
@@ -55,12 +56,27 @@ export function PMSSBrowserLogin({
     });
   }
 
+  function acceptText(value: string) {
+    if (!value || /[\u0000-\u001f]/.test(value)) return;
+    lastInteraction.current = Date.now();
+    textBuffer.current += value;
+    if (textBuffer.current.length >= 100) flushText();
+    else {
+      if (typingTimer.current !== null) window.clearTimeout(typingTimer.current);
+      typingTimer.current = window.setTimeout(flushText, 90);
+    }
+  }
+
   function flushText() {
     if (typingTimer.current !== null) window.clearTimeout(typingTimer.current);
     typingTimer.current = null;
     const text = textBuffer.current;
     textBuffer.current = "";
-    if (text) send({action: "text", text});
+    if (text) {
+      for (let offset = 0; offset < text.length; offset += 100) {
+        send({action: "text", text: text.slice(offset, offset + 100)});
+      }
+    }
   }
 
   useEffect(() => {
@@ -95,39 +111,52 @@ export function PMSSBrowserLogin({
     );
     if (!point) return;
     flushText();
-    surface.current?.focus();
+    // A real native input keeps browser keyboard focus even across React rerenders.
+    keyboardSink.current?.focus({ preventScroll: true });
     lastInteraction.current = Date.now();
     setHint("正在将点击发送到学校浏览器…");
     send({action: "click", ...point});
   }
 
-  function keyboard(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+  function keyboard(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing || composing.current) return;
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      flushText();
+      send({action: "key", key: "SelectAll"});
+      return;
+    }
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
     const specials = ["Enter", "Tab", "Backspace", "Delete", "Escape",
       "ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"];
     if (specials.includes(event.key)) {
       event.preventDefault();
       flushText();
       send({action: "key", key: event.key});
-    } else if (event.key.length === 1) {
-      event.preventDefault();
-      lastInteraction.current = Date.now();
-      textBuffer.current += event.key;
-      if (textBuffer.current.length >= 100) flushText();
-      else {
-        if (typingTimer.current !== null) window.clearTimeout(typingTimer.current);
-        typingTimer.current = window.setTimeout(flushText, 90);
-      }
     }
+    // Ordinary characters are delivered by the native input event, not keydown.
   }
 
-  function paste(event: React.ClipboardEvent<HTMLDivElement>) {
+  function nativeInput(event: React.FormEvent<HTMLInputElement>) {
+    if (composing.current) return;
+    const element = event.currentTarget;
+    const value = element.value;
+    element.value = ""; // No passwords or account names retained in the input DOM.
+    acceptText(value);
+  }
+
+  function compositionEnd(event: React.CompositionEvent<HTMLInputElement>) {
+    composing.current = false;
+    const element = event.currentTarget;
+    const value = element.value;
+    element.value = "";
+    acceptText(value);
+  }
+
+  function paste(event: React.ClipboardEvent<HTMLInputElement>) {
     event.preventDefault();
     const value = event.clipboardData.getData("text").slice(0, 128);
-    if (value && !/[\r\n\x00-\x1f]/.test(value)) {
-      flushText();
-      send({action: "text", text: value});
-    }
+    acceptText(value);
   }
 
   return <div className="pmss-browser-backdrop" role="presentation">
@@ -141,12 +170,23 @@ export function PMSSBrowserLogin({
         </div>
         <button type="button" aria-label="关闭登录窗口" onClick={onClose}><X size={20}/></button>
       </div>
-      <div ref={surface} className="pmss-browser-surface" tabIndex={0}
-        onKeyDown={keyboard} onPaste={paste} aria-label="学校网页登录画面与键盘控制">
+      <div className="pmss-browser-surface" aria-label="学校网页登录画面">
         <img ref={image} draggable={false} alt="服务器学校官网登录页面"
           src={BASE + "frame?seq=" + frame} onClick={click}
           onError={() => setError("暂时无法读取学校浏览器画面，请检查管理员登录网关")}
         />
+      </div>
+      <div className="pmss-browser-native-input">
+        <label htmlFor="pmss-native-input"><Keyboard size={15}/> 键盘输入</label>
+        <input id="pmss-native-input" ref={keyboardSink} type="password"
+          autoComplete="off" autoCorrect="off" spellCheck={false}
+          aria-label="输入到学校网页当前选中的账号或密码框"
+          placeholder="先点击上方学校输入框，再直接在这里键入"
+          onKeyDown={keyboard} onInput={nativeInput} onPaste={paste}
+          onCompositionStart={() => { composing.current = true; }}
+          onCompositionEnd={compositionEnd}
+        />
+        <span>即时转发，不保存输入内容</span>
       </div>
       <div className="pmss-browser-footer">
         <span><Keyboard size={14}/> {hint}</span>
