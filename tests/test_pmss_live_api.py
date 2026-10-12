@@ -2,6 +2,7 @@
 import json
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app import pmss_live_api as live
@@ -192,6 +193,6 @@ def test_local_store_is_persistent_and_one_time(local):
     before = live._intent(token, identity["id"])
     assert before["state"] == "PREPARED"
     live._transition(token, identity["id"], ("PREPARED",), "SAVING")
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException, match="已执行或状态未确认"):
         live._transition(token, identity["id"], ("PREPARED",), "SAVING")
     assert live._intent(token, identity["id"])["state"] == "SAVING"
