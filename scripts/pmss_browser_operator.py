@@ -47,13 +47,17 @@ def _trusted(handler):
 
 
 def _driver():
+    global _DRIVER
+    if _DRIVER is not None:
+        return _DRIVER
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     options = Options()
     options.debugger_address = os.environ.get(
         "POWERBID_CHROME_DEBUGGER", "127.0.0.1:9223"
     )
-    return webdriver.Chrome(options=options)
+    _DRIVER = webdriver.Chrome(options=options)
+    return _DRIVER
 
 
 def _pick_tab(driver):
