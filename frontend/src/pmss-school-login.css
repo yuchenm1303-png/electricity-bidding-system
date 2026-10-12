@@ -17,3 +17,11 @@
 .pmss-browser-error{color:#ff9191;font-size:12px;margin:12px 0 0}
 .pmss-browser-privacy{margin:15px 0 0;display:flex;align-items:center;gap:7px;font-size:11px;color:#8d979d;line-height:1.6}
 @media(max-width:720px){.pmss-browser-backdrop{padding:8px}.pmss-browser-modal{padding:13px;border-radius:12px}.pmss-browser-heading h3{font-size:18px}.pmss-browser-surface{aspect-ratio:1365/768}.pmss-browser-surface img{object-fit:contain}.pmss-browser-footer{align-items:flex-start;flex-direction:column}}
+
+.pmss-browser-native-input{display:flex;align-items:center;gap:12px;margin-top:13px;padding:10px 12px;border-radius:10px;border:1px solid #3c4650;background:#1c2228;flex-wrap:wrap}
+.pmss-browser-native-input label{font-size:12px;font-weight:600;color:#d8e0e6;display:flex;gap:7px;align-items:center;white-space:nowrap}
+.pmss-browser-native-input input{flex:1 1 230px;min-width:0;max-width:520px;font-size:13px;padding:11px 12px;color:#fff;background:#10161a;border:1px solid #596471;border-radius:8px;outline:none}
+.pmss-browser-native-input input:focus{border-color:#7eb3e4;box-shadow:0 0 0 2px rgba(126,179,228,.2)}
+.pmss-browser-native-input input::placeholder{color:#a6b0b7;opacity:1}
+.pmss-browser-native-input>span{font-size:11px;color:#9ba8ae;white-space:nowrap}
+@media(max-width:720px){.pmss-browser-native-input{gap:8px}.pmss-browser-native-input>span{white-space:normal}}
