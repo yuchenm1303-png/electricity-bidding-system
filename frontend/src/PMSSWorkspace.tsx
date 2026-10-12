@@ -4,16 +4,17 @@ import { Activity, ArrowRight, Database, Download, FileJson2, ShieldCheck, Uploa
 import {
   CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { evaluatePMSSNetwork, inspectPMSS, optimizePMSS, rankPMSSNetwork } from "./api";
-import { numeric, type PMSSInspection, type PMSSNetworkComparison, type PMSSNetworkRank, type PMSSOptimization } from "./types";
+import { evaluatePMSSNetwork, inspectPMSS, optimizePMSS, rankPMSSNetwork, generatePMSSStrategyTrio, guardPMSSStrategyTrio } from "./api";
+import { numeric, type PMSSInspection, type PMSSNetworkComparison, type PMSSNetworkRank, type PMSSOptimization, type PMSSStrategyTrio, type PMSSStrategyGuard } from "./types";
 import "./pmss-studio.css";
 import { MarketExplorer, OptimizationHourReview } from "./PMSSInsights";
 import { PMSSCandidateDispatchPanel } from "./PMSSCandidateDispatchPanel";
 import { PMSSHoldoutGatePanel } from "./PMSSHoldoutGatePanel";
 import { PMSSManualClearingPanel } from "./PMSSManualClearingPanel";
-import { PMSSBiddingFlowPanel } from "./PMSSBiddingFlowPanel";
+import { PMSSSmartBidPanel } from "./PMSSSmartBidPanel";
 import type { PMSSBidProposal } from "./pmssBiddingFlow";
 import { PMSSSourcePicker } from "./PMSSSourcePicker";
+import { getPMSSSnapshot } from "./pmssReadOnly";
 import { PMSSConnectionPanel } from "./PMSSConnectionPanel";
 import type { AccountUser } from "./AccountGate";
 import { PMSSGridOverview } from "./PMSSGridOverview";
@@ -81,6 +82,9 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
   const [networkBusy, setNetworkBusy] = useState(false);
   const [rankBusy, setRankBusy] = useState(false);
   const [rankResult, setRankResult] = useState<PMSSNetworkRank | null>(null);
+  const [trioResult, setTrioResult] = useState<PMSSStrategyTrio | null>(null);
+  const [guardResult, setGuardResult] = useState<PMSSStrategyGuard | null>(null);
+  const [sourceMeta, setSourceMeta] = useState<{projectId: string; dates: string[]} | null>(null);
   const [riskAversion, setRiskAversion] = useState(0.5);
   const [target, setTarget] = useState("");
   const [minimum, setMinimum] = useState(0);
@@ -88,24 +92,24 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
   const [step, setStep] = useState(200);
   const [iterations, setIterations] = useState(2);
   const [busy, setBusy] = useState(false);
-  const [activeTask, setActiveTask] = useState<"import"|"optimize"|null>(null);
+  const [activeTask, setActiveTask] = useState<"import"|"optimize"|"smart"|null>(null);
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
 
   const clearMarket = () => {
     setSnapshot(null); setInspection(null); setAnalysis(null);
     setProposal(null); setManualReviewReady(false);
-    setNetworkResult(null); setRankResult(null); setTarget("");
+    setNetworkResult(null); setRankResult(null); setTrioResult(null); setGuardResult(null); setSourceMeta(null); setTarget("");
     setFileName(""); setError("");
   };
 
-  const importServerSnapshot = async (raw: Record<string, unknown>, label: string) => {
+  const importServerSnapshot = async (raw: Record<string, unknown>, label: string, source: {projectId: string; dates: string[]}) => {
     if (busy || networkBusy || rankBusy) throw new Error("正在运行本地计算，请完成后再切换案例。");
     clearMarket();
     setBusy(true); setActiveTask("import");
     try {
       const inspected = await inspectPMSS(raw);
-      setSnapshot(raw); setInspection(inspected);
+      setSnapshot(raw); setInspection(inspected); setSourceMeta(source);
       setMinimum(inspected.historical_bid_rule_audit.price_floor ?? 0);
       setMaximum(Math.min(10000, inspected.historical_bid_rule_audit.price_ceiling ?? 1000));
       setFileName(label);
@@ -120,14 +124,14 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
 
   const chooseUnit = (unitId: string) => {
     setTarget(unitId); setAnalysis(null); setNetworkResult(null);
-    setRankResult(null); setProposal(null); setManualReviewReady(false);
+    setRankResult(null); setTrioResult(null); setGuardResult(null); setProposal(null); setManualReviewReady(false);
   };
 
   const importFile = async (file: File) => {
     if (busy || networkBusy || rankBusy) return;
     setInspection(null); setSnapshot(null); setAnalysis(null);
     setProposal(null); setManualReviewReady(false);
-    setNetworkResult(null); setRankResult(null); setFileName(""); setError("");
+    setNetworkResult(null); setRankResult(null); setTrioResult(null); setGuardResult(null); setSourceMeta(null); setFileName(""); setError("");
     if (file.size > 700_000) {
       setError("文件超过 700 KB，使用只读导出器生成的精简脱敏 JSON。");
       return;
@@ -191,6 +195,70 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
       setAnalysis(await optimizePMSS(snapshot, target, prices, iterations));
     } catch (err) {
       setError(err instanceof Error ? err.message : "本地优化失败");
+    } finally {
+      setBusy(false); setActiveTask(null);
+    }
+  };
+
+  /**
+   * A creates independently named, cost-based DC research curves.
+   * B recomputes and screens them on independent authorized dates.
+   * Missing guard evidence is never replaced with the old network ranking.
+   */
+  const runSmart = async () => {
+    if (!snapshot || !inspection || !target || busy || rankBusy || networkBusy) return;
+    const hasLoad = inspection.load_mw.length === 24 &&
+      inspection.load_mw.every(value => Number.isFinite(value) && value >= 0);
+    if (!hasLoad || !inspection.dc_grid_available || !inspection.historical_only) {
+      setError("生成三策略需要完整 24 小时负荷、授权历史日期及已核实的 DC 电网模型。");
+      return;
+    }
+    setAnalysis(null); setRankResult(null); setTrioResult(null);
+    setGuardResult(null); setNetworkResult(null);
+    setProposal(null); setManualReviewReady(false); setError("");
+    setBusy(true); setActiveTask("smart");
+    try {
+      const trio = await generatePMSSStrategyTrio(snapshot, target);
+      if (trio.pmss_write_performed !== false ||
+          trio.pmss_clearing_executed !== false ||
+          trio.safe_for_live_submission !== false ||
+          trio.real_pmss_clearing !== false ||
+          trio.study_only !== true) {
+        throw new Error("策略来源未标明仅供本地研究，拒绝展示为智能候选。");
+      }
+      setTrioResult(trio);
+      if (!sourceMeta || !sourceMeta.dates.includes(inspection.case_date)) {
+        setError("已经生成三类本地方案，但缺少获授权的独立历史日期，暂不允许推荐或审核交接。");
+        return;
+      }
+      const dates = [...new Set(sourceMeta.dates)].sort().slice(-5);
+      if (dates.length < 3) {
+        setError("只找到不足三天的历史案例，无法通过跨日期风控；本地方案仅供研究。");
+        return;
+      }
+      const controller = new AbortController();
+      const history = await Promise.all(dates.map(date =>
+        date === inspection.case_date
+          ? Promise.resolve(snapshot)
+          : getPMSSSnapshot(sourceMeta.projectId, date, controller.signal)));
+      const guard = await guardPMSSStrategyTrio(history,
+        trio.candidates.map(item => ({
+          id: item.profile,
+          name: item.profile,
+          price_blocks: item.price_blocks,
+        })),
+        target);
+      if (guard.pmss_write_performed !== false ||
+          guard.pmss_clearing_executed !== false ||
+          guard.recommended_for_real_pmss !== null) {
+        throw new Error("跨日期风控结果包含未经许可的实际提交或收益声明。");
+      }
+      setGuardResult(guard);
+      if (!guard.candidates.some(item => item.research_shortlist_admitted)) {
+        setError("跨日期验证未达到研究推荐准入标准。三类方案仅可查看，不允许作为可信报价推荐。");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "智能报价风险复核失败；任何候选均不可自动放行。");
     } finally {
       setBusy(false); setActiveTask(null);
     }
@@ -284,17 +352,36 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
       <button type="button" onClick={() => picker.current?.click()}>选择 JSON 文件 <ArrowRight size={15}/></button>
     </div>}
     {inspection && <>
-      <PMSSBiddingFlowPanel
+      <div className="pmss-smart-target">
+        <div><strong>选择目标机组</strong><small>先在上方选择工程、日期，再选择这一组的研究机组</small></div>
+        <div className="glass-select-field">
+          <GlassSelect ariaLabel="智能报价目标机组" value={target} searchable
+            disabled={busy || networkBusy || rankBusy}
+            options={inspection.units.map(unit => ({value:unit.unit_id,label:(unit.name||unit.unit_id)+" · "+unit.unit_id}))}
+            onValueChange={chooseUnit}/>
+        </div>
+      </div>
+      <PMSSSmartBidPanel
         inspection={inspection} target={target} analysis={analysis} rankResult={rankResult}
+        trioResult={trioResult} guardResult={guardResult}
         proposal={proposal} manualReviewReady={manualReviewReady}
         pending={busy || networkBusy || rankBusy}
         onImport={() => picker.current?.click()}
-        onOptimize={() => void run()}
-        onRank={() => void runRank()}
+        onGenerate={() => void runSmart()}
         onChoose={candidate => {
           setProposal(candidate); setNetworkResult(null); setManualReviewReady(false);
         }}
       />
+      {proposal && <PMSSManualClearingPanel
+        key={fileName + ":" + target + ":" + inspection.case_date + ":" + JSON.stringify(proposal.segments)}
+        snapshot={snapshot!} caseDate={inspection.case_date}
+        proposal={proposal}
+        onReviewed={result => {
+          if (activeProposalRef.current === proposal) setManualReviewReady(result !== null);
+        }}
+      />}
+      <details className="pmss-advanced">
+        <summary>高级策略研究与技术细节 · 网络约束、历史回测、机组模型和逐时段诊断</summary>
       <div className="pmss-section-head"><div><small>01 / MARKET SNAPSHOT</small><h3>历史市场场景</h3>
         <p>{inspection.case_date || "未标注日期"} · {inspection.forecast_source}</p>
       </div><span className="pmss-status">字段已验证</span></div>
@@ -619,14 +706,6 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
           <p className="pmss-footnote">新推荐没有在 PMSS 中提交或出清。历史 MAE 只评价原报价的模型拟合，不是新报价的真实收益保证。</p>
         </>}
       </div>
-      {proposal && <PMSSManualClearingPanel
-        key={target + ":" + inspection.case_date + ":" + JSON.stringify(proposal.segments)}
-        snapshot={snapshot!} caseDate={inspection.case_date}
-        proposal={proposal}
-        onReviewed={result => {
-          if (activeProposalRef.current === proposal) setManualReviewReady(result !== null);
-        }}
-      />}
       <div className="pmss-panel">
         <div className="pmss-panel-head">
           <div>
@@ -780,6 +859,7 @@ export function PMSSWorkspace({ account }: { account?: AccountUser | null }) {
         rankResult={rankResult}
         otherBusy={busy || networkBusy || rankBusy}
       />}
+      </details>
     </>}
     <PMSSHoldoutGatePanel/>
   </section>;

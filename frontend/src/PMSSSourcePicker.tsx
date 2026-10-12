@@ -9,7 +9,7 @@ import type { PMSSInspection } from "./types";
 import "./pmss-unified.css";
 
 export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
-  onLoaded: (snapshot: Record<string, unknown>, label: string) => Promise<void>;
+  onLoaded: (snapshot: Record<string, unknown>, label: string, source: {projectId: string; dates: string[]}) => Promise<void>;
   onReset: () => void;
   inspection: PMSSInspection | null;
 }) {
@@ -84,7 +84,7 @@ export function PMSSSourcePicker({ onLoaded, onReset, inspection }: {
       const snapshot = await getPMSSSnapshot(projectId, caseDate, ctrl.signal);
       if (ctrl.signal.aborted) return;
       const project = projects.find(p => p.project_id === projectId);
-      await onLoaded(snapshot, (project?.name || "PMSS 工程") + " / " + caseDate);
+      await onLoaded(snapshot, (project?.name || "PMSS 工程") + " / " + caseDate, {projectId, dates: cases.map(item => item.case_date)});
       if (!ctrl.signal.aborted) setMessage("已读取服务器脱敏只读快照；本地试算不会写回老师平台。");
     } catch (error) {
       if (!ctrl.signal.aborted) setMessage(error instanceof Error ? error.message : "快照读取失败");

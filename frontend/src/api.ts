@@ -1,4 +1,4 @@
-import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange, PMSSJointMwhRange, PMSSHoldoutReview, PMSSManualClearingReview } from "./types";
+import type { Scenario, Settings, Report, PMSSInspection, PMSSOptimization, PMSSNetworkComparison, PMSSNetworkRank, PMSSCandidateDispatchRange, PMSSJointMwhRange, PMSSHoldoutReview, PMSSManualClearingReview, PMSSStrategyTrio, PMSSStrategyGuard } from "./types";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -154,4 +154,29 @@ export async function reviewManuallyImportedPMSSResult(
       }),
     }),
   );
+}
+
+/** A engine: source-constrained, local three-profile DC bid research. */
+export async function generatePMSSStrategyTrio(
+  snapshot: Record<string, unknown>,
+  target_unit_id: string,
+): Promise<PMSSStrategyTrio> {
+  return unpack<PMSSStrategyTrio>(await fetch(BASE + "api/pmss/strategy-trio", {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "X-PowerBid-Request": "1"},
+    body: JSON.stringify({snapshot, target_unit_id}),
+  }));
+}
+
+/** B engine: independently dated historical checks; never live market approval. */
+export async function guardPMSSStrategyTrio(
+  history_cases: Record<string, unknown>[],
+  candidates: {id: string; name: string; price_blocks: [number, number, number][]}[],
+  target_unit_id: string,
+): Promise<PMSSStrategyGuard> {
+  return unpack<PMSSStrategyGuard>(await fetch(BASE + "api/pmss/strategy-guard", {
+    method: "POST",
+    headers: {"Content-Type": "application/json", "X-PowerBid-Request": "1"},
+    body: JSON.stringify({history_cases, candidates, target_unit_id}),
+  }));
 }
