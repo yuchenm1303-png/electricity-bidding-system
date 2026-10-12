@@ -92,7 +92,8 @@ def test_only_admin_can_reconnect_during_confirmed_outage(clients, monkeypatch):
         )
         assert response.status_code == 200, response.text
         assert response.json()["vpn_authenticated"] is False
-    assert calls == [("POST", "/reconnect")]
+    # Admin status check performs an expected, read-only operator probe.
+    assert calls == [("GET", "/status"), ("POST", "/reconnect")]
 
 
 @pytest.mark.parametrize(
