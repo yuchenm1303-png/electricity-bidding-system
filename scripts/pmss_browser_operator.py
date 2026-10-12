@@ -205,11 +205,8 @@ def handle_school_browser(handler, path, authenticated):
                 return True
             with _LOCK:
                 driver = _driver()
-                try:
-                    _pick_tab(driver)
-                    outcome = _act(driver, body)
-                finally:
-                    driver.quit()
+                _pick_tab(driver)
+                outcome = _act(driver, body)
         except (ValueError, TypeError, KeyError):
             handler._json(422, {"error": "invalid_browser_action"})
             return True
