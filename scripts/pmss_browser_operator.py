@@ -30,6 +30,7 @@ _KEYS = {
     "ArrowLeft": ("ArrowLeft", "ArrowLeft", 37), "ArrowUp": ("ArrowUp", "ArrowUp", 38),
     "ArrowRight": ("ArrowRight", "ArrowRight", 39),
     "ArrowDown": ("ArrowDown", "ArrowDown", 40),
+    "SelectAll": ("a", "KeyA", 65),
 }
 
 
@@ -144,6 +145,7 @@ def _act(driver, payload):
             driver.execute_cdp_cmd("Input.dispatchKeyEvent", {
                 "type": event, "key": key, "code": code,
                 "windowsVirtualKeyCode": vk,
+                "modifiers": 2 if name == "SelectAll" else 0,
             })
     elif kind == "scroll":
         dy = payload.get("dy")
