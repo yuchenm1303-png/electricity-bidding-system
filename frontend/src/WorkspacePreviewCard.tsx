@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Activity, ArrowUpRight, BarChart3, ChevronRight, ChartNoAxesCombined,
-  Database, Expand, Gauge, Layers3, Network, ShieldCheck, X
+  Activity, ArrowUpRight, ChevronRight, ChartNoAxesCombined,
+  Database, Expand, Layers3, Network, ShieldCheck, X
 } from "lucide-react";
 import "./landing-workspace-cards.css";
 
