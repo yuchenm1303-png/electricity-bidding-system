@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Activity, ExternalLink, RefreshCw, ShieldCheck, WifiOff, Wifi, LockKeyhole, Database } from "lucide-react";
+import { PMSSBrowserLogin } from "./PMSSBrowserLogin";
 import "./pmss-connection.css";
 
 type ConnectionState = {
@@ -31,6 +32,32 @@ export function PMSSConnectionPanel({ enabled, isAdmin }: { enabled: boolean; is
   const [restarting, setRestarting] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const closeLogin = useCallback(() => setLoginOpen(false), []);
+
+  const checkSchoolAuthorized = useCallback(async (): Promise<boolean> => {
+    try {
+      const response = await fetch(STATUS, { credentials: "same-origin", cache: "no-store" });
+      if (!response.ok) return false;
+      const next = await response.json() as ConnectionState;
+      setStatus(next);
+      return next.pmss_access === "authorized";
+    } catch { return false; }
+  }, []);
+
+  const openSchoolLogin = async () => {
+    if (loginLoading) return;
+    setLoginLoading(true); setError("");
+    try {
+      const response = await fetch(import.meta.env.BASE_URL + "api/pmss/connection/browser/availability",
+        {credentials: "same-origin", cache: "no-store"});
+      const data = await response.json() as {available?: boolean};
+      if (!response.ok || !data.available) throw new Error("学校站内登录服务还未部署或正在维护");
+      setLoginOpen(true);
+    } catch (cause) {setError(cause instanceof Error ? cause.message : "无法打开学校登录");}
+    finally {setLoginLoading(false);}
+  };
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const timeout = new AbortController();
@@ -140,6 +167,10 @@ export function PMSSConnectionPanel({ enabled, isAdmin }: { enabled: boolean; is
             <RefreshCw size={16} className={restarting ? "is-spinning" : ""}/>
             {restarting ? "正在重连…" : "确认断线后重启 VPN"}
           </button>}
+          {isAdmin && !working && <button type="button" className="pmss-connection-login"
+            disabled={loginLoading} onClick={() => void openSchoolLogin()}>
+            <LockKeyhole size={15}/> {loginLoading ? "准备学校登录…" : "在 PowerBid 登录学校 PMSS"}
+          </button>}
           {isAdmin && portal && <a className="pmss-connection-portal"
             href={portal} target="_blank" rel="noopener noreferrer">
             <ExternalLink size={15}/> 查看学校个人门户
@@ -147,7 +178,7 @@ export function PMSSConnectionPanel({ enabled, isAdmin }: { enabled: boolean; is
         </div>
         {isAdmin && waiting && <p className="pmss-connection-small">
           管理员提示：学校平台要求重新认证。个人浏览器的网页登录不会自动更新服务器端会话，
-          目前尚不支持在 PowerBid 内完成服务器的交互式认证，请使用已有受保护的维护渠道。
+          请使用上方“在 PowerBid 登录学校 PMSS”打开受保护的学校登录窗口，认证后将自动更新服务器连接。
           不要重启已正常运行的 VPN 容器来尝试绕过认证。
         </p>}
         {isAdmin && <p className="pmss-connection-notice"><LockKeyhole size={14}/>
@@ -160,5 +191,7 @@ export function PMSSConnectionPanel({ enabled, isAdmin }: { enabled: boolean; is
         {message && <p className="pmss-connection-success" role="status">{message}</p>}
       </div>
     </details>
+    {isAdmin && <PMSSBrowserLogin show={loginOpen} onClose={closeLogin}
+      onConnected={checkSchoolAuthorized}/>}
   </section>;
 }

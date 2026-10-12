@@ -37,3 +37,6 @@
 .pmss-connection-expanded{display:flex;flex-direction:column;gap:14px}
 .pmss-connection.is-secondary .pmss-connection-status{margin:0}
 @media(max-width:760px){.pmss-connection.is-secondary{padding:16px}}
+
+.pmss-connection-actions .pmss-connection-login{background:#e4e9eb;color:#15191d;border:1px solid #e4e9eb;font-weight:650}
+.pmss-connection-actions .pmss-connection-login:hover:not(:disabled){background:#f7fafb;color:#15191d}

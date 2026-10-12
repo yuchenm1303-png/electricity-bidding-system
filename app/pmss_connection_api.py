@@ -17,7 +17,10 @@ from urllib.request import Request as URLRequest
 from urllib.request import urlopen
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
+import stat
 
 from app.account_auth import require_user
 
@@ -165,3 +168,108 @@ async def reconnect(request: Request):
         "vpn_authenticated": False,
         "message": "共享 VPN 已尝试重启；需要学校重新认证时，仍须获授权的使用者完成登录。",
     })
+
+
+# The school login is performed in the dedicated server-side Chrome tab.
+# The browser is never exposed as a VNC/CDP service on the public internet.
+_BROWSER_SECRET = Path("/private/powerbid-pmss/.pmss-web-login-secret")
+_BROWSER_HOST = "172.17.0.1"
+_BROWSER_PORT = 18761
+
+
+def _browser_key() -> str:
+    try:
+        info = _BROWSER_SECRET.lstat()
+        if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600:
+            raise OSError("Not an owner-only token")
+        key = _BROWSER_SECRET.read_text(encoding="ascii").strip()
+        if len(key) < 40:
+            raise OSError("Browser token too short")
+        return key
+    except OSError:
+        raise HTTPException(503, detail="学校站内登录尚未部署完成") from None
+
+
+def _browser_call(method: str, action: str, payload: dict | None = None) -> tuple[int, bytes]:
+    """Only fixed paths; no user-controlled hosts, URLs, commands or credentials."""
+    if action not in ("status", "frame", "action"):
+        raise HTTPException(404, "Unsupported browser action")
+    key = _browser_key()
+    client = http.client.HTTPConnection(_BROWSER_HOST, _BROWSER_PORT, timeout=10)
+    raw = json.dumps(payload, ensure_ascii=False).encode("utf-8") if payload else None
+    try:
+        client.request(method, "/operator/browser/" + action, body=raw, headers={
+            "X-PowerBid-Operator-Token": key,
+            "Content-Type": "application/json",
+            "Accept": "application/json, image/png",
+        })
+        response = client.getresponse()
+        data = response.read(2_000_001)
+        if len(data) > 2_000_000:
+            raise ValueError("Frame exceeds limit")
+        return response.status, data
+    except (OSError, ValueError, http.client.HTTPException):
+        raise HTTPException(503, detail="学校登录窗口暂不可用，请检查服务器浏览器") from None
+    finally:
+        client.close()
+
+
+class SchoolBrowserAction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["open", "click", "text", "key", "scroll"]
+    x: float | None = Field(default=None, ge=0, le=2000)
+    y: float | None = Field(default=None, ge=0, le=1200)
+    text: str | None = Field(default=None, max_length=128)
+    key: Literal[
+        "Enter", "Tab", "Backspace", "Delete", "Escape",
+        "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"
+    ] | None = None
+    dy: Literal[-1, 1] | None = None
+
+
+@router.get("/browser/availability")
+def browser_availability(request: Request):
+    require_user(request, admin=True)
+    try:
+        code, raw = _browser_call("GET", "status")
+        return _response({"available": code == 200 and
+                          json.loads(raw).get("ready") is True})
+    except (HTTPException, ValueError, TypeError):
+        return _response({"available": False})
+
+
+@router.get("/browser/frame")
+def browser_frame(request: Request):
+    require_user(request, admin=True)
+    code, data = _browser_call("GET", "frame")
+    if code != 200 or not data.startswith(bytes((137, 80, 78, 71, 13, 10, 26, 10))):
+        raise HTTPException(503, "学校登录画面无法读取")
+    return Response(data, media_type="image/png", headers={
+        "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+        "Vary": "Cookie",
+    })
+
+
+@router.post("/browser/action")
+def browser_action(request: Request, body: SchoolBrowserAction):
+    require_user(request, admin=True)
+    values = body.model_dump(exclude_none=True)
+    if body.action == "click" and not {"x", "y"} <= values.keys():
+        raise HTTPException(422, "Missing pointer coordinates")
+    if body.action == "text" and (not body.text or
+                                 any(ord(c) < 32 for c in body.text)):
+        raise HTTPException(422, "Invalid keyboard text")
+    if body.action == "key" and body.key is None:
+        raise HTTPException(422, "Missing key")
+    if body.action == "scroll" and body.dy is None:
+        raise HTTPException(422, "Missing scroll direction")
+    code, _raw = _browser_call("POST", "action", values)
+    if code == 409:
+        raise HTTPException(409, "学校已完成身份认证，无需继续操作登录窗口")
+    if code != 200:
+        raise HTTPException(503, "学校登录操作未被执行")
+    # Don't echo browser input, especially secrets, even to the caller.
+    global _PROBE_CACHE
+    with _PROBE_LOCK:
+        _PROBE_CACHE = (0.0, "unknown")
+    return _response({"ok": True})
