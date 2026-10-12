@@ -27,7 +27,14 @@ def _school_authorized():
         # A T200 response is the only authority; VPN status and cookie count
         # do not establish valid application authentication.
         result = requests.get(_SCHOOL_READONLY_BRIDGE, timeout=9, allow_redirects=False)
-        return result.status_code == 200 and result.json().get("retCode") == "T200"
+        if result.status_code != 200:
+            raise RuntimeError("School API did not return a successful HTTP response")
+        code = result.json().get("retCode")
+        if code == "T200":
+            return True
+        if code == "T000":
+            return False
+        raise RuntimeError("Ambiguous school authentication status")
     except (requests.RequestException, ValueError, AttributeError):
         # Fail closed: a network error is not permission to interact with a
         # possibly authenticated PMSS administrator session.
@@ -53,10 +60,12 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        handle_school_browser(self, urlsplit(self.path).path, _school_authorized)
+        if not handle_school_browser(self, urlsplit(self.path).path, _school_authorized):
+            self._json(404, {"error": "not_found"})
 
     def do_POST(self):
-        handle_school_browser(self, urlsplit(self.path).path, _school_authorized)
+        if not handle_school_browser(self, urlsplit(self.path).path, _school_authorized):
+            self._json(404, {"error": "not_found"})
 
 
 if __name__ == "__main__":
