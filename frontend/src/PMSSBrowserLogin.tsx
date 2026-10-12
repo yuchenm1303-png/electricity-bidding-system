@@ -69,7 +69,7 @@ export function PMSSBrowserLogin({
   }
 
   function keyboard(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     const specials = ["Enter", "Tab", "Backspace", "Delete", "Escape",
       "ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"];
     if (specials.includes(event.key)) {
