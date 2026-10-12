@@ -124,6 +124,19 @@ def _store(user_id: int, local_id: str, case_date: str, unit_id: str,
            case_id: str, payload: dict[str, Any]) -> str:
     token = secrets.token_urlsafe(36)
     with _database() as db:
+        db.execute("BEGIN IMMEDIATE")
+        # A new token must NOT bypass an uncertain prior upstream write.
+        previous = db.execute(
+            "SELECT 1 FROM intents WHERE project_id=? AND case_date=? AND unit_id=? "
+            "AND state IN ('SAVING', 'SAVE_ACKNOWLEDGED', 'UNKNOWN_SAVE', "
+            "'VERIFIED_SAVED', 'CLEARING', 'UNKNOWN_CLEARING', 'CLEARING_REQUESTED') "
+            "LIMIT 1",
+            (local_id, case_date, unit_id),
+        ).fetchone()
+        if previous:
+            raise HTTPException(
+                409, "此学校案例与机组已有提交或状态不确定记录，禁止重复创建出清操作"
+            )
         db.execute(
             "INSERT INTO intents VALUES(?,?,?,?,?,?,?,?,?)",
             (_token_hash(token), user_id, int(time.time()), "PREPARED",
