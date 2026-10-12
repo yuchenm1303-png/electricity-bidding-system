@@ -1,3 +1,5 @@
+body { margin: 0; }
+html:has(.pb-editorial-home) { scroll-behavior: smooth; }
 /* PowerBid / editorial homepage
    Guided by Alma's actual site structure: restrained tokens, 1200px shell,
    orderly navigation, alternate two-column feature rows, quiet motion.
@@ -7,7 +9,8 @@
   --e-text:#1a2225; --e-muted:#64748b; --e-dim:#84919e;
   --e-border:#e2e8f0; --e-accent:#7299a0;
   --e-accent-hover:#5c8188; --e-on-accent:#fff;
-  background:var(--e-bg); color:var(--e-text);
+  background:var(--e-bg); color:var(--e-text); min-height:100vh;
+  overflow:clip;
   font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
   font-size:14px; line-height:1.7;
   -webkit-font-smoothing:antialiased;
@@ -45,8 +48,8 @@
   align-items:center;gap:25px;
 }
 .pb-editorial-home .pb-e-logo {justify-self:start;display:inline-flex;}
-.pb-editorial-home .pb-brand {color:var(--e-text);gap:10px;}
-.pb-editorial-home .pb-brand-smirel {width:92px;height:30px;object-fit:contain;}
+.pb-editorial-home .pb-brand {display:inline-flex;align-items:center;white-space:nowrap;color:var(--e-text);gap:10px;}
+.pb-editorial-home .pb-brand-smirel {display:block;flex-shrink:0;width:92px;height:30px;object-fit:contain;}
 .pb-editorial-home .pb-brand-word {font-size:18px;font-weight:640;letter-spacing:-.045em;color:var(--e-text);}
 .pb-editorial-home .pb-e-nav {
   display:flex;align-items:center;justify-content:center;gap:28px;
