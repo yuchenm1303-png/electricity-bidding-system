@@ -165,17 +165,14 @@ def handle_school_browser(handler, path, authenticated):
         with _LOCK:
             try:
                 driver = _driver()
-                try:
-                    _pick_tab(driver)
-                    frame = driver.get_screenshot_as_png()
-                    pixel_w, pixel_h = struct.unpack(">II", frame[16:24])
-                    css_w, css_h = driver.execute_script(
-                        "return [window.innerWidth,window.innerHeight]"
-                    )
-                    global _FRAME_METRICS
-                    _FRAME_METRICS = (pixel_w, pixel_h, css_w, css_h)
-                finally:
-                    pass
+                _pick_tab(driver)
+                frame = driver.get_screenshot_as_png()
+                pixel_w, pixel_h = struct.unpack(">II", frame[16:24])
+                css_w, css_h = driver.execute_script(
+                    "return [window.innerWidth,window.innerHeight]"
+                )
+                global _FRAME_METRICS
+                _FRAME_METRICS = (pixel_w, pixel_h, css_w, css_h)
                 if not 100 <= len(frame) <= 2_000_000:
                     raise ValueError("Invalid frame")
             except Exception:
