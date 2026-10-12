@@ -3,7 +3,17 @@ import { AlertTriangle, CheckCircle2, RefreshCw, ShieldCheck } from "lucide-reac
 import type { PMSSStrategyTrio } from "./types";
 import "./pmss-live-clearing.css";
 
-type SchoolStatus = { configured: boolean; school_auth: string; live_write_enabled: boolean };
+type SchoolStatus = { configured: boolean; school_auth: string; live_write_enabled: boolean;
+  read_only_school_auth?: string };
+type SchoolPreflight = {
+  source: "TEACHER_PMSS_BRIDGE_READ_ONLY"; school_authenticated: true;
+  read_only: true; teacher_write_performed: false; teacher_clearing_executed: false;
+  project_name: string; case_date: string; target_unit_id: string;
+  target_unit_name: string; school_unit_capacity_mva: number;
+  school_case_mapped: boolean; price_limits: [number,number]; max_segments: number;
+  same_curve_all_day: boolean; existing_school_bid_blocks: number;
+  original_cost_fields_present: boolean; original_write_configured: boolean;
+};
 type Prepared = {
   intent_token: string; project_id: string; case_date: string; target_unit_id: string;
   state: string; segments: {startPower: number; endPower: number; price: number}[];
@@ -39,6 +49,7 @@ export function PMSSOfficialClearingPanel({
   projectId: string; caseDate: string; targetUnitId: string; trio: PMSSStrategyTrio;
 }) {
   const [school, setSchool] = useState<SchoolStatus | null>(null);
+  const [preflight, setPreflight] = useState<SchoolPreflight | null>(null);
   const [selected, setSelected] = useState("");
   const [prepared, setPrepared] = useState<Prepared | null>(null);
   const [stage, setStage] = useState("IDLE");
@@ -66,6 +77,8 @@ export function PMSSOfficialClearingPanel({
         block.length === 3 && block.every(Number.isFinite))) : [];
   const profile = usable.find(item => item.profile === selected);
   const confirmSubmit = "提交报价 " + targetUnitId + " " + caseDate;
+  const verifiedPreflight = preflight?.case_date === caseDate &&
+    preflight.target_unit_id === targetUnitId ? preflight : null;
   const confirmExecute = "执行出清 " + targetUnitId + " " + caseDate;
 
   async function action(callback: () => Promise<void>) {
@@ -74,6 +87,16 @@ export function PMSSOfficialClearingPanel({
     try {await callback();}
     catch (e) {setError(e instanceof Error ? e.message : "老师平台操作失败");}
     finally {setBusy(false);}
+  }
+
+  async function preflightSchool() {
+    await action(async () => {
+      const params = new URLSearchParams({project_id:projectId,
+        case_date:caseDate, target_unit_id:targetUnitId});
+      const report = await schoolAPI<SchoolPreflight>("school-preflight?" + params.toString());
+      setPreflight(report);
+      setNotice("已直接读取学校原版工程、日期、机组及报价规则；本次仅做只读核验，未提交或出清。");
+    });
   }
 
   async function prepare() {
@@ -143,13 +166,29 @@ export function PMSSOfficialClearingPanel({
     </header>
     <div className="pmss-live-connect">
       <strong>学校应用会话：</strong>
-      {!school ? "检查中…" : school.school_auth === "authorized" ?
-        "已验证，可以生成预览" : school.school_auth === "login_required" ?
-          "学校要求重新登录，历史研究仍可用" : "学校服务器连接待配置或不可用"}
+      {!school ? "检查中…" : school.live_write_enabled ?
+        "原版出清连接已核验" : school.read_only_school_auth === "authorized" ?
+        "学校只读会话已验证 · 原版报价写入尚待独立配置" :
+        school.read_only_school_auth === "login_required" ?
+        "学校登录会话已过期" : "学校实时连接不可用或待配置"}
       <button type="button" disabled={busy} onClick={() => void action(async () => {
         setSchool(await schoolAPI<SchoolStatus>("status"));
       })}><RefreshCw size={14}/> 检测</button>
     </div>
+    <div className="pmss-live-connect">
+      <strong>学校实时数据只读核验：</strong>
+      <button type="button" disabled={busy ||
+          school?.read_only_school_auth !== "authorized"}
+        onClick={() => void preflightSchool()}>核验选定工程、日期、机组及五段规则（不提交）</button>
+    </div>
+    {verifiedPreflight && <div className="pmss-live-preview">
+      <div><strong>学校工程</strong><span>{verifiedPreflight.project_name} / {verifiedPreflight.case_date}</span></div>
+      <div><strong>学校机组</strong><span>{verifiedPreflight.target_unit_name} · {verifiedPreflight.school_unit_capacity_mva} MVA</span></div>
+      <div><strong>学校日前市场</strong><span>24小时共用曲线：{verifiedPreflight.same_curve_all_day ? "是" : "否"} · 最多 {verifiedPreflight.max_segments} 段</span></div>
+      <div><strong>实时报价范围</strong><span>{verifiedPreflight.price_limits[0]}～{verifiedPreflight.price_limits[1]}</span></div>
+      <div><strong>学校原报价读取</strong><span>{verifiedPreflight.existing_school_bid_blocks} 段 · 原始成本字段：{verifiedPreflight.original_cost_fields_present ? "已核验" : "缺失"}</span></div>
+      <p>只读学校原始数据，尚未保存新报价或执行出清。学校读写权限与本地策略风控分开核验。</p>
+    </div>}
     <p className="pmss-live-warning"><AlertTriangle size={16}/>
       三类本地策略尚未经过老师 PMSS 验证，部分机组物理约束也尚未核实。实际能否接受报价由学校实时规则检查；操作会修改学校对应案例的报价与结果；
       请只选择本次课程仿真实验要验证的报价。</p>

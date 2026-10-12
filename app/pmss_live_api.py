@@ -244,6 +244,99 @@ def _readback_matches(original: dict[str, Any], payload: dict[str, Any]) -> bool
         return False
 
 
+def _readonly_bridge_adapter() -> TeacherPlatformAdapter:
+    """Read-only school bridge, never used for save or clearing."""
+    endpoint = os.getenv("PMSS_READONLY_BRIDGE_URL", "")
+    if endpoint != "http://172.17.0.1:18760":
+        raise ValueError("Private read-only school bridge unavailable")
+    return TeacherPlatformAdapter(base_url=endpoint, timeout=10)
+
+
+def _readonly_school_status() -> str:
+    try:
+        adapter = _readonly_bridge_adapter()
+        adapter.list_projects(page_no=1, page_size=1)
+    except TeacherPlatformAuthenticationExpired:
+        return "login_required"
+    except (TeacherPlatformError, ValueError, OSError):
+        return "unavailable"
+    return "authorized"
+
+
+@router.get("/school-preflight")
+def school_preflight(request: Request, project_id: str,
+                     case_date: date, target_unit_id: str):
+    """School-only queries; no school write or local intent creation."""
+    require_user(request, admin=True)
+    if not (1 <= len(project_id) <= 100 and 1 <= len(target_unit_id) <= 100):
+        raise HTTPException(422, "学校工程或机组标识不合法")
+    try:
+        root, projects = _catalog()
+        item = next((x for x in projects if x["project_id"] == project_id), None)
+        day = case_date.isoformat()
+        if not root.is_dir() or not item or not any(
+            x["case_date"] == day for x in item["cases"]
+        ):
+            raise ValueError("Case not found in authenticated catalog")
+        adapter = _readonly_bridge_adapter()
+        remote_projects = adapter.list_projects(page_no=1, page_size=50)
+        candidates = [
+            x for x in remote_projects
+            if isinstance(x, dict) and x.get("projectName") == item["name"]
+        ]
+        if len(candidates) != 1:
+            raise ValueError("School project does not uniquely match")
+        remote_id = str(candidates[0]["projectId"])
+        ctx, case, unit, scope = _remote_case(
+            adapter, remote_id, day, target_unit_id
+        )
+        rules = MarketLimits.from_pmss(ctx.market_system)
+        if not rules.same_curve or rules.price_floor is None or rules.price_ceiling is None:
+            raise ValueError("School day-ahead rules do not match local mode")
+        existing = adapter.get_unit_bid(
+            scope_id=scope, unit_id=target_unit_id
+        )
+        blocks = existing.get("datas") if isinstance(existing, dict) else None
+        count = 0
+        if isinstance(blocks, list):
+            count = sum(len(x.get("segmentDatas", []))
+                        for x in blocks if isinstance(x, dict))
+        cost_keys = (
+            "minTechPowerCost", "startCostHot", "startCostWarm", "startCostCold"
+        )
+        cost_ready = isinstance(existing, dict) and all(
+            key in existing for key in cost_keys
+        )
+        return {
+            "source": "TEACHER_PMSS_BRIDGE_READ_ONLY",
+            "school_authenticated": True,
+            "read_only": True,
+            "teacher_write_performed": False,
+            "teacher_clearing_executed": False,
+            "project_id": project_id,
+            "project_name": item["name"],
+            "case_date": day,
+            "target_unit_id": target_unit_id,
+            "target_unit_name": str(unit.get("title", "")),
+            "school_unit_capacity_mva": unit.get("mvarate"),
+            "school_case_mapped": bool(case.get("caseId")),
+            "price_limits": [rules.price_floor, rules.price_ceiling],
+            "max_segments": rules.max_segments,
+            "same_curve_all_day": rules.same_curve,
+            "existing_school_bid_blocks": count,
+            "original_cost_fields_present": cost_ready,
+            "original_write_configured": bool(
+                os.getenv("PMSS_BASE_URL")
+                and os.getenv("PMSS_COOKIE_FILE")
+                and os.getenv("PMSS_LIVE_PROJECT_MAP_FILE")
+            ),
+        }
+    except TeacherPlatformAuthenticationExpired:
+        raise HTTPException(409, "学校登录已过期，请由管理员在 PowerBid 内重新认证") from None
+    except (TeacherPlatformError, ValueError, OSError, KeyError, TypeError):
+        raise HTTPException(422, "学校只读数据与选定工程、日期或机组未能核对一致") from None
+
+
 @router.get("/status")
 def live_status(request: Request):
     require_user(request, admin=True)
@@ -252,7 +345,8 @@ def live_status(request: Request):
                       os.getenv("PMSS_LIVE_PROJECT_MAP_FILE"))
     if not configured:
         return {"configured": False, "school_auth": "not_configured",
-                "live_write_enabled": False}
+                "live_write_enabled": False,
+                "read_only_school_auth": _readonly_school_status()}
     try:
         adapter = _adapter()
         adapter.list_projects(page_no=1, page_size=1)
@@ -263,7 +357,8 @@ def live_status(request: Request):
     else:
         state = "authorized"
     return {"configured": True, "school_auth": state,
-            "live_write_enabled": state == "authorized"}
+            "live_write_enabled": state == "authorized",
+            "read_only_school_auth": _readonly_school_status()}
 
 
 @router.post("/prepare")
