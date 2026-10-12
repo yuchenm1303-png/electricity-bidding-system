@@ -9,7 +9,7 @@ export type PMSSBidSegment = PMSSOptimization["recommended"]["segments"][number]
 export type PMSSBidProposal = {
   caseDate: string;
   targetUnitId: string;
-  source: "surrogate" | "network-risk";
+  source: "surrogate" | "network-risk" | "strategy-trio";
   strategyLabel: string;
   segments: PMSSBidSegment[];
   shared24hCurve: true;
