@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, Download, LockKeyhole, ShieldAlert, Sparkles } from "lucide-react";
-import type { PMSSInspection, PMSSNetworkRank, PMSSOptimization } from "./types";
+import type { PMSSInspection, PMSSNetworkRank, PMSSOptimization, PMSSStrategyTrio, PMSSStrategyGuard } from "./types";
 import { numeric } from "./types";
 import {
-  proposalAuditDocument, proposalFromSurrogate, type PMSSBidProposal,
+  proposalAuditDocument, type PMSSBidProposal,
 } from "./pmssBiddingFlow";
-import { buildSmartBidProfiles, suggestedSmartProfile, type SmartProfileId } from "./pmssSmartBid";
+import { buildSmartBidProfiles, buildSmartTrioProfiles, suggestedGuardedProfile, type SmartProfileId } from "./pmssSmartBid";
 import "./pmss-smart-bid.css";
 
 type Props = {
@@ -13,6 +13,8 @@ type Props = {
   target: string;
   analysis: PMSSOptimization | null;
   rankResult: PMSSNetworkRank | null;
+  trioResult: PMSSStrategyTrio | null;
+  guardResult: PMSSStrategyGuard | null;
   proposal: PMSSBidProposal | null;
   manualReviewReady: boolean;
   pending: boolean;
@@ -40,7 +42,7 @@ function downloadCandidate(proposal: PMSSBidProposal) {
 }
 
 export function PMSSSmartBidPanel({
-  inspection, target, analysis, rankResult, proposal, manualReviewReady,
+  inspection, target, analysis, rankResult, trioResult, guardResult, proposal, manualReviewReady,
   pending, onImport, onGenerate, onChoose,
 }: Props) {
   const [selectedId, setSelectedId] = useState<SmartProfileId | "surrogate" | null>(null);
@@ -52,10 +54,12 @@ export function PMSSSmartBidPanel({
     setSelectedId(null);
     setReviewChecked(false);
     setLocalError("");
-  }, [inspection.case_date, target, rankResult, analysis]);
+  }, [inspection.case_date, target, rankResult, trioResult, guardResult, analysis]);
 
-  const profiles = buildSmartBidProfiles(inspection, rankResult?.target_unit_id === target ? rankResult : null);
-  const suggestion = suggestedSmartProfile(profiles);
+  const profiles = trioResult
+    ? buildSmartTrioProfiles(inspection, trioResult.target_unit_id === target ? trioResult : null, guardResult)
+    : buildSmartBidProfiles(inspection, rankResult?.target_unit_id === target ? rankResult : null);
+  const suggestion = trioResult ? suggestedGuardedProfile(profiles) : null;
   const hasLoad = inspection.load_mw.length === 24 &&
     inspection.load_mw.every(value => Number.isFinite(value) && value >= 0);
   const targetUnit = inspection.units.find(unit => unit.unit_id === target);
@@ -66,10 +70,10 @@ export function PMSSSmartBidPanel({
     proposal.targetUnitId === target ? proposal : null;
   const selectedProfile = profiles.find(item => item.id === selectedId) ??
     (!selectedId ? suggestion : null);
-  const willChoose = selectedProfile?.proposal ??
-    (selectedId === "surrogate" && fallback
-      ? (() => {try {return proposalFromSurrogate(inspection, fallback);} catch {return null;}})()
-      : null);
+  // Research-only output is visible, but cannot advance to handoff without B approval.
+  const willChoose = selectedProfile?.researchAdmitted === true &&
+    guardResult?.status === "HISTORICAL_ONLY_LOCAL_STRATEGY_RESEARCH"
+    ? selectedProfile.proposal : null;
 
   function confirmReview() {
     if (!reviewChecked || !willChoose) return;
@@ -89,7 +93,7 @@ export function PMSSSmartBidPanel({
     {label: "人工审核", complete: !!chosen},
     {label: "出清复盘", complete: manualReviewReady},
   ];
-  const confidence = rankResult?.confidence_status || "尚未取得独立验证结论";
+  const confidence = guardResult?.model_confidence_grade || "尚未取得独立跨日期验证结论";
 
   return <section className="pmss-smart" aria-label="一键智能报价工作台">
     <div className="pmss-smart-top">
@@ -143,11 +147,14 @@ export function PMSSSmartBidPanel({
           <h5>{slot.title}</h5>
           {profile ? <>
             <p>{profile.subtitle} · {profile.candidate.name}</p>
+            <span className="pmss-smart-risk">{
+              profile.researchAdmitted ? "通过历史研究筛选（非实盘许可）" : "尚未通过独立风控，禁止作为可信推荐"
+            }</span>
             <div className="pmss-smart-values">
               <div><small>模拟期望边际收益</small><strong>{numeric(profile.candidate.expected_margin, 2)}</strong></div>
               <div><small>模拟下行边际收益</small><strong>{numeric(profile.candidate.downside_margin, 2)}</strong></div>
             </div>
-            <div className="pmss-smart-bottom">风险加权模型评分 {numeric(profile.candidate.score, 2)}
+            <div className="pmss-smart-bottom">本地模型评分 {numeric(profile.candidate.score, 2)}
               <ArrowRight size={16}/></div>
           </> : <>
             <p>当前没有足够的独立、合规候选填入这一类别。</p>
@@ -163,10 +170,10 @@ export function PMSSSmartBidPanel({
         查看并人工核对
       </button>
     </div>}
-    {rankResult && profiles.length < 3 && <p className="pmss-smart-warning" role="status">
+    {(trioResult || rankResult) && profiles.length < 3 && <p className="pmss-smart-warning" role="status">
       策略引擎没有返回三条不同且通过基本规则检查的曲线，因此保留空位；未用同一报价冒充不同方案。
     </p>}
-    {rankResult && profiles.length === 0 && <p className="pmss-smart-warning" role="alert">
+    {(trioResult || rankResult) && profiles.length === 0 && <p className="pmss-smart-warning" role="alert">
       当前排序未产生可审核候选，可能存在极端报价或规则不符。请检查网络和市场参数，不能强行推荐。
     </p>}
     <div className="pmss-smart-decision">
@@ -180,16 +187,21 @@ export function PMSSSmartBidPanel({
         <span className="pmss-smart-risk"><ShieldAlert size={14}/>
           风控状态：尚未获得跨日期、真实 PMSS 新报价出清的独立验证；不具备自动提交准入
         </span>
-        {rankResult && <small>引擎可信度标识：{confidence} · 历史证据天数：{rankResult.historical_evidence_days}（不等于独立留出验证）</small>}
+        <small>风控可信度：{confidence} · 独立日期：{guardResult?.training_case_dates.join("、") || "未验证"} · 留出日期：{guardResult?.untouched_holdout_case_dates.join("、") || "未验证"}</small>
+        {selectedProfile && !selectedProfile.researchAdmitted && <p className="pmss-smart-warning" role="status">
+          此方案尚未通过跨日期研究准入，不提供可信推荐或人工交接。
+          {selectedProfile.riskBlockers?.length
+            ? " 风险原因：" + selectedProfile.riskBlockers.join("、") : ""}
+        </p>}
       </div>
       <div className="pmss-smart-review">
         <label><input type="checkbox" checked={reviewChecked} disabled={!willChoose || pending}
           onChange={event => setReviewChecked(event.target.checked)}/>
-          我已核对机组、日期与报价规则，理解这只是本地研究候选，不代表真实收益或老师平台的批准。
+          我已核对日期与报价规则；只有通过独立日期研究准入的候选才能进入人工审核，这仍不代表老师平台批准。
         </label>
         <button type="button" disabled={!reviewChecked || !willChoose || pending}
           onClick={confirmReview}>人工确认候选 <ArrowRight size={16}/></button>
-        <small>勾选后只在本页确认候选，不会向老师平台发起任何写入。</small>
+        <small>未通过风控的候选只允许查看研究指标，不能进入推荐审核或模拟真实收益。所有操作均不写入老师平台。</small>
       </div>
     </div>
     {localError && <p role="alert" className="pmss-smart-warning">{localError}</p>}
