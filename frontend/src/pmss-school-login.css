@@ -1,0 +1,19 @@
+.pmss-browser-backdrop{position:fixed;inset:0;z-index:100000;background:rgba(4,7,12,.84);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:22px}
+.pmss-browser-modal{width:min(1100px,100%);max-height:94vh;overflow:auto;background:#14171b;border:1px solid rgba(255,255,255,.14);box-shadow:0 25px 90px #0009;border-radius:20px;padding:22px;color:#f2f2f2}
+.pmss-browser-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:0 2px 18px}
+.pmss-browser-heading small{font-size:10px;letter-spacing:.1em;color:#a2afb5;display:flex;gap:8px;align-items:center}
+.pmss-browser-heading h3{font-size:22px;font-weight:630;letter-spacing:-.04em;margin:7px 0}
+.pmss-browser-heading p{font-size:12px;color:#a4afb6;line-height:1.6;margin:0}
+.pmss-browser-heading>button{background:transparent;border:1px solid #39414a;border-radius:9px;color:#e6e6e6;width:34px;height:34px;display:grid;place-items:center;cursor:pointer}
+.pmss-browser-surface{width:100%;aspect-ratio:1365/768;background:#0c1115;border:1px solid #3d424b;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;outline:none}
+.pmss-browser-surface:focus-visible{outline:2px solid #b9c5ca;outline-offset:3px}
+.pmss-browser-surface img{display:block;width:100%;height:100%;object-fit:contain;cursor:crosshair;user-select:none}
+.pmss-browser-footer{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:16px 0 0;flex-wrap:wrap;color:#bbc5cb;font-size:12px}
+.pmss-browser-footer>span{display:flex;align-items:center;gap:8px}
+.pmss-browser-buttons{display:flex;gap:7px;flex-wrap:wrap}
+.pmss-browser-buttons button{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 12px;font-size:12px;background:#252b30;color:#f1f3f5;border:1px solid #3b4247;border-radius:8px;cursor:pointer}
+.pmss-browser-buttons button:hover{background:#353d43}
+.pmss-browser-buttons button:last-child{background:#e5ebef;color:#101719}
+.pmss-browser-error{color:#ff9191;font-size:12px;margin:12px 0 0}
+.pmss-browser-privacy{margin:15px 0 0;display:flex;align-items:center;gap:7px;font-size:11px;color:#8d979d;line-height:1.6}
+@media(max-width:720px){.pmss-browser-backdrop{padding:8px}.pmss-browser-modal{padding:13px;border-radius:12px}.pmss-browser-heading h3{font-size:18px}.pmss-browser-surface{aspect-ratio:1.3}.pmss-browser-surface img{object-fit:contain}.pmss-browser-footer{align-items:flex-start;flex-direction:column}}
