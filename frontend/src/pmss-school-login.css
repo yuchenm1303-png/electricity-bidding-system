@@ -17,3 +17,15 @@
 .pmss-browser-error{color:#ff9191;font-size:12px;margin:12px 0 0}
 .pmss-browser-privacy{margin:15px 0 0;display:flex;align-items:center;gap:7px;font-size:11px;color:#8d979d;line-height:1.6}
 @media(max-width:720px){.pmss-browser-backdrop{padding:8px}.pmss-browser-modal{padding:13px;border-radius:12px}.pmss-browser-heading h3{font-size:18px}.pmss-browser-surface{aspect-ratio:1365/768}.pmss-browser-surface img{object-fit:contain}.pmss-browser-footer{align-items:flex-start;flex-direction:column}}
+
+.pmss-browser-quick-login{margin-top:14px;border:1px solid #354049;background:#1b2127;border-radius:12px;padding:12px 14px}
+.pmss-browser-quick-description{display:flex;gap:8px;align-items:center;color:#e4ebef;font-size:12px;font-weight:650;margin-bottom:10px}
+.pmss-browser-quick-description span{font-size:11px;color:#9ba8b0;font-weight:400;margin-left:auto}
+.pmss-browser-quick-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end}
+.pmss-browser-quick-fields label{display:flex;flex-direction:column;gap:5px;color:#aab5bc;font-size:11px;min-width:0}
+.pmss-browser-quick-fields input{height:38px;width:100%;box-sizing:border-box;background:#111821;border:1px solid #44505a;border-radius:8px;padding:0 11px;color:#f7fafc;font-size:14px;font-family:inherit;outline:none}
+.pmss-browser-quick-fields input:focus{border-color:#73b7d7;box-shadow:0 0 0 2px rgba(115,183,215,.17)}
+.pmss-browser-quick-fields input:disabled{opacity:.64}
+.pmss-browser-quick-fields button{border:0;border-radius:8px;min-height:38px;padding:0 18px;white-space:nowrap;background:#e7ebee;color:#13202b;font-size:12px;font-weight:700;cursor:pointer}
+.pmss-browser-quick-fields button:disabled{opacity:.55;cursor:default}
+@media(max-width:720px){.pmss-browser-quick-description{align-items:flex-start;flex-wrap:wrap}.pmss-browser-quick-description span{margin-left:0}.pmss-browser-quick-fields{grid-template-columns:1fr}.pmss-browser-quick-fields button{width:100%}.pmss-browser-surface{max-height:43vh}}
