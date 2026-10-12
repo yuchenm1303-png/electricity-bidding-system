@@ -320,6 +320,26 @@ def assess_pmss_strategy_candidates(
             **asdict(historical),
             "tolerances_are_project_research_preferences_not_pmss_rules": True,
         },
+        # Strictly historical ORIGINAL bids only, never hypothetical strategy
+        # observations. Keep target-specific error separate from grid-wide MAE.
+        "target_unit_original_bid_historical_fit": [{
+            "case_date": day.case_date,
+            "target_unit_id": target_unit_id,
+            "dispatch_mae_mw": next(
+                row.dispatch.mae for row in day.per_unit
+                if row.unit_id == target_unit_id
+            ),
+            "dispatch_coverage": next(
+                row.dispatch.coverage for row in day.per_unit
+                if row.unit_id == target_unit_id
+            ),
+            "max_abs_dispatch_error_mw": next(
+                row.max_abs_error_mw for row in day.per_unit
+                if row.unit_id == target_unit_id
+            ),
+            "original_bid_only": True,
+            "new_bid_counterfactual_verified": False,
+        } for day in days],
         "per_day_original_bid_simulation_vs_real_pmss": [{
             "case_date": day.case_date,
             "dispatch_mae_mw": day.unit_dispatch.mae,
