@@ -178,11 +178,11 @@ function drawTextNode(
     fontKerning?: string; fontStretch?: string; fontVariantCaps?: string;
     wordSpacing?: string; textRendering?: string;
   };
-  if ("fontKerning" in typography) typography.fontKerning = style.fontKerning || "auto";
-  if ("fontStretch" in typography) typography.fontStretch = style.fontStretch || "normal";
-  if ("fontVariantCaps" in typography) typography.fontVariantCaps = style.fontVariantCaps || "normal";
+  if ("fontKerning" in typography) typography.fontKerning = (style.fontKerning || "auto") as typeof typography.fontKerning;
+  if ("fontStretch" in typography) typography.fontStretch = (style.fontStretch || "normal") as typeof typography.fontStretch;
+  if ("fontVariantCaps" in typography) typography.fontVariantCaps = (style.fontVariantCaps || "normal") as typeof typography.fontVariantCaps;
   if ("wordSpacing" in typography) typography.wordSpacing = style.wordSpacing || "0px";
-  if ("textRendering" in typography) typography.textRendering = style.textRendering || "auto";
+  if ("textRendering" in typography) typography.textRendering = (style.textRendering || "auto") as typeof typography.textRendering;
 
   const transform = style.textTransform;
   for (const match of matches) {
