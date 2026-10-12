@@ -145,6 +145,40 @@ def _act(driver, payload):
     return {}
 
 
+def _submit_school_login(driver, username, password):
+    """Fill the two known school form fields and submit only after admin click.
+
+    Inputs exist for this one operation; never return, persist or log either.
+    Selenium/CDP acts on the already-authenticated, server-owned school tab.
+    """
+    page = urlsplit(driver.current_url)
+    if page.hostname != _HOST or page.path != "/":
+        raise ValueError("School login form is not the active page")
+    # Only two exact field identifiers and the school's own submit control.
+    form_ready = driver.execute_script(
+        "return Boolean(document.querySelector('input#username[type=text]')"
+        " && document.querySelector('input#password[type=password]')"
+        " && document.querySelector('button[type=submit]'))"
+    )
+    if not form_ready:
+        raise ValueError("School login form is unavailable")
+    # Native input events are required for React / Ant Design form state.
+    for field_id, value in (("username", username), ("password", password)):
+        driver.execute_script(
+            "const field=document.getElementById(arguments[0]);"
+            "const setter=Object.getOwnPropertyDescriptor("
+            "HTMLInputElement.prototype,'value').set;"
+            "setter.call(field,'');"
+            "field.dispatchEvent(new Event('input',{bubbles:true}));"
+            "field.focus();",
+            field_id,
+        )
+        driver.execute_cdp_cmd("Input.insertText", {"text": value})
+    # No generic click: exactly the known school sign-in form submit button.
+    driver.execute_script(
+        "document.querySelector('button[type=submit]').click()"
+    )
+
 def handle_school_browser(handler, path, authenticated):
     """Return True only for the dedicated login routes on the local bridge."""
     if not path.startswith("/operator/browser/"):
@@ -182,6 +216,38 @@ def handle_school_browser(handler, path, authenticated):
         handler.send_header("Content-Length", str(len(frame)))
         handler.end_headers()
         handler.wfile.write(frame)
+        return True
+    if path == "/operator/browser/login" and handler.command == "POST":
+        try:
+            size = int(handler.headers.get("Content-Length", "0"))
+            if not 1 <= size <= 900:
+                raise ValueError("Invalid login request size")
+            body = json.loads(handler.rfile.read(size))
+            if not isinstance(body, dict) or set(body) != {"username", "password"}:
+                raise ValueError("Invalid login request")
+            username, password = body["username"], body["password"]
+            if not (isinstance(username, str) and isinstance(password, str)
+                    and 1 <= len(username) <= 128 and 1 <= len(password) <= 256):
+                raise ValueError("Invalid login field length")
+            if any(ord(c) < 32 for c in username + password):
+                raise ValueError("Invalid login characters")
+            if authenticated():
+                handler._json(409, {"error": "school_already_authorized"})
+                return True
+            with _LOCK:
+                driver = _driver()
+                try:
+                    _pick_tab(driver)
+                    _submit_school_login(driver, username, password)
+                finally:
+                    driver.quit()
+        except (ValueError, TypeError, KeyError):
+            handler._json(422, {"error": "invalid_school_login_form"})
+            return True
+        except Exception:
+            handler._json(503, {"error": "school_login_unavailable"})
+            return True
+        handler._json(200, {"submitted": True})
         return True
     if path == "/operator/browser/action" and handler.command == "POST":
         try:
