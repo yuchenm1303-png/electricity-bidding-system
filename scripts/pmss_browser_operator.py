@@ -9,13 +9,16 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import math
 import stat
+import struct
 import threading
 from pathlib import Path
 from urllib.parse import urlsplit
 
 _LOCK = threading.RLock()
 _HANDLE = None
+_FRAME_METRICS = None
 _SCHOOL_URL = "http://cq.university.netts-dev.tsintergy.com/"
 _HOST = "cq.university.netts-dev.tsintergy.com"
 _TOKEN_FILE = "/srv/powerbid-platform/private-cases/.pmss-web-login-secret"
@@ -73,6 +76,20 @@ def _pick_tab(driver):
     raise ValueError("No school browser tab")
 
 
+def _screenshot_to_css(x, y, metrics):
+    """Chrome CDP accepts CSS coordinates, screenshots contain device pixels."""
+    if metrics is None:
+        raise ValueError("Browser frame must be captured before clicking")
+    pixel_w, pixel_h, css_w, css_h = metrics
+    if not all(math.isfinite(v) and v > 0 for v in metrics):
+        raise ValueError("Invalid browser dimensions")
+    if not all(math.isfinite(v) for v in (x, y)):
+        raise ValueError("Invalid pointer coordinates")
+    if not (0 <= x < pixel_w and 0 <= y < pixel_h):
+        raise ValueError("Pointer outside screenshot")
+    return (x * css_w / pixel_w, y * css_h / pixel_h)
+
+
 def _act(driver, payload):
     kind = payload.get("action")
     if kind == "open":
@@ -83,6 +100,7 @@ def _act(driver, payload):
             raise ValueError("Invalid coordinates")
         if not 0 <= x <= 2000 or not 0 <= y <= 1200:
             raise ValueError("Invalid coordinates")
+        x, y = _screenshot_to_css(x, y, _FRAME_METRICS)
         driver.execute_cdp_cmd("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y})
         for event in ("mousePressed", "mouseReleased"):
             driver.execute_cdp_cmd("Input.dispatchMouseEvent", {
@@ -119,6 +137,12 @@ def _act(driver, payload):
         raise ValueError("Invalid action")
     if urlsplit(driver.current_url).hostname != _HOST:
         raise ValueError("School browser left the permitted host")
+    if kind == "click":
+        # Safe focus signal only: do not inspect, store or return input contents.
+        return {"focused_input": bool(driver.execute_script(
+            "return ['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)"
+        ))}
+    return {}
 
 
 def handle_school_browser(handler, path, authenticated):
@@ -138,6 +162,12 @@ def handle_school_browser(handler, path, authenticated):
                 try:
                     _pick_tab(driver)
                     frame = driver.get_screenshot_as_png()
+                    pixel_w, pixel_h = struct.unpack(">II", frame[16:24])
+                    css_w, css_h = driver.execute_script(
+                        "return [window.innerWidth,window.innerHeight]"
+                    )
+                    global _FRAME_METRICS
+                    _FRAME_METRICS = (pixel_w, pixel_h, css_w, css_h)
                 finally:
                     driver.quit()
                 if not 100 <= len(frame) <= 2_000_000:
@@ -171,7 +201,7 @@ def handle_school_browser(handler, path, authenticated):
                 driver = _driver()
                 try:
                     _pick_tab(driver)
-                    _act(driver, body)
+                    outcome = _act(driver, body)
                 finally:
                     driver.quit()
         except (ValueError, TypeError, KeyError):
@@ -180,7 +210,7 @@ def handle_school_browser(handler, path, authenticated):
         except Exception:
             handler._json(503, {"error": "school_browser_unavailable"})
             return True
-        handler._json(200, {"ok": True})
+        handler._json(200, {"ok": True, **outcome})
         return True
     handler._json(405, {"error": "operator_method_not_allowed"})
     return True
