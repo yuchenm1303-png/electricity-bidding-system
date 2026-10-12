@@ -493,3 +493,51 @@ export type PMSSManualClearingReview = {
   pmss_clearing_executed: false;
   automatic_submission_enabled: false;
 };
+
+/** Window A: independent local DC strategy generation; not PMSS clearing. */
+export type PMSSStrategyTrio = {
+  target_unit_id: string;
+  candidates: {
+    profile: string;
+    policy_name: string;
+    expected_dc_margin: number;
+    downside_dc_margin: number;
+    worst_dc_margin: number;
+    expected_dc_mwh: number;
+    profile_score: number;
+    price_blocks: [number, number, number][];
+    full_capacity_dc_hours: number;
+    physical_status: string;
+    local_candidate_usable: boolean;
+    warnings: string[];
+  }[];
+  missing_physical_unit_ids: string[];
+  physical_inputs_independently_verified: false;
+  real_pmss_clearing: false;
+  safe_for_live_submission: false;
+  pmss_write_performed: false;
+  pmss_clearing_executed: false;
+  study_only: true;
+};
+
+/** Window B: date-separated retrospective guard; no real-bid approval. */
+export type PMSSStrategyGuard = {
+  status: "HISTORICAL_ONLY_LOCAL_STRATEGY_RESEARCH";
+  model_confidence_grade: string;
+  training_case_dates: string[];
+  untouched_holdout_case_dates: string[];
+  candidates: {
+    candidate_id: string;
+    candidate_name: string;
+    research_shortlist_admitted: boolean;
+    live_bid_allowed: false;
+    real_pmss_candidate_profit_verified: false;
+    score_training_only_0_to_100: number | null;
+    hard_blockers: string[];
+    risk_warnings: string[];
+  }[];
+  recommended_for_real_pmss: null;
+  pmss_write_performed: false;
+  pmss_clearing_executed: false;
+  warning: string;
+};
