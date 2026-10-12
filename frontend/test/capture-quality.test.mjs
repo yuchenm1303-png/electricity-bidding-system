@@ -35,6 +35,7 @@ test("governor degrades only after sustained slow frames and recovers",()=>{
   for(let i=10;i<15;i++)governor.select(500,500,2000+i*45,.045);
   assert.equal(governor.degraded,true);
   assert.ok(governor.scale<2);
+  assert.ok(governor.scale>=1.75,"Retina fallback must not regress below previous 1.75x capture");
   for(let i=0;i<110;i++)governor.select(500,500,4500+i*16,.016);
   assert.equal(governor.degraded,false);
   assert.equal(governor.scale,2);
@@ -46,6 +47,10 @@ test("single slow frame or hidden-tab scheduling gap does not drop quality",()=>
   governor.select(480,480,2500,.2);
   governor.select(480,480,12000,8);
   assert.equal(governor.scale,2);
+  const standard=createCaptureQualityGovernor(1,4096);
+  standard.select(500,500,0,0);
+  for(let i=0;i<15;i++)standard.select(500,500,2000+i*45,.045);
+  assert.ok(standard.scale>=1.65,"1x desktop supersampling should survive slow frames");
 });
 
 test("browser zoom changes pixel ratio on resize",()=>{
