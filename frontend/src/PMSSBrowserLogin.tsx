@@ -44,6 +44,7 @@ export function PMSSBrowserLogin({
         : "点击已送达学校页面；如需输入，请点击对应输入框。");
     }
     lastInteraction.current = Date.now();
+    if (data.action === "text") setHint("已将键盘输入同步到学校页面，画面正在更新。");
     if (data.action === "open" || data.action === "text" || data.action === "key") {
       setFrame(n => n + 1);
     }
