@@ -95,7 +95,11 @@ export function PMSSBrowserLogin({
   }
 
   useEffect(() => {
-    if (!show) return;
+    if (!show) {
+      setUsername("");
+      setPassword("");
+      return;
+    }
     setError("");
     setUsername("");
     setPassword("");
