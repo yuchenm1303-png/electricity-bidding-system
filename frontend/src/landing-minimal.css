@@ -92,7 +92,7 @@ background:transparent;color:var(--e-text);border-color:var(--e-muted);
 /* Hero: one decision statement + the user's own real interactive artwork. */
 .pb-editorial-home .pb-e-hero {background:var(--e-bg);overflow:hidden;}
 .pb-editorial-home .pb-e-hero-grid {
-display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;max-width:1000px;min-height:max(790px,calc(100svh - 76px));padding-block:94px 56px;
+display:flex;flex-direction:column;justify-content:center;align-items:center;gap:0;max-width:1000px;min-height:max(750px,calc(100svh - 76px));padding-block:60px 32px;
 }
 .pb-editorial-home .pb-e-hero-copy {
 position:relative;z-index:1;text-align:center;width:100%;max-width:900px;display:flex;align-items:center;flex-direction:column;
@@ -102,19 +102,19 @@ position:relative;z-index:1;text-align:center;width:100%;max-width:900px;display
   font-size:10px;font-weight:620;letter-spacing:.16em;color:var(--e-dim);
 }
 .pb-editorial-home .pb-e-eyebrow {
-display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:28px;letter-spacing:.19em;color:var(--e-dim);font-size:10px;font-weight:470;
+display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:24px;letter-spacing:.19em;color:var(--e-dim);font-size:10px;font-weight:470;
 }
 .pb-editorial-home .pb-e-eyebrow > span {height:1px;width:23px;background:var(--e-accent);}
 .pb-editorial-home .pb-e-hero h1 {
 font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","SimSun",Georgia,serif;
-  font-size:clamp(45px,5vw,70px);line-height:1.45;letter-spacing:.035em;font-weight:400;color:var(--e-text);white-space:normal;text-wrap:balance;margin:0;
+  font-size:clamp(44px,4.7vw,66px);line-height:1.38;letter-spacing:.035em;font-weight:400;color:var(--e-text);white-space:normal;text-wrap:balance;margin:0;
 }
 .pb-editorial-home .pb-e-hero h1 em {
 display:inline-block;font-style:normal;font-weight:400;letter-spacing:.08em;color:var(--e-text);opacity:.89;background:none;-webkit-text-fill-color:currentColor;
 }
 .pb-editorial-home .pb-e-lead {
 font-family:Georgia,"Noto Serif SC","Songti SC","STSong","SimSun",serif;
-  font-size:16px;line-height:2;color:var(--e-muted);margin:26px 0 31px;letter-spacing:.03em;text-align:center;max-width:580px;
+  font-size:16px;line-height:2;color:var(--e-muted);margin:22px 0 24px;letter-spacing:.03em;text-align:center;max-width:580px;
 }
 .pb-editorial-home .pb-e-hero-buttons {
 display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
@@ -132,11 +132,11 @@ display:inline-flex;align-items:center;justify-content:center;gap:12px;min-heigh
 color:var(--e-text);border-color:var(--e-dim);
 }
 .pb-editorial-home .pb-e-hero-foot {
-display:flex;justify-content:center;align-items:center;gap:13px;margin-top:30px;font-size:10px;letter-spacing:.055em;color:var(--e-dim);
+display:flex;justify-content:center;align-items:center;gap:13px;margin-top:25px;font-size:10px;letter-spacing:.055em;color:var(--e-dim);
 }
 .pb-editorial-home .pb-e-divider-dot {height:3px;width:3px;border-radius:50%;background:var(--e-dim);}
 .pb-editorial-home .pb-e-model {
-position:relative;width:min(100%,820px);height:310px;flex-shrink:0;margin:39px auto 0;min-width:0;
+position:relative;width:min(100%,820px);height:265px;flex-shrink:0;margin:28px auto 0;min-width:0;
 }
 .pb-editorial-home .pb-e-model .pb-constellation {color:var(--e-muted);}
 .pb-editorial-home .pb-e-model .pb-field-canvas {
@@ -379,7 +379,7 @@ font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","SimSun",
   .pb-editorial-home .pb-e-nav {gap:20px;}
   .pb-editorial-home .pb-e-header-actions {gap:9px;}
   .pb-editorial-home .pb-e-hero-grid {
-gap:0;min-height:max(780px,calc(100svh - 76px));padding-block:94px 50px;
+gap:0;min-height:max(750px,calc(100svh - 76px));padding-block:58px 34px;
 }
   .pb-editorial-home .pb-e-hero h1 {
 font-size:clamp(45px,5vw,68px);
@@ -407,7 +407,7 @@ font-size:clamp(45px,5vw,68px);
   .pb-editorial-home .pb-e-mobile-links {display:flex;flex-direction:column;border-top:1px solid var(--e-border);margin-top:10px;padding-top:10px;}
   .pb-editorial-home .pb-e-mobile-links a {display:flex;align-items:center;gap:7px;min-height:38px;font-size:13px;color:var(--e-text);}
   .pb-editorial-home .pb-e-hero-grid {
-min-height:max(760px,calc(100svh - 70px));padding-block:90px 46px;gap:0;
+min-height:max(720px,calc(100svh - 70px));padding-block:70px 34px;gap:0;
 }
   .pb-editorial-home .pb-e-hero-copy {
 max-width:900px;
