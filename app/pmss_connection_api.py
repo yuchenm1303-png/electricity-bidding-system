@@ -192,7 +192,7 @@ def _browser_key() -> str:
 
 def _browser_call(method: str, action: str, payload: dict | None = None) -> tuple[int, bytes]:
     """Only fixed paths; no user-controlled hosts, URLs, commands or credentials."""
-    if action not in ("status", "frame", "action"):
+    if action not in ("status", "frame", "action", "login"):
         raise HTTPException(404, "Unsupported browser action")
     key = _browser_key()
     client = http.client.HTTPConnection(_BROWSER_HOST, _BROWSER_PORT, timeout=10)
@@ -281,3 +281,34 @@ def browser_action(request: Request, body: SchoolBrowserAction):
     if body.action == "click":
         result["focused_input"] = confirmed_focus
     return _response(result)
+
+
+class SchoolLoginCredentials(BaseModel):
+    """Transient school credentials: never logged, stored, reflected or cached."""
+    model_config = ConfigDict(extra="forbid")
+    username: str = Field(min_length=1, max_length=128)
+    password: str = Field(min_length=1, max_length=256)
+
+
+@router.post("/browser/login")
+def browser_school_login(request: Request, body: SchoolLoginCredentials):
+    require_user(request, admin=True)
+    # JSON + private custom header ensures the operation cannot be triggered
+    # by cross-site HTML forms. Credential fields are never echoed or logged.
+    if request.headers.get("X-PowerBid-Request") != "1":
+        raise HTTPException(403, detail="学校登录请求验证失败")
+    if any(ord(ch) < 32 for ch in body.username + body.password):
+        raise HTTPException(422, detail="学校登录信息含无效字符")
+    status, _ = _browser_call("POST", "login", body.model_dump())
+    if status == 409:
+        raise HTTPException(409, detail="学校 PMSS 已登录")
+    if status == 422:
+        raise HTTPException(422, detail="学校原版登录表单不可用，请刷新后重试")
+    if status != 200:
+        raise HTTPException(503, detail="学校登录操作暂时不可用")
+    global _PROBE_CACHE
+    with _PROBE_LOCK:
+        _PROBE_CACHE = (0.0, "unknown")
+    # Login success is NEVER inferred from an accepted submit. The frontend
+    # separately polls the read-only T200 school authorization result.
+    return _response({"submitted": True, "authenticated": False})

@@ -16,6 +16,9 @@ export function PMSSBrowserLogin({
   show, onClose, onConnected,
 }: { show: boolean; onClose: () => void; onConnected: () => Promise<boolean> }) {
   const [frame, setFrame] = useState(0);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [hint, setHint] = useState("点击画面里的输入框，然后在键盘上正常输入。");
   const image = useRef<HTMLImageElement>(null);
@@ -48,6 +51,34 @@ export function PMSSBrowserLogin({
     }
   }
 
+  async function loginSchool(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting || !username || !password) return;
+    setSubmitting(true);
+    setError("");
+    setHint("正在将账号信息一次性提交到学校原版登录页面…");
+    try {
+      // One request for the complete school form, not one round trip per key.
+      const response = await fetch(BASE + "login", {
+        method: "POST", credentials: "same-origin", cache: "no-store",
+        headers: {"Content-Type":"application/json", "X-PowerBid-Request":"1"},
+        body: JSON.stringify({username, password}),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({})) as {detail?: string};
+        throw new Error(payload.detail || "学校原版登录表单提交失败");
+      }
+      setHint("已提交学校原版登录表单，正在等待学校验证。此处不会将提交成功当作认证成功。");
+      setFrame(n => n + 1);
+      void onConnected();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "学校登录暂时不可用");
+    } finally {
+      setPassword("");
+      setSubmitting(false);
+    }
+  }
+
   function send(data: BrowserAction) {
     // Serialize keyboard and mouse actions so characters never arrive out of order.
     queue.current = queue.current.then(() => post(data)).catch(cause => {
@@ -64,9 +95,15 @@ export function PMSSBrowserLogin({
   }
 
   useEffect(() => {
-    if (!show) return;
+    if (!show) {
+      setUsername("");
+      setPassword("");
+      return;
+    }
     setError("");
-    setHint("请在上方的学校原版页面完成身份验证。无需将密码交给 PowerBid 管理员。");
+    setUsername("");
+    setPassword("");
+    setHint("请使用下方即时输入区登录；学校原版画面仅用于查看进度与处理额外验证。");
     void post({action: "open"}).catch(e => setError(String(e)));
     const images = window.setInterval(() => {
       if (Date.now() - lastInteraction.current > 6500) setFrame(n => n + 1);
@@ -148,6 +185,28 @@ export function PMSSBrowserLogin({
           onError={() => setError("暂时无法读取学校浏览器画面，请检查管理员登录网关")}
         />
       </div>
+      <form className="pmss-browser-quick-login" onSubmit={event => void loginSchool(event)}
+        autoComplete="off" aria-label="学校 PMSS 即时登录">
+        <div className="pmss-browser-quick-description">
+          <LockKeyhole size={15}/> 学校账号快捷登录
+          <span>本地即时输入，点击登录后一次性发送到受保护的学校浏览器，不保存密码。</span>
+        </div>
+        <div className="pmss-browser-quick-fields">
+          <label>学校用户名
+            <input name="school-username" type="text" autoComplete="off"
+              value={username} onChange={event => setUsername(event.target.value)}
+              maxLength={128} placeholder="输入学校用户名" required disabled={submitting}/>
+          </label>
+          <label>学校密码
+            <input name="school-password" type="password" autoComplete="off"
+              value={password} onChange={event => setPassword(event.target.value)}
+              maxLength={256} placeholder="输入学校密码" required disabled={submitting}/>
+          </label>
+          <button type="submit" disabled={submitting || !username || !password}>
+            {submitting ? "正在提交…" : "登录学校 PMSS"}
+          </button>
+        </div>
+      </form>
       <div className="pmss-browser-footer">
         <span><Keyboard size={14}/> {hint}</span>
         <div className="pmss-browser-buttons">
@@ -159,7 +218,7 @@ export function PMSSBrowserLogin({
         </div>
       </div>
       {error && <p className="pmss-browser-error" role="alert">{error}</p>}
-      <p className="pmss-browser-privacy"><ExternalLink size={13}/> 仅用于学校网页登录。
+      <p className="pmss-browser-privacy"><ExternalLink size={13}/> 账号信息仅用于本次学校网页登录，经过当前 HTTPS 连接传送到受保护服务器，不写入账户数据库。
         登录后的报价提交与原版出清仍须分别人工确认；不会开放服务器桌面或自动提交报价。</p>
     </section>
   </div>;
