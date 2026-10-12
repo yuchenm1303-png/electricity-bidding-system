@@ -23,6 +23,7 @@ export function PMSSBrowserLogin({
   const queue = useRef<Promise<void>>(Promise.resolve());
   const textBuffer = useRef("");
   const typingTimer = useRef<number | null>(null);
+  const lastInteraction = useRef(0);
 
   async function post(data: BrowserAction): Promise<void> {
     const response = await fetch(BASE + "action", {
@@ -41,7 +42,10 @@ export function PMSSBrowserLogin({
         ? "已选中学校输入框。现在直接键入用户名或密码。"
         : "点击已送达学校页面；如需输入，请点击对应输入框。");
     }
-    setFrame(n => n + 1);
+    lastInteraction.current = Date.now();
+    if (data.action === "open" || data.action === "key" && data.key === "Enter") {
+      setFrame(n => n + 1);
+    }
   }
 
   function send(data: BrowserAction) {
@@ -64,7 +68,9 @@ export function PMSSBrowserLogin({
     setError("");
     setHint("请在上方的学校原版页面完成身份验证。无需将密码交给 PowerBid 管理员。");
     void post({action: "open"}).catch(e => setError(String(e)));
-    const images = window.setInterval(() => setFrame(n => n + 1), 1800);
+    const images = window.setInterval(() => {
+      if (Date.now() - lastInteraction.current > 6500) setFrame(n => n + 1);
+    }, 4500);
     const checker = window.setInterval(() => {
       void onConnected().then(ok => {
         if (ok) { setHint("学校登录已经验证成功。"); onClose(); }
@@ -90,6 +96,7 @@ export function PMSSBrowserLogin({
     if (!point) return;
     flushText();
     surface.current?.focus();
+    lastInteraction.current = Date.now();
     setHint("正在将点击发送到学校浏览器…");
     send({action: "click", ...point});
   }
@@ -104,6 +111,7 @@ export function PMSSBrowserLogin({
       send({action: "key", key: event.key});
     } else if (event.key.length === 1) {
       event.preventDefault();
+      lastInteraction.current = Date.now();
       textBuffer.current += event.key;
       if (textBuffer.current.length >= 100) flushText();
       else {
