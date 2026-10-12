@@ -36,3 +36,37 @@ def test_click_uses_css_coordinates_and_reports_focus(monkeypatch):
         "mouseMoved", "mousePressed", "mouseReleased"
     ]
     assert all(item[1]["x"] == 1200 and item[1]["y"] == 350 for item in d.events)
+
+
+def test_browser_driver_reuse_and_stale_recovery(monkeypatch):
+    class Stub:
+        def __init__(self):
+            self.closed = False
+        def quit(self):
+            self.closed = True
+
+    session = Stub()
+    monkeypatch.setattr(browser, "_DRIVER", session)
+    monkeypatch.setattr(browser, "_HANDLE", "school")
+    monkeypatch.setattr(browser, "_FRAME_METRICS", (1356, 676, 1695, 845))
+    assert browser._driver() is session
+    assert browser._driver() is session
+    browser._reset_driver()
+    assert session.closed
+    assert browser._DRIVER is None
+    assert browser._HANDLE is None
+    assert browser._FRAME_METRICS is None
+
+
+def test_remote_text_enters_active_browser_field():
+    class Stub:
+        current_url = "http://cq.university.netts-dev.tsintergy.com/"
+        def __init__(self):
+            self.events = []
+        def execute_cdp_cmd(self, method, payload):
+            self.events.append((method, payload))
+    driver = Stub()
+    assert browser._act(driver, {"action": "text", "text": "Test_123"}) == {}
+    assert driver.events == [
+        ("Input.insertText", {"text": "Test_123"})
+    ]
