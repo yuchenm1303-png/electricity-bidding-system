@@ -64,7 +64,8 @@ def _pick_tab(driver):
     global _HANDLE
     handles = driver.window_handles
     if _HANDLE in handles:
-        driver.switch_to.window(_HANDLE)
+        if driver.current_window_handle != _HANDLE:
+            driver.switch_to.window(_HANDLE)
         if urlsplit(driver.current_url).hostname == _HOST:
             return
     for handle in handles:
