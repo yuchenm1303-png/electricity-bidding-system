@@ -174,7 +174,7 @@ async def reconnect(request: Request):
 # The browser is never exposed as a VNC/CDP service on the public internet.
 _BROWSER_SECRET = Path("/run/powerbid-vpn/pmss-browser-token")
 _BROWSER_HOST = "172.17.0.1"
-_BROWSER_PORT = 18760
+_BROWSER_PORT = 18761
 
 
 def _browser_key() -> str:
