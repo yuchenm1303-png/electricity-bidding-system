@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Keyboard, LockKeyhole, RefreshCw, X } from "lucide-react";
 import "./pmss-school-login.css";
+import { browserImagePoint } from "./pmssBrowserCoordinates";
 
 const BASE = import.meta.env.BASE_URL + "api/pmss/connection/browser/";
 
@@ -32,6 +33,13 @@ export function PMSSBrowserLogin({
     if (!response.ok) {
       const payload = await response.json().catch(() => ({})) as {detail?: string};
       throw new Error(payload.detail || "学校登录窗口暂时无法控制");
+    }
+    // Refresh on success; input focus is managed by the remote browser.
+    if (data.action === "click") {
+      const feedback = await response.json().catch(() => ({})) as {focused_input?: boolean};
+      setHint(feedback.focused_input
+        ? "已选中学校输入框。现在直接键入用户名或密码。"
+        : "点击已送达学校页面；如需输入，请点击对应输入框。");
     }
     setFrame(n => n + 1);
   }
@@ -75,13 +83,15 @@ export function PMSSBrowserLogin({
   function click(event: React.MouseEvent<HTMLImageElement>) {
     const img = image.current;
     if (!img) return;
-    const rect = img.getBoundingClientRect();
-    const x = (event.clientX - rect.left) * img.naturalWidth / rect.width;
-    const y = (event.clientY - rect.top) * img.naturalHeight / rect.height;
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const point = browserImagePoint(
+      event.clientX, event.clientY, img.getBoundingClientRect(),
+      img.naturalWidth, img.naturalHeight,
+    );
+    if (!point) return;
     flushText();
     surface.current?.focus();
-    send({action: "click", x: Math.round(x), y: Math.round(y)});
+    setHint("正在将点击发送到学校浏览器…");
+    send({action: "click", ...point});
   }
 
   function keyboard(event: React.KeyboardEvent<HTMLDivElement>) {
@@ -106,7 +116,10 @@ export function PMSSBrowserLogin({
   function paste(event: React.ClipboardEvent<HTMLDivElement>) {
     event.preventDefault();
     const value = event.clipboardData.getData("text").slice(0, 128);
-    if (value && !/[\r\n\x00-\x1f]/.test(value)) send({action: "text", text: value});
+    if (value && !/[\r\n\x00-\x1f]/.test(value)) {
+      flushText();
+      send({action: "text", text: value});
+    }
   }
 
   return <div className="pmss-browser-backdrop" role="presentation">
