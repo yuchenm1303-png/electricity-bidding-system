@@ -202,6 +202,8 @@ export function PMSSSmartBidPanel({
           const fleet = guardResult.per_day_original_bid_simulation_vs_real_pmss
             .find(item => item.case_date === row.case_date);
           const holdout = guardResult.untouched_holdout_case_dates.includes(row.case_date);
+          const priceRule = guardResult.historical_original_bid_vs_imported_price_rules
+            .find(item => item.case_date === row.case_date);
           return <div className={"pmss-smart-evidence-day" + (holdout ? " is-holdout" : "")}
             key={row.case_date}>
             <div className="pmss-smart-evidence-date">
@@ -211,6 +213,9 @@ export function PMSSSmartBidPanel({
             <div><small>10台机组总体出力 MAE</small><strong>{errorMW(fleet?.dispatch_mae_mw ?? null)}</strong></div>
             <div><small>节点电价 MAE</small><strong>{fleet?.nodal_price_mae_pmss_reported_unit_unverified == null
               ? "缺失" : numeric(fleet.nodal_price_mae_pmss_reported_unit_unverified, 2)}</strong></div>
+            <div><small>历史报价超出现规则的段数</small>
+              <strong>{priceRule ? priceRule.above_ceiling_segment_count +
+                priceRule.below_floor_segment_count : "未检查"}</strong></div>
           </div>;
         })}
       </div>
@@ -223,6 +228,12 @@ export function PMSSSmartBidPanel({
           {guardResult.historical_original_bid_validation.reasons.map(reason =>
             <li key={reason}>{historicalFailure(reason)}</li>)}
         </ul>}
+        {!guardResult.historical_price_rules_consistent && <p>
+          历史原报价存在超出当前导入市场价格上下限的分段，
+          可能是市场规则版本或数据口径不一致。没有修改历史记录，
+          也不能仅凭当前规则将这些历史报价直接认定为违规。
+          在来源核实前禁止据此提高策略可信度。
+        </p>}
         {guardResult.original_bid_distinct_training_curves < 2 && <p>训练案例的历史原报价曲线缺少足够变化，无法可靠检验报价变化对结果的影响。</p>}
         {guardResult.holdout_reuses_training_original_bid_curve && <p>留出日期重复使用了训练历史报价，独立性受到限制。</p>}
         <p>未核实的启停、爬坡、备用等约束仍不能假设已经满足；真实 PMSS 新报价出清验证尚未进行。</p>
