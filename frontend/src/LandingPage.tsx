@@ -7,6 +7,7 @@ import "./portal-polish.css";
 import "./landing-buttons.css";
 import "./landing-showcase-polish.css";
 import "./icon-interactions.css";
+import "./landing-alma-charcoal.css";
 import PowerConstellation from "./PowerConstellation";
 
 const PublicLiquidGlass = lazy(() => import("./PublicLiquidGlass"));
