@@ -248,7 +248,7 @@ export default function PowerConstellation() {
   return <div className="pb-constellation">
     <div className="pb-constellation-header" aria-hidden="true">
       <span className="pb-constellation-kicker"><span className="pb-constellation-status"/> 交互式电网 / 3D</span>
-      <span className="pb-constellation-meta">示意模型 · ${NODES.length} 节点</span>
+      <span className="pb-constellation-meta">示意模型 · {NODES.length} 节点</span>
     </div>
     <canvas
       ref={canvasRef}
