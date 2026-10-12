@@ -408,6 +408,19 @@
 :root[data-theme] .pb-landing .pb-footer { background: var(--alma-alt); color: var(--alma-ink); border-top: 1px solid var(--alma-line); }
 :root[data-theme] .pb-landing .pb-footer-inner > span,
 :root[data-theme] .pb-landing .pb-footer-inner > a { color: var(--alma-dim); }
+/* Mobile account actions should share the same muted neutral treatment. */
+:root[data-theme] .pb-landing .pb-mobile-auth-quick {
+  color: var(--alma-ink);
+  background: var(--alma-surface);
+  border: 1px solid var(--alma-line);
+  border-radius: 7px;
+  box-shadow: none;
+}
+:root[data-theme] .pb-landing .pb-mobile-auth-quick:hover {
+  color: var(--alma-ink);
+  background: var(--alma-raised);
+  border-color: var(--alma-accent);
+}
 /* Touch and reduced motion: keep the content readable without overlap. */
 @media (max-width: 900px) {
   :root[data-theme] .pb-landing .pb-header-links.pb-menu-open {
@@ -433,6 +446,7 @@
   :root[data-theme] .pb-landing .pb-hero-subtitle { font-size: 12px; margin: 21px 0 26px; }
   :root[data-theme] .pb-landing .pb-button-main { min-height: 49px; min-width: 0; padding: 0 17px; }
   :root[data-theme] .pb-landing .pb-hero-orb { top: 70%; right: -15%; width: 110vw; opacity: .14; }
+  :root[data-theme] .pb-landing .pb-hero-orb :is(.pb-constellation-kicker,.pb-constellation-meta,.pb-constellation-hint,.pb-constellation-detail) { display: none; }
   :root[data-theme] .pb-landing .pb-hero-proof { margin-top: 33px; }
   :root[data-theme] .pb-landing .pb-signal-ribbon { padding-inline: 18px; }
   :root[data-theme] .pb-landing .pb-section { padding-block: 74px; }
