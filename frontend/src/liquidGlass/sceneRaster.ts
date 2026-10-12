@@ -172,6 +172,17 @@ function drawTextNode(
   ctx.textBaseline = "alphabetic";
   const letterAware = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
   if ("letterSpacing" in letterAware) letterAware.letterSpacing = style.letterSpacing;
+  // Text captured into WebGL should retain the browser's typography
+  // decisions before the intentionally distorted optical pass.
+  const typography = ctx as CanvasRenderingContext2D & {
+    fontKerning?: string; fontStretch?: string; fontVariantCaps?: string;
+    wordSpacing?: string; textRendering?: string;
+  };
+  if ("fontKerning" in typography) typography.fontKerning = (style.fontKerning || "auto") as typeof typography.fontKerning;
+  if ("fontStretch" in typography) typography.fontStretch = (style.fontStretch || "normal") as typeof typography.fontStretch;
+  if ("fontVariantCaps" in typography) typography.fontVariantCaps = (style.fontVariantCaps || "normal") as typeof typography.fontVariantCaps;
+  if ("wordSpacing" in typography) typography.wordSpacing = style.wordSpacing || "0px";
+  if ("textRendering" in typography) typography.textRendering = (style.textRendering || "auto") as typeof typography.textRendering;
 
   const transform = style.textTransform;
   for (const match of matches) {
@@ -188,7 +199,11 @@ function drawTextNode(
         if (transform === "uppercase") text = text.toUpperCase();
         if (transform === "lowercase") text = text.toLowerCase();
         if (transform === "capitalize") text = text.replace(/\b\w/g, (part) => part.toUpperCase());
-        ctx.fillText(text, rect.left - roiLeft, rect.top - roiTop + rect.height * 0.8, Math.max(rect.width + 2, 1));
+        // Draw native glyph proportions. Canvas fillText(maxWidth)
+        // horizontally compresses letters whenever measured glyph widths
+        // differ from DOM Range metrics (especially on CJK/bold text).
+        // Native CSS wraps/clips; it does not scale the font horizontally.
+        ctx.fillText(text, rect.left - roiLeft, rect.top - roiTop + rect.height * 0.8);
       }
     } catch {
       // React may update a text node between range reads.

@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:workflow": "node --experimental-strip-types --test test/pmss-bidding-flow.test.mjs test/pmss-smart-bid.test.mjs test/lens-modes.test.mjs"
+    "test:workflow": "node --experimental-strip-types --test test/pmss-bidding-flow.test.mjs test/pmss-smart-bid.test.mjs test/lens-modes.test.mjs test/capture-quality.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.2",
