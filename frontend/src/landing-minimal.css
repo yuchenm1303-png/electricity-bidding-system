@@ -94,7 +94,7 @@
 }
 .pb-editorial-home .pb-e-hero-copy {
   position:relative;z-index:1;
-  animation:pb-e-enter .65s cubic-bezier(.21,.76,.32,1) both;
+  /* Text remains fully visible from the first frame. */
 }
 @keyframes pb-e-enter {
   from {opacity:0;transform:translateY(18px);}
@@ -141,7 +141,7 @@
 .pb-editorial-home .pb-e-divider-dot {height:3px;width:3px;border-radius:50%;background:var(--e-dim);}
 .pb-editorial-home .pb-e-model {
   position:relative;height:535px;min-width:0;
-  animation:pb-e-enter .68s .08s both;
+  /* Grid is visible immediately; motion stays inside the canvas. */
 }
 .pb-editorial-home .pb-e-model .pb-constellation {color:var(--e-muted);}
 .pb-editorial-home .pb-e-model .pb-field-canvas {opacity:.89;filter:grayscale(.26) saturate(.7);}
