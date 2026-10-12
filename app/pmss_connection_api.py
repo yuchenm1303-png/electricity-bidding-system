@@ -272,4 +272,9 @@ def browser_action(request: Request, body: SchoolBrowserAction):
     global _PROBE_CACHE
     with _PROBE_LOCK:
         _PROBE_CACHE = (0.0, "unknown")
-    return _response({"ok": True})
+    # Echo only a boolean focus state, never input text or credentials.
+    try:
+        confirmed_focus = json.loads(_raw).get("focused_input") is True
+    except (ValueError, TypeError, AttributeError):
+        confirmed_focus = False
+    return _response({"ok": True, "focused_input": confirmed_focus})
