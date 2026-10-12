@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import os
+import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
@@ -22,7 +24,21 @@ _SCHOOL_READONLY_BRIDGE = (
 )
 
 
+_AUTH_LOCK = threading.Lock()
+_AUTH_CACHE = (0.0, False)
+
+
 def _school_authorized():
+    global _AUTH_CACHE
+    with _AUTH_LOCK:
+        if time.monotonic() - _AUTH_CACHE[0] < 4:
+            return _AUTH_CACHE[1]
+        state = _read_school_auth()
+        _AUTH_CACHE = (time.monotonic(), state)
+        return state
+
+
+def _read_school_auth():
     try:
         # A T200 response is the only authority; VPN status and cookie count
         # do not establish valid application authentication.
