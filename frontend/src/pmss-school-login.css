@@ -16,4 +16,4 @@
 .pmss-browser-buttons button:last-child{background:#e5ebef;color:#101719}
 .pmss-browser-error{color:#ff9191;font-size:12px;margin:12px 0 0}
 .pmss-browser-privacy{margin:15px 0 0;display:flex;align-items:center;gap:7px;font-size:11px;color:#8d979d;line-height:1.6}
-@media(max-width:720px){.pmss-browser-backdrop{padding:8px}.pmss-browser-modal{padding:13px;border-radius:12px}.pmss-browser-heading h3{font-size:18px}.pmss-browser-surface{aspect-ratio:1.3}.pmss-browser-surface img{object-fit:contain}.pmss-browser-footer{align-items:flex-start;flex-direction:column}}
+@media(max-width:720px){.pmss-browser-backdrop{padding:8px}.pmss-browser-modal{padding:13px;border-radius:12px}.pmss-browser-heading h3{font-size:18px}.pmss-browser-surface{aspect-ratio:1365/768}.pmss-browser-surface img{object-fit:contain}.pmss-browser-footer{align-items:flex-start;flex-direction:column}}
