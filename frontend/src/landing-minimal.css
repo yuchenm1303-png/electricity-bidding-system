@@ -166,12 +166,46 @@
   filter:grayscale(.42) saturate(.75);
   opacity:.9;
 }
-/* Hide visual callouts without taking away the keyboard/screen-reader node description. */
-:root[data-theme] .pb-minimal-home .pb-minimal-grid-model :is(.pb-constellation-header,.pb-constellation-hint) {display:none;}
+/* Quiet, useful model metadata: visible, but never obstructing interaction. */
+:root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-header {
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  position:absolute;top:9px;left:12px;right:12px;z-index:2;
+  pointer-events:none;
+}
+:root[data-theme] .pb-minimal-home .pb-minimal-grid-model :is(.pb-constellation-kicker,.pb-constellation-meta) {
+  color:var(--pb-min-faint);font-size:10px;font-weight:560;letter-spacing:.08em;
+}
+:root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-status {
+  background:var(--pb-min-accent);box-shadow:none;
+}
 :root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-detail {
-  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
-  overflow:hidden;white-space:nowrap;clip-path:inset(50%);
-  border:0;box-shadow:none;backdrop-filter:none;
+  display:flex;flex-direction:column;gap:3px;
+  position:absolute;left:12px;bottom:12px;z-index:2;
+  min-width:172px;width:auto;height:auto;
+  margin:0;padding:11px 14px;
+  overflow:visible;white-space:normal;clip-path:none;
+  border:1px solid var(--pb-min-border);border-radius:9px;
+  background:color-mix(in srgb,var(--pb-min-bg) 88%,transparent);
+  box-shadow:none;backdrop-filter:blur(9px);
+  pointer-events:none;
+}
+:root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-detail-index {
+  color:var(--pb-min-faint);font-size:9px;font-weight:550;letter-spacing:.1em;
+}
+:root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-detail strong {
+  color:var(--pb-min-ink);font-size:13px;font-weight:620;
+}
+:root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-detail-sub {
+  color:var(--pb-min-soft);font-size:10px;
+}
+:root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-hint {
+  position:absolute;right:12px;bottom:17px;z-index:2;
+  display:flex;align-items:center;gap:9px;
+  color:var(--pb-min-faint);font-size:10px;font-weight:550;
+  letter-spacing:.015em;pointer-events:none;
+}
+:root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-line {
+  width:15px;background:var(--pb-min-border);
 }
 /* Under the hero: simple information, not stacked demo dashboards. */
 :root[data-theme] .pb-minimal-home .pb-minimal-capabilities {
@@ -313,6 +347,27 @@
   :root[data-theme] .pb-minimal-home .pb-minimal-context {font-size:9px;}
   :root[data-theme] .pb-minimal-home .pb-minimal-grid-model {
     height:350px;min-height:0; margin-top:0;
+  }
+  :root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-header {
+    top:7px;left:5px;right:5px;
+  }
+  :root[data-theme] .pb-minimal-home .pb-minimal-grid-model :is(.pb-constellation-kicker,.pb-constellation-meta) {
+    font-size:8px;letter-spacing:.025em;
+  }
+  :root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-detail {
+    left:5px;bottom:5px;min-width:137px;padding:8px 10px;gap:2px;
+  }
+  :root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-detail strong {
+    font-size:12px;
+  }
+  :root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-detail-sub {
+    font-size:8px;
+  }
+  :root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-hint {
+    right:5px;bottom:11px;font-size:8px;gap:5px;
+  }
+  :root[data-theme] .pb-minimal-home .pb-minimal-grid-model .pb-constellation-line {
+    width:10px;
   }
   :root[data-theme] .pb-minimal-home .pb-minimal-capabilities {padding:70px 0 72px;}
   :root[data-theme] .pb-minimal-home .pb-minimal-section-title h2 {font-size:40px;}
