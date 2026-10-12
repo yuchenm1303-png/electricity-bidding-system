@@ -61,7 +61,8 @@ export function PMSSOfficialClearingPanel({
 
   const usable = trio.target_unit_id === targetUnitId ?
     trio.candidates.filter(item => item.price_blocks.length === 5 &&
-      item.local_candidate_usable && item.price_blocks.every(block =>
+      item.price_blocks.some(block => block[2] > 0) &&
+      item.price_blocks.every(block =>
         block.length === 3 && block.every(Number.isFinite))) : [];
   const profile = usable.find(item => item.profile === selected);
   const confirmSubmit = "提交报价 " + targetUnitId + " " + caseDate;
@@ -150,7 +151,7 @@ export function PMSSOfficialClearingPanel({
       })}><RefreshCw size={14}/> 检测</button>
     </div>
     <p className="pmss-live-warning"><AlertTriangle size={16}/>
-      三类本地策略尚未获得老师 PMSS 真实出清验证。操作会修改学校对应案例的报价与结果；
+      三类本地策略尚未经过老师 PMSS 验证，部分机组物理约束也尚未核实。实际能否接受报价由学校实时规则检查；操作会修改学校对应案例的报价与结果；
       请只选择本次课程仿真实验要验证的报价。</p>
     <div className="pmss-live-pick">
       <label htmlFor="pmss-live-profile">选择需要送入学校验证的研究策略</label>
