@@ -528,6 +528,17 @@ export type PMSSStrategyGuard = {
   untouched_holdout_case_dates: string[];
   original_bid_distinct_training_curves: number;
   holdout_reuses_training_original_bid_curve: boolean;
+  historical_price_rules_consistent: boolean;
+  historical_original_bid_vs_imported_price_rules: {
+    case_date: string;
+    market_price_floor: number | null;
+    market_price_ceiling: number | null;
+    max_historical_bid_price: number | null;
+    below_floor_segment_count: number;
+    above_ceiling_segment_count: number;
+    consistent_with_imported_rule: boolean;
+    historical_original_quotes_modified: false;
+  }[];
   historical_original_bid_validation: {
     status: string;
     reasons: string[];
