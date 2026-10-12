@@ -127,6 +127,9 @@ def handle_school_browser(handler, path, authenticated):
     if not _trusted(handler):
         handler._json(403, {"error": "operator_denied"})
         return True
+    if path == "/operator/browser/status" and handler.command == "GET":
+        handler._json(200, {"ready": True})
+        return True
     if path == "/operator/browser/frame" and handler.command == "GET":
         with _LOCK:
             try:
