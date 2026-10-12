@@ -174,7 +174,7 @@ def handle_school_browser(handler, path, authenticated):
                     global _FRAME_METRICS
                     _FRAME_METRICS = (pixel_w, pixel_h, css_w, css_h)
                 finally:
-                    driver.quit()
+                    pass
                 if not 100 <= len(frame) <= 2_000_000:
                     raise ValueError("Invalid frame")
             except Exception:
