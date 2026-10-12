@@ -20,6 +20,8 @@ export function PMSSBrowserLogin({
   const image = useRef<HTMLImageElement>(null);
   const surface = useRef<HTMLDivElement>(null);
   const queue = useRef<Promise<void>>(Promise.resolve());
+  const textBuffer = useRef("");
+  const typingTimer = useRef<number | null>(null);
 
   async function post(data: BrowserAction): Promise<void> {
     const response = await fetch(BASE + "action", {
@@ -41,6 +43,14 @@ export function PMSSBrowserLogin({
     });
   }
 
+  function flushText() {
+    if (typingTimer.current !== null) window.clearTimeout(typingTimer.current);
+    typingTimer.current = null;
+    const text = textBuffer.current;
+    textBuffer.current = "";
+    if (text) send({action: "text", text});
+  }
+
   useEffect(() => {
     if (!show) return;
     setError("");
@@ -52,7 +62,12 @@ export function PMSSBrowserLogin({
         if (ok) { setHint("学校登录已经验证成功。"); onClose(); }
       });
     }, 6000);
-    return () => { window.clearInterval(images); window.clearInterval(checker); };
+    return () => {
+      window.clearInterval(images); window.clearInterval(checker);
+      if (typingTimer.current !== null) window.clearTimeout(typingTimer.current);
+      typingTimer.current = null;
+      textBuffer.current = "";
+    };
   }, [show, onClose, onConnected]);
 
   if (!show) return null;
@@ -64,6 +79,7 @@ export function PMSSBrowserLogin({
     const x = (event.clientX - rect.left) * img.naturalWidth / rect.width;
     const y = (event.clientY - rect.top) * img.naturalHeight / rect.height;
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    flushText();
     surface.current?.focus();
     send({action: "click", x: Math.round(x), y: Math.round(y)});
   }
@@ -74,10 +90,16 @@ export function PMSSBrowserLogin({
       "ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"];
     if (specials.includes(event.key)) {
       event.preventDefault();
+      flushText();
       send({action: "key", key: event.key});
     } else if (event.key.length === 1) {
       event.preventDefault();
-      send({action: "text", text: event.key});
+      textBuffer.current += event.key;
+      if (textBuffer.current.length >= 100) flushText();
+      else {
+        if (typingTimer.current !== null) window.clearTimeout(typingTimer.current);
+        typingTimer.current = window.setTimeout(flushText, 90);
+      }
     }
   }
 
