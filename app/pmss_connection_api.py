@@ -222,7 +222,7 @@ class SchoolBrowserAction(BaseModel):
     text: str | None = Field(default=None, max_length=128)
     key: Literal[
         "Enter", "Tab", "Backspace", "Delete", "Escape",
-        "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"
+        "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "SelectAll"
     ] | None = None
     dy: Literal[-1, 1] | None = None
 
