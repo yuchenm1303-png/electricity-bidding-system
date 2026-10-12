@@ -242,7 +242,7 @@ def browser_availability(request: Request):
 def browser_frame(request: Request):
     require_user(request, admin=True)
     code, data = _browser_call("GET", "frame")
-    if code != 200 or not data.startswith(b"\\x89PNG\\r\\n\\x1a\\n"):
+    if code != 200 or not data.startswith(bytes((137, 80, 78, 71, 13, 10, 26, 10))):
         raise HTTPException(503, "学校登录画面无法读取")
     return Response(data, media_type="image/png", headers={
         "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
