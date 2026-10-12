@@ -62,6 +62,18 @@ def test_distinct_dates_not_independent_bids_and_no_live_profit_claim():
     assert report["holdout_reuses_training_original_bid_curve"] is True
     assert report["research_shortlist_candidate_ids"] == []
     assert report["model_confidence_grade"].startswith("C1_")
+    target_days = report["target_unit_original_bid_historical_fit"]
+    assert [row["case_date"] for row in target_days] == [
+        "2025-09-01", "2025-09-02", "2025-09-03",
+    ]
+    assert all(row["target_unit_id"] == "G1" for row in target_days)
+    assert all(row["dispatch_mae_mw"] == pytest.approx(0) for row in target_days)
+    assert all(row["dispatch_coverage"] == 1.0 for row in target_days)
+    assert all(row["max_abs_dispatch_error_mw"] == pytest.approx(0)
+               for row in target_days)
+    assert all(row["original_bid_only"] is True for row in target_days)
+    assert all(row["new_bid_counterfactual_verified"] is False
+               for row in target_days)
     assert report["recommended_for_real_pmss"] is None
     assert report["actual_pmss_counterfactual_profit_available"] is False
     assert report["historical_original_bid_validation"]["validated_new_bids"] is False
