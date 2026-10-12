@@ -60,6 +60,20 @@ def _driver():
     return _DRIVER
 
 
+def _reset_driver():
+    """Drop stale ChromeDriver without restarting the protected Chrome browser."""
+    global _DRIVER, _HANDLE, _FRAME_METRICS
+    previous = _DRIVER
+    _DRIVER = None
+    _HANDLE = None
+    _FRAME_METRICS = None
+    if previous is not None:
+        try:
+            previous.quit()
+        except Exception:
+            pass
+
+
 def _pick_tab(driver):
     global _HANDLE
     handles = driver.window_handles
@@ -176,6 +190,7 @@ def handle_school_browser(handler, path, authenticated):
                 if not 100 <= len(frame) <= 2_000_000:
                     raise ValueError("Invalid frame")
             except Exception:
+                _reset_driver()
                 handler._json(503, {"error": "school_browser_unavailable"})
                 return True
         handler.send_response(200)
@@ -208,6 +223,8 @@ def handle_school_browser(handler, path, authenticated):
             handler._json(422, {"error": "invalid_browser_action"})
             return True
         except Exception:
+            with _LOCK:
+                _reset_driver()
             handler._json(503, {"error": "school_browser_unavailable"})
             return True
         handler._json(200, {"ok": True, **outcome})
