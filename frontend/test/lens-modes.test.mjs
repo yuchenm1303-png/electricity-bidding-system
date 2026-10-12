@@ -40,7 +40,7 @@ test("published four-mode geometry has predictable dimensions",()=>{
   assert.deepEqual(VISUAL_LENS_SIZE.free,{width:80,height:54});
   assert.deepEqual(VISUAL_LENS_SIZE.chart,{width:156,height:156});
   assert.deepEqual(VISUAL_LENS_SIZE.hero,{width:128,height:128});
-  assert.deepEqual(VISUAL_LENS_SIZE.grid,{width:250,height:250});
+  assert.deepEqual(VISUAL_LENS_SIZE.grid,{width:164,height:164});
 });
 
 test("default, non-hover, and foreign DOM targets do not switch the lens",()=>{
@@ -76,7 +76,7 @@ test("network and decorative Hero content use expressive refraction",()=>{
   assert.equal(resolveVisualMode(scene({selectors:[".pb-hero"]}),350,320,true),"hero");
 });
 
-test("250px grid lens requires safe canvas region with no floating HUD",()=>{
+test("editorial grid lens requires safe canvas region with no floating HUD",()=>{
   const grid=new ElementMock([],new Rect(200,150,900,650));
   const root=scene({selectors:[".pb-hero"],grid});
   assert.equal(resolveVisualMode(root,600,450,true),"grid");
@@ -85,6 +85,15 @@ test("250px grid lens requires safe canvas region with no floating HUD",()=>{
   assert.equal(resolveVisualMode(root,600,155,true),"hero");
   const hud=new ElementMock([".pb-hero-hud"],new Rect(570,420,160,95));
   assert.equal(resolveVisualMode(scene({selectors:[".pb-hero"],grid,overlays:[hud]}),600,450,true),"hero");
+});
+
+test("164px lens fits the resized 265px homepage grid while avoiding labels",()=>{
+  const grid = new ElementMock([],new Rect(250,500,820,265));
+  const root = scene({grid});
+  assert.equal(resolveVisualMode(root,650,632,true),"grid");
+  assert.equal(resolveVisualMode(root,650,505,true),"free");
+  const detail = new ElementMock([".pb-constellation-detail"],new Rect(620,612,180,35));
+  assert.equal(resolveVisualMode(scene({grid,overlays:[detail]}),650,632,true),"free");
 });
 
 test("optics preserve original free surface and readable chart magnification",()=>{

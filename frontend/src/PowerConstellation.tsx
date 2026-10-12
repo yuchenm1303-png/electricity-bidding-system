@@ -56,6 +56,10 @@ export default function PowerConstellation() {
     if (!ctx) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const coarse = window.matchMedia("(pointer: coarse)");
+    // Paint the homepage's calm monochrome directly into the source Canvas.
+    // The WebGL lens copies these pixels, so its refraction cannot resurrect
+    // the pre-filter blue colors while the DOM displays grayscale.
+    const editorialMonochrome = Boolean(canvas.closest(".pb-editorial-home"));
     let w = 0, h = 0, raf = 0, frame = 0, lastPaint = 0, shown = true;
     let yaw = -.51, pitch = -.22, angularVelocity = .00055;
     let isDragging = false, dragDistance = 0, lastX = 0, lastY = 0;
@@ -75,6 +79,7 @@ export default function PowerConstellation() {
     function paint() {
       if (!ctx || !w || !h) return;
       ctx.clearRect(0,0,w,h);
+      ctx.filter = editorialMonochrome ? "grayscale(1) saturate(0) brightness(.96)" : "none";
       const scale = Math.min(w * .263, h * .355);
       const angle = yaw + (reduced.matches ? 0 : Math.sin(frame * .003) * .018);
       const elevation = pitch;

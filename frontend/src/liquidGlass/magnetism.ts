@@ -72,7 +72,10 @@ export function createMagneticController(
           const centerY = baseTop + rect.height / 2;
           const normalizedX = Math.max(-1, Math.min(1, (pointerX - centerX) / Math.max(rect.width / 2, 1)));
           const normalizedY = Math.max(-1, Math.min(1, (pointerY - centerY) / Math.max(rect.height / 2, 1)));
-          const distance = activeTarget === element ? 4.5 : 5.5;
+          // Smaller travel on the Alma-style public landing: tactile, not jumpy.
+          const landing = Boolean(element.closest(".pb-editorial-home"));
+          const distance = landing ? (activeTarget === element ? 2.6 : 3.1)
+            : activeTarget === element ? 4.5 : 5.5;
           state.x.target = normalizedX * distance;
           state.y.target = normalizedY * distance;
         } else {

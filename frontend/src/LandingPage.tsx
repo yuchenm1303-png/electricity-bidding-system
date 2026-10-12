@@ -78,21 +78,21 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
     <div className="pb-landing pb-minimal-home pb-editorial-home" id="top">
       <header className="pb-e-header">
         <div className="pb-e-shell pb-e-header-inner">
-          <a href="#top" className="pb-e-logo" aria-label="PowerBid 返回首页" onClick={closeMenu}><Brand/></a>
+          <a href="#top" data-liquid-snap="true" className="pb-e-logo" aria-label="PowerBid 返回首页" onClick={closeMenu}><Brand/></a>
           <nav id="pb-e-mobile-navigation" className={"pb-e-nav"+(menuOpen?" is-open":"")} aria-label="首页导航">
-            {sections.map(section=><a key={section.id} href={"#"+section.id} onClick={closeMenu}>{section.name}</a>)}
+            {sections.map(section=><a key={section.id} data-liquid-snap="true" data-liquid-mount="nav" href={"#"+section.id} onClick={closeMenu}>{section.name}</a>)}
             <div className="pb-e-mobile-links">
-              <a href={loginHref} onClick={closeMenu}>登录</a>
-              <a href={registerHref} onClick={closeMenu}>注册</a>
-              <a href={workspaceHref} onClick={closeMenu}>进入工作台 <ArrowUpRight size={15}/></a>
+              <a data-liquid-snap="true" href={loginHref} onClick={closeMenu}>登录</a>
+              <a data-liquid-snap="true" href={registerHref} onClick={closeMenu}>注册</a>
+              <a data-liquid-snap="true" href={workspaceHref} onClick={closeMenu}>进入工作台 <ArrowUpRight size={15}/></a>
             </div>
           </nav>
           <div className="pb-e-header-actions">
-            <a className="pb-e-login" href={loginHref}>登录</a>
-            <a className="pb-e-register" href={registerHref}>注册</a>
-            <a className="pb-e-top-cta" href={workspaceHref}>进入工作台 <ArrowUpRight size={16}/></a>
+            <a className="pb-e-login" data-liquid-snap="true" data-liquid-mount="nav" href={loginHref}>登录</a>
+            <a className="pb-e-register" data-liquid-snap="true" data-liquid-mount="nav" href={registerHref}>注册</a>
+            <a className="pb-e-top-cta" data-liquid-snap="true" data-liquid-mount="control" data-magnetic-hover="true" href={workspaceHref}>进入工作台 <ArrowUpRight size={16}/></a>
           </div>
-          <button className="pb-e-menu-toggle" type="button" aria-expanded={menuOpen} aria-controls="pb-e-mobile-navigation" aria-label={menuOpen?"关闭导航":"打开导航"} onClick={()=>setMenuOpen(v=>!v)}>
+          <button className="pb-e-menu-toggle" data-liquid-snap="true" data-liquid-mount="compact" data-magnetic-hover="true" type="button" aria-expanded={menuOpen} aria-controls="pb-e-mobile-navigation" aria-label={menuOpen?"关闭导航":"打开导航"} onClick={()=>setMenuOpen(v=>!v)}>
             {menuOpen?<X size={21}/>:<Menu size={21}/>}
           </button>
         </div>
@@ -106,8 +106,8 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
               <h1 id="pb-e-main-title">电力报价系统<br/><em>小组作业</em></h1>
               <p className="pb-e-lead">从市场数据到报价策略，再到市场出清。<br/>让每一步决策都更清晰、更有依据。</p>
               <div className="pb-e-hero-buttons">
-                <a className="pb-e-primary" href={workspaceHref}>进入工作台 <ArrowUpRight size={17}/></a>
-                <a className="pb-e-secondary" href="#philosophy">了解系统 <ArrowDown size={16}/></a>
+                <a className="pb-e-primary" data-liquid-snap="true" data-liquid-mount="control" data-magnetic-hover="true" href={workspaceHref}>进入工作台 <ArrowUpRight size={17}/></a>
+                <a className="pb-e-secondary" data-liquid-snap="true" data-liquid-mount="control" href="#philosophy">了解系统 <ArrowDown size={16}/></a>
               </div>
               <div className="pb-e-hero-foot"><span>研究与教学场景</span><span className="pb-e-divider-dot"/><span>PMSS · 报价与仿真</span></div>
             </div>
@@ -163,14 +163,14 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
             </div>
             <div className="pb-e-explore-panel">
               <div className="pb-e-controls">
-                <div className="pb-e-control-top"><span>PRICE / EXPERIMENT 001</span><button type="button" disabled={bid===310} onClick={()=>setBid(310)}><RotateCcw size={13}/> 重置</button></div>
+                <div className="pb-e-control-top"><span>PRICE / EXPERIMENT 001</span><button type="button" data-liquid-snap="true" data-liquid-mount="compact" disabled={bid===310} onClick={()=>setBid(310)}><RotateCcw size={13}/> 重置</button></div>
                 <h3>报价探索器</h3>
                 <p>拖动滑块查看报价位置。真实决策请进入工作台完成模型校验。</p>
                 <label htmlFor="pb-e-bid-range">候选申报价格</label>
                 <div className="pb-e-value">{bid}<span>元 / MWh</span></div>
-                <input id="pb-e-bid-range" type="range" min="180" max="400" step="10" value={bid} aria-valuetext={bid+" 元每兆瓦时"} onChange={e=>setBid(Number(e.target.value))} style={{"--pb-e-percent":percent+"%"} as CSSProperties}/>
+                <input id="pb-e-bid-range" data-liquid-snap="false" type="range" min="180" max="400" step="10" value={bid} aria-valuetext={bid+" 元每兆瓦时"} onChange={e=>setBid(Number(e.target.value))} style={{"--pb-e-percent":percent+"%"} as CSSProperties}/>
                 <div className="pb-e-range-label"><span>180</span><span>400</span></div>
-                <div className="pb-e-stepper"><button type="button" disabled={bid<=180} onClick={()=>setBid(v=>Math.max(180,v-10))} aria-label="降低报价10元"><Minus size={15}/> 减少</button><button type="button" disabled={bid>=400} onClick={()=>setBid(v=>Math.min(400,v+10))} aria-label="提高报价10元"><Plus size={15}/> 增加</button></div>
+                <div className="pb-e-stepper"><button type="button" data-liquid-snap="true" data-liquid-mount="control" disabled={bid<=180} onClick={()=>setBid(v=>Math.max(180,v-10))} aria-label="降低报价10元"><Minus size={15}/> 减少</button><button type="button" data-liquid-snap="true" data-liquid-mount="control" disabled={bid>=400} onClick={()=>setBid(v=>Math.min(400,v+10))} aria-label="提高报价10元"><Plus size={15}/> 增加</button></div>
               </div>
               <div className="pb-e-explore-chart">
                 <div className="pb-e-chart-top"><div><span>ILLUSTRATIVE CURVE</span><strong>报价变化趋势</strong></div><span>交互示意</span></div>
@@ -184,7 +184,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
                 <div className="pb-e-chart-bottom"><span>报价 180—400 元 / MWh</span><strong>{bid} <small>元 / MWh</small></strong></div>
               </div>
             </div>
-            <div className="pb-e-explore-note"><span>仅供教学与研究 / 图形不是 PMSS 出清证明</span><a href={workspaceHref}>进入完整工作台 <ArrowUpRight size={16}/></a></div>
+            <div className="pb-e-explore-note"><span>仅供教学与研究 / 图形不是 PMSS 出清证明</span><a data-liquid-snap="true" data-liquid-mount="control" href={workspaceHref}>进入完整工作台 <ArrowUpRight size={16}/></a></div>
           </div>
         </section>
 
@@ -196,7 +196,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
               <p>流程完整，交互不复杂。每一步都有清楚的用途和边界。</p>
             </div>
             <div className="pb-e-steps">
-              {steps.map((item,i)=><button key={item.code} type="button" aria-pressed={step===i} className={"pb-e-step"+(step===i?" is-current":"")} onClick={()=>setStep(i)}>
+              {steps.map((item,i)=><button key={item.code} type="button" data-liquid-snap="false" aria-pressed={step===i} className={"pb-e-step"+(step===i?" is-current":"")} onClick={()=>setStep(i)}>
                 <span>{item.code} / {item.en}</span><strong>{item.label}</strong><ChevronRight size={17}/>
               </button>)}
             </div>
@@ -207,11 +207,11 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
         <section className="pb-e-final">
           <div className="pb-e-shell pb-e-final-inner">
             <div><span>READY FOR THE NEXT DECISION?</span><h2>让研究，从这里开始。</h2><p>面向电力市场教学与分析的完整工作台。</p></div>
-            <a href={workspaceHref} className="pb-e-primary">进入 PowerBid <ArrowRight size={18}/></a>
+            <a href={workspaceHref} data-liquid-snap="true" data-liquid-mount="control" data-magnetic-hover="true" className="pb-e-primary">进入 PowerBid <ArrowRight size={18}/></a>
           </div>
         </section>
       </main>
-      <footer className="pb-e-footer"><div className="pb-e-shell pb-e-footer-inner"><Brand/><span>电力市场教学与研究 · 非真实交易建议</span><a href="#top">返回顶部 ↑</a></div></footer>
+      <footer className="pb-e-footer"><div className="pb-e-shell pb-e-footer-inner"><Brand/><span>电力市场教学与研究 · 非真实交易建议</span><a href="#top" data-liquid-snap="true" data-liquid-mount="nav">返回顶部 ↑</a></div></footer>
     </div>
     <Suspense fallback={null}><PublicLiquidGlass/></Suspense>
   </>;

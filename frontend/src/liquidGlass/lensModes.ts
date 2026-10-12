@@ -11,7 +11,7 @@ export const VISUAL_LENS_SIZE = {
   free: {width:80,height:54},
   chart: {width:156,height:156},
   hero: {width:128,height:128},
-  grid: {width:250,height:250},
+  grid: {width:164,height:164},
 } as const;
 
 const DECORATIVE_OCCLUSION = [
@@ -29,7 +29,7 @@ const CHART_PLOT = [
   ".pb-browser-chart-panel .pb-curve-graphic",
 ].join(",");
 
-/** Only decorative grid pixels qualify for the 250px mode. */
+/** Fit the optical circle inside the 265px editorial grid without overlaying labels. */
 function insideBox(element:Element,x:number,y:number,halfLens=0) {
   const r=element.getBoundingClientRect();
   // Match the existing live Canvas sampler: the *whole* lens, not merely
@@ -58,7 +58,8 @@ export function resolveVisualMode(root:HTMLElement,x:number,y:number,inside:bool
   // display rect instead; reject visible text/HUD overlap before magnifying.
   const grid=root.querySelector<HTMLCanvasElement>(".pb-landing .pb-field-canvas");
   if (grid && insideBox(grid,x,y,VISUAL_LENS_SIZE.grid.width/2) && !hit.closest(DECORATIVE_OCCLUSION)) {
-    const centerRect=new DOMRect(x-125,y-125,250,250);
+    const half=VISUAL_LENS_SIZE.grid.width/2;
+    const centerRect=new DOMRect(x-half,y-half,half*2,half*2);
     const obscured=[...root.querySelectorAll<HTMLElement>(DECORATIVE_OCCLUSION)].some(el=>{
       const style=getComputedStyle(el);
       return style.display!=="none" && style.visibility!=="hidden" &&

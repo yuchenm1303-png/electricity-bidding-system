@@ -87,12 +87,15 @@ export function isEligibleSurface(element: HTMLElement) {
 // wordmark; no extra mount or second lens is created.
 export function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY: number) {
   const rect = element.getBoundingClientRect();
-  const brand = element.matches(".brand-home-link, .mobile-brand-home, .pb-logo-link, .pb-identity-brand");
+  const brand = element.matches(".brand-home-link, .mobile-brand-home, .pb-logo-link, .pb-e-logo, .pb-identity-brand");
+  const landingMount = element.closest(".pb-editorial-home") ? element.dataset.liquidMount : undefined;
   const compact = element.matches(".sidebar-collapse, .ta-menu-toggle, .ta-header-icon, .icon-button");
   // A narrow, content-hugging brand capsule gives the rasterized logo and
   // wordmark enough optical margin without wasting sampled area on empty space.
-  const paddingX = brand ? 6 : compact ? 6 : 8;
-  const paddingY = brand ? 8 : compact ? 6 : 8;
+  const paddingX = brand ? 8 : landingMount === "nav" ? 7
+    : landingMount === "compact" ? 4 : landingMount === "control" ? 4 : compact ? 6 : 8;
+  const paddingY = brand ? 9 : landingMount === "nav" ? 2
+    : landingMount === "compact" ? 4 : landingMount === "control" ? 3 : compact ? 6 : 8;
 
   // The viewport may crop part of a control near its edges; frame the
   // entire *visible* control rather than moving the center away and
@@ -102,7 +105,7 @@ export function getLensBounds(element: HTMLElement, _pointerX: number, _pointerY
   const top = Math.max(0, rect.top - paddingY);
   const bottom = Math.min(window.innerHeight, rect.bottom + paddingY);
   const width = Math.max(1, Math.min(window.innerWidth, Math.max(MIN_LENS_WIDTH, right - left)));
-  const height = Math.max(1, Math.min(window.innerHeight, Math.max(brand ? 50 : MIN_LENS_HEIGHT, bottom - top)));
+  const height = Math.max(1, Math.min(window.innerHeight, Math.max(brand ? 50 : landingMount === "nav" ? 36 : MIN_LENS_HEIGHT, bottom - top)));
   return {
     width,
     height,
