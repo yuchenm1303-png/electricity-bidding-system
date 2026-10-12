@@ -140,7 +140,7 @@ position:relative;width:min(100%,820px);height:265px;flex-shrink:0;margin:28px a
 }
 .pb-editorial-home .pb-e-model .pb-constellation {color:var(--e-muted);}
 .pb-editorial-home .pb-e-model .pb-field-canvas {
-opacity:.78;filter:grayscale(1) saturate(0) brightness(.96);
+opacity:.78;filter:none;
 }
 .pb-editorial-home .pb-e-model .pb-constellation-header {
 left:10px;right:10px;top:0;gap:16px;
@@ -521,3 +521,7 @@ font-size:38px;
   .pb-editorial-home .pb-e-model {animation:none;}
   .pb-editorial-home :is(a,button,.pb-e-sketch) {transition:none;}
 }
+
+/* Optical target feedback remains native: no competing overlay or second lens. */
+.pb-editorial-home [data-liquid-snap="true"] { -webkit-tap-highlight-color: transparent; }
+.pb-editorial-home .pb-e-hero-buttons [data-liquid-mount="control"]:active { transform:none; }
