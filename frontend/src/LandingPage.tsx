@@ -5,6 +5,7 @@ import { ArrowDown, ArrowRight, ArrowUpRight, ChevronRight, Menu, Minus, Plus, R
 // renderer keeps its original independently loaded style bundle.
 import "./landing-minimal.css";
 import PowerConstellation from "./PowerConstellation";
+import WorkspacePreviewCard from "./WorkspacePreviewCard";
 
 const PublicLiquidGlass = lazy(() => import("./PublicLiquidGlass"));
 
@@ -49,50 +50,6 @@ function Brand() {
     <img className="pb-brand-smirel" src={smirelLogo} width={92} height={30} alt="Smirel"/>
     <span className="pb-brand-word">PowerBid</span>
   </span>;
-}
-
-function StrategySketch() {
-  return <div className="pb-e-sketch pb-e-sketch-chart" aria-hidden="true">
-    <span className="pb-e-sketch-eyebrow">STRATEGY / BID CURVE</span>
-    <svg viewBox="0 0 480 240" preserveAspectRatio="xMidYMid meet" className="pb-e-preview-curve">
-      {[55,115,175,220].map(y=><line key={y} x1="12" x2="468" y1={y} y2={y} className="pb-e-gridline"/>)}
-      <path d="M12 200 C92 194 116 143 174 152 S263 181 315 107 S407 79 468 40" className="pb-e-line-secondary"/>
-      <path d="M12 219 L72 219 L72 175 L164 175 L164 136 L256 136 L256 105 L350 105 L350 65 L468 65" className="pb-e-line-primary"/>
-      {[72,164,256,350].map((x,i)=><circle key={x} cx={x} cy={[175,136,105,65][i]} r="4" className="pb-e-curve-dot"/>)}
-    </svg>
-    <div className="pb-e-sketch-foot"><span>五段申报 / 示意</span><span>PRICE →</span></div>
-  </div>;
-}
-
-function RiskSketch() {
-  return <div className="pb-e-sketch pb-e-sketch-risk" aria-hidden="true">
-    <span className="pb-e-sketch-eyebrow">ASSESSMENT / 约束校验</span>
-    <div className="pb-e-risk-rows">
-      {[
-        ["01", "成本与收益", "pb-e-bar-one"],
-        ["02", "网络与机组", "pb-e-bar-two"],
-        ["03", "历史与风险", "pb-e-bar-three"],
-      ].map(([number,label,bar])=><div className="pb-e-risk-row" key={number}>
-        <div><span>{number}</span><strong>{label}</strong></div>
-        <span className={"pb-e-risk-bar "+bar}/>
-      </div>)}
-    </div>
-    <div className="pb-e-sketch-foot"><span>评估维度 / 不代表实际得分</span><span>RESEARCH</span></div>
-  </div>;
-}
-
-function MarketSketch() {
-  return <div className="pb-e-sketch pb-e-sketch-market" aria-hidden="true">
-    <span className="pb-e-sketch-eyebrow">MARKET / NETWORK / CLEARING</span>
-    <div className="pb-e-market-line">
-      <div><span className="pb-e-market-dot"/><strong>市场数据</strong><small>DATA</small></div>
-      <i/>
-      <div><span className="pb-e-market-dot"/><strong>电网模型</strong><small>GRID</small></div>
-      <i/>
-      <div><span className="pb-e-market-dot"/><strong>出清结果</strong><small>RESULT</small></div>
-    </div>
-    <div className="pb-e-sketch-foot"><span>模型之间的关系，可验证、可追溯</span><span>03 / 03</span></div>
-  </div>;
 }
 
 export default function LandingPage({ workspaceHref }: LandingProps) {
@@ -183,15 +140,15 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
             <div className="pb-e-feature-list">
               <article className="pb-e-feature">
                 <div className="pb-e-feature-copy"><span>01 / STRATEGY</span><h3>有依据的报价策略。</h3><p>在机组成本、五段申报和市场约束之间建立联系，比较不同候选策略，而不是给出无法解释的数值。</p></div>
-                <StrategySketch/>
+                <WorkspacePreviewCard kind="strategy"/>
               </article>
               <article className="pb-e-feature pb-e-feature-reverse">
                 <div className="pb-e-feature-copy"><span>02 / RISK</span><h3>让风险可以被理解。</h3><p>把网络约束、负荷变化和历史误差纳入研究，明确策略的适用条件与局限。</p></div>
-                <RiskSketch/>
+                <WorkspacePreviewCard kind="risk"/>
               </article>
               <article className="pb-e-feature">
                 <div className="pb-e-feature-copy"><span>03 / SIMULATION</span><h3>连接市场与电网模型。</h3><p>对接 PMSS 教学环境，清楚区分本地模拟、原版出清及历史案例的真实来源。</p></div>
-                <MarketSketch/>
+                <WorkspacePreviewCard kind="network"/>
               </article>
             </div>
           </div>
