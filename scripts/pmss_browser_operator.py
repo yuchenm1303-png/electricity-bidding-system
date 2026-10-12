@@ -16,7 +16,6 @@ from urllib.parse import urlsplit
 
 _LOCK = threading.RLock()
 _HANDLE = None
-_DRIVER = None
 _SCHOOL_URL = "http://cq.university.netts-dev.tsintergy.com/"
 _HOST = "cq.university.netts-dev.tsintergy.com"
 _TOKEN_FILE = "/srv/powerbid-platform/private-cases/.pmss-web-login-secret"
