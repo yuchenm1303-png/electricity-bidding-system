@@ -13,3 +13,6 @@ release
 packaging
 *.spec
 *.iss
+
+# Keep local npm installs out of production Docker build contexts.
+**/node_modules
