@@ -124,6 +124,36 @@ def _candidate(raw: Mapping[str, Any]) -> tuple[str, str, tuple[BidSegment, ...]
     return identifier, name, _curve(raw)
 
 
+def _historical_price_rule_conflicts(snapshot: Any, case_date: str) -> dict[str, Any]:
+    """Compare ORIGINAL historical segments to the rules in the same snapshot.
+
+    The result is a source/rule consistency alert, NOT a claim that a
+    historical school bid was illegal. Never clip or rewrite archived offers.
+    """
+    floor = snapshot.limits.price_floor
+    ceiling = snapshot.limits.price_ceiling
+    below = above = 0
+    prices: list[float] = []
+    for periods in snapshot.bids.values():
+        for period in periods:
+            for block in period.segments:
+                prices.append(block.price)
+                if floor is not None and block.price < floor - 1e-8:
+                    below += 1
+                if ceiling is not None and block.price > ceiling + 1e-8:
+                    above += 1
+    return {
+        "case_date": case_date,
+        "market_price_floor": floor,
+        "market_price_ceiling": ceiling,
+        "max_historical_bid_price": max(prices) if prices else None,
+        "below_floor_segment_count": below,
+        "above_ceiling_segment_count": above,
+        "consistent_with_imported_rule": below == 0 and above == 0,
+        "historical_original_quotes_modified": False,
+    }
+
+
 def _scaled(value: float, values: list[float]) -> float:
     low, high = min(values), max(values)
     if high - low <= 1e-8 * max(1.0, abs(low), abs(high)):
@@ -190,7 +220,19 @@ def assess_pmss_strategy_candidates(
     holdout_reused_bid = offer_hashes[-1] in set(offer_hashes[:-1])
     training_distinct_bids = len(set(offer_hashes[:-1]))
     baseline_fit = historical.status == "HISTORICAL_BASELINE_WITHIN_TOLERANCE"
-    evidence_good = baseline_fit and training_distinct_bids >= 2 and not holdout_reused_bid
+    price_rule_checks = [
+        _historical_price_rule_conflicts(snap, day.case_date)
+        for snap, day in zip(snapshots, days, strict=True)
+    ]
+    rule_consistent = all(
+        check["consistent_with_imported_rule"] for check in price_rule_checks
+    )
+    # A mismatch in source price rules is a reason to investigate, not to
+    # silently clamp original teacher bids or approve altered-bid research.
+    evidence_good = (
+        baseline_fit and training_distinct_bids >= 2
+        and not holdout_reused_bid and rule_consistent
+    )
     if evidence_good:
         grade = "C2_HISTORICAL_ORIGINAL_BID_FIT_ONLY"
     else:
@@ -316,6 +358,8 @@ def assess_pmss_strategy_candidates(
         "untouched_holdout_case_dates": [days[-1].case_date],
         "original_bid_distinct_training_curves": training_distinct_bids,
         "holdout_reuses_training_original_bid_curve": holdout_reused_bid,
+        "historical_original_bid_vs_imported_price_rules": price_rule_checks,
+        "historical_price_rules_consistent": rule_consistent,
         "historical_original_bid_validation": {
             **asdict(historical),
             "tolerances_are_project_research_preferences_not_pmss_rules": True,
