@@ -1,13 +1,8 @@
 import smirelLogo from "./assets/smirel-logo.png";
 import { lazy, Suspense, useEffect, useState, type CSSProperties } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, ChevronRight, Menu, Minus, Plus, RotateCcw, X } from "lucide-react";
-import "./landing.css";
-import "./landing-dark.css";
-import "./portal-polish.css";
-import "./landing-buttons.css";
-import "./landing-showcase-polish.css";
-import "./icon-interactions.css";
-import "./landing-alma-charcoal.css";
+// The public homepage owns one scoped design sheet. The shared liquid-glass
+// renderer keeps its original independently loaded style bundle.
 import "./landing-minimal.css";
 import PowerConstellation from "./PowerConstellation";
 
