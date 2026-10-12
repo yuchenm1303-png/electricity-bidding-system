@@ -1,4 +1,4 @@
-import type { PMSSInspection, PMSSNetworkRank, PMSSRankedCurve } from "./types";
+import type { PMSSInspection, PMSSNetworkRank, PMSSRankedCurve, PMSSStrategyTrio, PMSSStrategyGuard } from "./types";
 import { makePMSSBidProposal, type PMSSBidProposal } from "./pmssBiddingFlow.ts";
 
 export type SmartProfileId = "revenue" | "balanced" | "defensive";
@@ -9,6 +9,10 @@ export type SmartBidProfile = {
   rationale: string;
   candidate: PMSSRankedCurve;
   proposal: PMSSBidProposal;
+  researchAdmitted?: boolean;
+  riskBlockers?: string[];
+  riskWarnings?: string[];
+  riskTrainingScore?: number | null;
 };
 
 /** Adapter for the existing network-rank output. No strategy is synthesized here. */
@@ -94,4 +98,91 @@ export function suggestedSmartProfile(profiles: SmartBidProfile[]): SmartBidProf
   // Research preference ONLY. This does not lift the model's submission prohibition.
   return profiles.find(item => item.id === "balanced") ??
     profiles.find(item => item.id === "defensive") ?? profiles[0] ?? null;
+}
+
+/**
+ * Bind three independently generated Window A DC profiles to Window B's
+ * independently dated risk gate. Missing / invalid evidence fails closed.
+ * This is research admission ONLY, never actual PMSS submission clearance.
+ */
+export function buildSmartTrioProfiles(
+  inspection: PMSSInspection,
+  trio: PMSSStrategyTrio | null,
+  guard: PMSSStrategyGuard | null,
+): SmartBidProfile[] {
+  if (!trio || trio.real_pmss_clearing !== false ||
+      trio.safe_for_live_submission !== false ||
+      trio.pmss_write_performed !== false ||
+      trio.pmss_clearing_executed !== false ||
+      trio.study_only !== true ||
+      !inspection.historical_only || !inspection.dc_grid_available) return [];
+  if (guard && (guard.pmss_write_performed !== false ||
+      guard.pmss_clearing_executed !== false ||
+      guard.recommended_for_real_pmss !== null ||
+      guard.status !== "HISTORICAL_ONLY_LOCAL_STRATEGY_RESEARCH")) return [];
+  const labels: Record<string, SmartProfileId> = {
+    "收益优先": "revenue", "均衡": "balanced", "稳健": "defensive",
+  };
+  const names: Record<SmartProfileId, string> = {
+    revenue: "收益优先", balanced: "均衡策略", defensive: "稳健策略",
+  };
+  const unique = new Set<string>();
+  const usedIds = new Set<string>();
+  return trio.candidates.flatMap(item => {
+    const id = labels[item.profile];
+    if (!id || usedIds.has(id) ||
+        ![item.expected_dc_margin, item.downside_dc_margin,
+          item.worst_dc_margin, item.expected_dc_mwh, item.profile_score]
+          .every(Number.isFinite) ||
+        !Array.isArray(item.price_blocks) || item.price_blocks.length !== 5 ||
+        !item.price_blocks.every(block =>
+          Array.isArray(block) && block.length === 3 && block.every(Number.isFinite))) {
+      return [];
+    }
+    const prices = item.price_blocks.map(block => block[2]);
+    const ceiling = inspection.historical_bid_rule_audit.price_ceiling;
+    if (prices.every(price => price <= 0) ||
+        (ceiling !== null && prices.every(price => price >= ceiling))) return [];
+    try {
+      const proposal = makePMSSBidProposal(
+        inspection, trio.target_unit_id, "strategy-trio",
+        item.price_blocks.map(([start_power, end_power, price]) =>
+          ({start_power, end_power, price})), names[id],
+      );
+      const fingerprint = JSON.stringify(proposal.segments);
+      if (unique.has(fingerprint)) return [];
+      usedIds.add(id); unique.add(fingerprint);
+      const assessed = guard?.candidates.find(row => row.candidate_id === item.profile);
+      const riskOk = assessed?.research_shortlist_admitted === true &&
+        assessed.live_bid_allowed === false &&
+        assessed.real_pmss_candidate_profit_verified === false;
+      const candidate: PMSSRankedCurve = {
+        name: item.policy_name, price_blocks: item.price_blocks,
+        expected_margin: item.expected_dc_margin,
+        downside_margin: item.downside_dc_margin,
+        worst_margin: item.worst_dc_margin,
+        expected_accepted_mwh: item.expected_dc_mwh,
+        score: item.profile_score,
+      };
+      return [{
+        id, title: names[id], subtitle: "真实网架下的本地 DC 研究方案",
+        rationale: "基于当前数据与合成竞争报价情景，使用本地 DC 优化得到五段曲线；不代表 PMSS 真实出清。",
+        candidate, proposal,
+        researchAdmitted: riskOk,
+        riskBlockers: assessed?.hard_blockers ??
+          ["缺少可核验的跨日期风控结论"],
+        riskWarnings: [...(assessed?.risk_warnings ?? []), ...(item.warnings ?? [])],
+        riskTrainingScore: assessed?.score_training_only_0_to_100 ?? null,
+      }];
+    } catch {
+      return [];
+    }
+  });
+}
+
+/** No auto suggestion without an independently dated research admission. */
+export function suggestedGuardedProfile(profiles: SmartBidProfile[]): SmartBidProfile | null {
+  const accepted = profiles.filter(item => item.researchAdmitted === true);
+  return accepted.find(item => item.id === "balanced") ??
+    accepted.find(item => item.id === "defensive") ?? accepted[0] ?? null;
 }
