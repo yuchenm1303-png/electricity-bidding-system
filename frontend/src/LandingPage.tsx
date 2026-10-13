@@ -66,7 +66,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
     const oldTitle=document.title;
     const meta=document.querySelector('meta[name="description"]');
     const oldDesc=meta?.getAttribute("content");
-    document.title="PowerBid Lab — 电力报价系统小组作业";
+    document.title="PowerBid Studio · 电力市场仿真与报价策略分析";
     meta?.setAttribute("content","PowerBid 电力市场教学与研究：市场数据、五段报价、策略分析和出清复盘。");
     return ()=>{
       document.title=oldTitle;
@@ -102,7 +102,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
         <section className="pb-e-hero" aria-labelledby="pb-e-main-title">
           <div className="pb-e-shell pb-e-hero-grid">
             <div className="pb-e-hero-copy">
-              <div className="pb-e-eyebrow">POWERBID <span/> ELECTRICITY MARKET LAB</div>
+              <div className="pb-e-eyebrow">POWERBID STUDIO <span/> ELECTRICITY MARKET LAB</div>
               <h1 id="pb-e-main-title">电力报价系统<br/><em>小组作业</em></h1>
               <p className="pb-e-lead">从市场数据到报价策略，再到市场出清。<br/>让每一步决策都更清晰、更有依据。</p>
               <div className="pb-e-hero-buttons">
@@ -211,7 +211,7 @@ export default function LandingPage({ workspaceHref }: LandingProps) {
           </div>
         </section>
       </main>
-      <footer className="pb-e-footer"><div className="pb-e-shell pb-e-footer-inner"><Brand/><span>电力市场教学与研究 · 非真实交易建议</span><a href="#top" data-liquid-snap="true" data-liquid-mount="nav">返回顶部 ↑</a></div></footer>
+      <footer className="pb-e-footer"><div className="pb-e-shell pb-e-footer-inner"><Brand/><span>PowerBid Studio · 电力市场教学与研究 · 非真实交易建议</span><a href="/privacy" data-liquid-snap="true" data-liquid-mount="nav">隐私政策</a><a href="#top" data-liquid-snap="true" data-liquid-mount="nav">返回顶部 ↑</a></div></footer>
     </div>
     <Suspense fallback={null}><PublicLiquidGlass/></Suspense>
   </>;
