@@ -28,6 +28,7 @@ export function PMSSBrowserLogin({
   const textBuffer = useRef("");
   const typingTimer = useRef<number | null>(null);
   const lastInteraction = useRef(0);
+  const framePending = useRef(false);
 
   async function post(data: BrowserAction): Promise<void> {
     const response = await fetch(BASE + "action", {
@@ -122,16 +123,15 @@ export function PMSSBrowserLogin({
   }, [show, onClose, onConnected]);
 
   useEffect(() => {
-    if (!show || !showRemote) return;
+    if (!show || !showRemote) { framePending.current = false; return; }
     // Remote screen is an optional fallback. No image polling while the
     // administrator types in native browser inputs.
-    let inFlight = false;
     const refresh = () => {
-      if (inFlight || Date.now() - lastInteraction.current <= 2500) return;
-      inFlight = true;
+      if (document.hidden || framePending.current ||
+          Date.now() - lastInteraction.current <= 2500) return;
+      framePending.current = true;
       setFrame(n => n + 1);
-      // The next frame is requested only after the previous image load/error.
-      // This timeout is a fallback for a broken network image request.
+      // Resume only after img load/error, never queue screenshots.
     };
     const timer = window.setInterval(refresh, 4500);
     return () => {window.clearInterval(timer);};
@@ -224,7 +224,8 @@ export function PMSSBrowserLogin({
         onKeyDown={keyboard} onPaste={paste} aria-label="学校网页登录画面与键盘控制">
         <img ref={image} draggable={false} alt="服务器学校官网登录页面"
           src={BASE + "frame?seq=" + frame} onClick={click}
-          onError={() => setError("暂时无法读取学校浏览器画面，请检查管理员登录网关")}
+          onLoad={() => { framePending.current = false; }}
+          onError={() => { framePending.current = false; setError("暂时无法读取学校浏览器画面，请检查管理员登录网关"); }}
         />
       </div>}
       {showRemote && <div className="pmss-browser-footer">
