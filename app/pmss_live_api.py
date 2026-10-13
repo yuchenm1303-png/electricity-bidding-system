@@ -66,7 +66,31 @@ def _json_file(path: str) -> dict[str, Any]:
     return result
 
 
+def _gateway_available() -> bool:
+    return (os.getenv("PMSS_LIVE_GATEWAY_ENABLED") == "1"
+            and os.getenv("PMSS_LIVE_GATEWAY_URL") == "http://172.17.0.1:18760"
+            and bool(os.getenv("PMSS_LIVE_WRITE_TOKEN_FILE"))
+            and bool(os.getenv("PMSS_LIVE_PROJECT_MAP_FILE")))
+
+
 def _adapter() -> TeacherPlatformAdapter:
+    if _gateway_available():
+        # The school cookies stay IN MEMORY inside the existing server VPN
+        # bridge. PowerBid knows only a private write-gate capability token.
+        token_path = os.getenv("PMSS_LIVE_WRITE_TOKEN_FILE", "")
+        path = Path(token_path)
+        if not token_path or path.is_symlink() or not path.is_file():
+            raise ValueError("Private school write authorization is missing")
+        info = path.stat()
+        if info.st_mode & 0o077 or not 40 <= info.st_size <= 256:
+            raise ValueError("Private school write authorization is invalid")
+        token = path.read_text("ascii").strip()
+        if len(token) < 40:
+            raise ValueError("Private school write authorization is invalid")
+        return TeacherPlatformAdapter(
+            base_url="http://172.17.0.1:18760",
+            write_gate_token=token, timeout=16,
+        )
     base = os.getenv("PMSS_BASE_URL", "")
     cookie_path = os.getenv("PMSS_COOKIE_FILE", "")
     if not base or not cookie_path:
@@ -340,9 +364,10 @@ def school_preflight(request: Request, project_id: str,
 @router.get("/status")
 def live_status(request: Request):
     require_user(request, admin=True)
-    configured = bool(os.getenv("PMSS_BASE_URL") and
-                      os.getenv("PMSS_COOKIE_FILE") and
-                      os.getenv("PMSS_LIVE_PROJECT_MAP_FILE"))
+    configured = (_gateway_available() or
+                  bool(os.getenv("PMSS_BASE_URL") and
+                       os.getenv("PMSS_COOKIE_FILE") and
+                       os.getenv("PMSS_LIVE_PROJECT_MAP_FILE")))
     if not configured:
         return {"configured": False, "school_auth": "not_configured",
                 "live_write_enabled": False,
