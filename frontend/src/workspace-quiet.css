@@ -422,6 +422,54 @@
   box-shadow:none;
 }
 
+/* PMSS-specific editorial surfaces: retain all sections, data and controls. */
+:root[data-theme] .app .pmss-workspace {gap:19px}
+:root[data-theme] .app .pmss-hero {
+  background:var(--ta-panel);
+  border:1px solid var(--ta-border);
+  border-radius:10px;
+  padding:26px 28px;
+}
+:root[data-theme] .app .pmss-hero::after {display:none}
+:root[data-theme] .app .pmss-hero h2 {font-weight:590;font-size:24px;letter-spacing:-.025em}
+:root[data-theme] .app .pmss-eyebrow,
+:root[data-theme] .app :is(.pmss-section-head small,.pmss-panel-head small,.pmss-source-eyebrow) {
+  color:var(--ta-muted-2);font-weight:570;letter-spacing:.1em;
+}
+:root[data-theme] .app .pmss-hero-tags span {
+  border:1px solid var(--ta-border);
+  border-radius:6px;
+  background:var(--ta-faint);
+}
+:root[data-theme] .app :is(.pmss-metric,.pmss-panel,.pmss-source-panel,.pmss-market-context) {
+  background:var(--ta-panel);
+  border:1px solid var(--ta-border);
+  border-radius:10px;
+  box-shadow:none;
+}
+:root[data-theme] .app .pmss-metric {padding:17px 18px;gap:8px}
+:root[data-theme] .app .pmss-metric strong {font-size:21px;font-weight:620}
+:root[data-theme] .app .pmss-panel {padding:22px}
+:root[data-theme] .app :is(.pmss-section-head h3,.pmss-panel-head h3,.pmss-source-heading h3) {
+  color:var(--ta-ink);font-size:17px;font-weight:590;letter-spacing:-.015em;
+}
+:root[data-theme] .app :is(.pmss-controls input,.pmss-controls select,.pmss-source-fields select,.pmss-market-context select) {
+  background:var(--ta-field);color:var(--ta-ink);border-color:var(--ta-border);border-radius:7px;
+}
+:root[data-theme] .app .pmss-source-fields .pmss-source-load {
+  color:var(--ta-rail);background:var(--ta-primary);border:1px solid var(--ta-primary);
+}
+:root[data-theme] .app :is(.pmss-state-label,.pmss-status) {
+  border-radius:6px;font-weight:540;
+}
+:root[data-theme] .app .pmss-grid-canvas {background:var(--ta-faint);border-radius:8px}
+:root[data-theme] .app .pmss-source-panel {padding:22px}
+@media(max-width:700px) {
+  :root[data-theme] .app .pmss-hero {padding:20px}
+  :root[data-theme] .app .pmss-panel,
+  :root[data-theme] .app .pmss-source-panel {padding:16px}
+}
+
 /* Safe layouts: preserve the existing responsive nav drawer behavior. */
 @media (max-width:1480px) {
   :root[data-theme] .app .ta-top-dashboard,
