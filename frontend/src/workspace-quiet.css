@@ -175,6 +175,22 @@
 :root[data-theme] .app .pb-account-name {font-weight:570}
 :root[data-theme] .app .pb-identity-avatar {box-shadow:none}
 
+/* Remove the last saturated avatar tile and bottom-left note frame. */
+:root[data-theme] .app .avatar-mark,
+:root[data-theme] .app .pb-identity-avatar {
+  background:var(--ta-faint);
+  color:var(--ta-ink-2);
+  border:1px solid var(--ta-border);
+  box-shadow:none;
+  font-weight:610;
+}
+:root[data-theme] .app .simulation-note {
+  padding:14px 3px 0;
+  border:0;
+  border-top:1px solid var(--ta-border);
+  border-radius:0;
+  background:transparent;
+}
 /* More breathing room, but not a sea of empty dashboard chrome. */
 :root[data-theme] .app .content-shell {
   max-width:1540px;
