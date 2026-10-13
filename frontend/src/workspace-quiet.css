@@ -1,0 +1,521 @@
+/*
+ * PowerBid Quiet Workspace
+ * A single, scoped presentation layer for the authenticated workbench.
+ * Inspired by the restrained graphite, thin borders and editorial spacing of
+ * alma.now, without copying its assets or touching calculations and state.
+ *
+ * It comes last in WorkspaceEntry. The lens engine remains unchanged.
+ */
+:root[data-theme="dark"] .app {
+  --ta-bg:#252930;
+  --ta-rail:#22262c;
+  --ta-panel:#2a2f36;
+  --ta-faint:#30363e;
+  --ta-hover:#323943;
+  --ta-field:#272c34;
+  --ta-ink:#e4e7e9;
+  --ta-ink-2:#cbd2d8;
+  --ta-muted:#a5afb9;
+  --ta-muted-2:#87939e;
+  --ta-border:#3a424b;
+  --ta-primary:#b3c1c8;
+  --ta-primary-hover:#d3dde1;
+  --ta-primary-soft:#353e47;
+  --ta-success:#91c8b0;
+  --ta-success-soft:#304139;
+  --ta-shadow:none;
+  --ta-chart-hover:rgba(200,215,229,.055);
+  --pb-chart-grid:#414850;
+  --pb-chart-accent:#a6b6c8;
+  --pb-chart-secondary:#788ca4;
+  --pb-chart-track:#454e59;
+  --pb-chart-text:#9aa6b2;
+  --pb-chart-reference:#bba989;
+  --pb-quiet-glow:rgba(0,0,0,.07);
+}
+:root[data-theme="light"] .app {
+  --ta-bg:#f7f8f9;
+  --ta-rail:#f5f6f7;
+  --ta-panel:#ffffff;
+  --ta-faint:#f3f5f6;
+  --ta-hover:#ecf0f2;
+  --ta-field:#fbfcfd;
+  --ta-ink:#262d34;
+  --ta-ink-2:#4f5c67;
+  --ta-muted:#63717c;
+  --ta-muted-2:#81909b;
+  --ta-border:#e0e5e8;
+  --ta-primary:#526875;
+  --ta-primary-hover:#394d58;
+  --ta-primary-soft:#e7edef;
+  --ta-success:#387962;
+  --ta-success-soft:#e8f3ed;
+  --ta-shadow:none;
+  --ta-chart-hover:rgba(81,104,119,.05);
+  --pb-chart-grid:#e3e8eb;
+  --pb-chart-accent:#6c8394;
+  --pb-chart-secondary:#adbbc6;
+  --pb-chart-track:#e2e8ed;
+  --pb-chart-text:#778591;
+  --pb-chart-reference:#987e65;
+  --pb-quiet-glow:rgba(0,0,0,.03);
+}
+
+/* One font scale; avoid an extra network font in the workbench. */
+:root[data-theme] .app {
+  font-family:Inter,"SF Pro Text",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  font-feature-settings:"tnum" 1;
+  background:var(--ta-bg);
+  color:var(--ta-ink);
+}
+:root[data-theme] .app .app-main,
+:root[data-theme] .app .content-shell {background:var(--ta-bg);color:var(--ta-ink)}
+:root[data-theme] .app .sidebar {
+  background:var(--ta-rail);
+  border-right:1px solid var(--ta-border);
+}
+:root[data-theme] .app .brand {
+  height:80px;flex:0 0 80px;
+  border-bottom:1px solid var(--ta-border);
+}
+:root[data-theme] .app .brand-home-link {opacity:.95}
+:root[data-theme] .app .brand-name strong {font-size:19px;letter-spacing:-.05em;font-weight:630}
+:root[data-theme] .app .brand-name small {font-weight:500;letter-spacing:.09em}
+:root[data-theme] .app .sidebar-section-label {
+  margin-top:16px;color:var(--ta-muted-2);
+  font-size:10px;font-weight:520;letter-spacing:.12em;
+}
+:root[data-theme] .app .sidebar-section-label span {font-size:10px}
+:root[data-theme] .app .sidebar-nav {gap:3px;padding-inline:13px}
+:root[data-theme] .app .nav-entry {
+  min-height:41px;
+  border:1px solid transparent;
+  border-radius:7px;
+  background:transparent;
+  color:var(--ta-muted);
+  font-weight:510;
+  font-size:12.5px;
+  transition:background .15s,color .15s,border-color .15s;
+}
+:root[data-theme] .app .nav-entry svg {color:var(--ta-muted-2);stroke-width:1.65}
+:root[data-theme] .app .nav-entry:hover:not(.active) {background:var(--ta-hover);color:var(--ta-ink)}
+:root[data-theme] .app .nav-entry.active {
+  color:var(--ta-ink);
+  background:var(--ta-primary-soft);
+  border:1px solid var(--ta-border);
+  box-shadow:inset 2px 0 var(--ta-primary);
+  font-weight:590;
+}
+:root[data-theme] .app .nav-entry.active svg {color:var(--ta-primary)}
+:root[data-theme] .app .legacy-entry {
+  margin-top:12px;padding-top:10px;
+  border-top:1px solid var(--ta-border);
+  border-radius:0;
+}
+:root[data-theme] .app .simulation-note {
+  border:1px solid var(--ta-border);
+  border-radius:8px;
+  background:transparent;
+  box-shadow:none;
+  padding:11px 12px;
+}
+:root[data-theme] .app .simulation-note strong {font-weight:560;color:var(--ta-ink-2)}
+:root[data-theme] .app .simulation-note p {color:var(--ta-muted-2);line-height:1.7}
+:root[data-theme] .app .simulation-note svg {color:var(--ta-muted-2)}
+:root[data-theme] .app .data-source {color:var(--ta-muted-2)}
+:root[data-theme] .app .sidebar-foot {height:44px;border-top:1px solid var(--ta-border);font-weight:510;color:var(--ta-muted-2)}
+:root[data-theme] .app .version-dot {background:var(--ta-primary)}
+:root[data-theme] .app .online-dot {background:var(--ta-success);box-shadow:none}
+
+/* Quiet command bar, no floating icon tiles. */
+:root[data-theme] .app .global-header {
+  height:73px;flex-basis:73px;
+  padding-inline:28px;
+  background:var(--ta-bg);
+  border-bottom:1px solid var(--ta-border);
+  box-shadow:none;
+  backdrop-filter:none;
+}
+:root[data-theme] .app :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger) {
+  background:transparent;
+  border:1px solid transparent;
+  color:var(--ta-muted);
+  box-shadow:none;
+  border-radius:7px;
+}
+:root[data-theme] .app .ta-header-icon {height:37px;width:37px}
+:root[data-theme] .app .ta-menu-toggle {width:38px;height:38px;flex-basis:38px}
+:root[data-theme] .app :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger):hover {
+  background:var(--ta-hover);
+  border-color:var(--ta-border);
+  color:var(--ta-ink);
+}
+:root[data-theme] .app .ta-global-search {
+  height:39px;max-width:370px;
+  border:1px solid var(--ta-border);
+  background:var(--ta-field);
+  border-radius:7px;box-shadow:none;
+}
+:root[data-theme] .app .ta-global-search:focus-within {
+  border-color:var(--ta-primary);
+  box-shadow:0 0 0 2px var(--ta-primary-soft);
+}
+:root[data-theme] .app .ta-global-search input {color:var(--ta-ink);font-size:12px}
+:root[data-theme] .app .ta-global-search kbd {
+  background:transparent;border-color:var(--ta-border);
+  color:var(--ta-muted-2);font-size:10px;
+}
+:root[data-theme] .app .environment-pill {
+  background:transparent;
+  border:1px solid var(--ta-border);
+  color:var(--ta-muted);font-weight:520;
+  padding:7px 10px;border-radius:6px;
+}
+:root[data-theme] .app .pb-account-trigger {min-height:39px}
+:root[data-theme] .app .pb-account-name {font-weight:570}
+:root[data-theme] .app .pb-identity-avatar {box-shadow:none}
+
+/* Remove the last saturated avatar tile and bottom-left note frame. */
+:root[data-theme] .app .avatar-mark,
+:root[data-theme] .app .pb-identity-avatar {
+  background:var(--ta-faint);
+  color:var(--ta-ink-2);
+  border:1px solid var(--ta-border);
+  box-shadow:none;
+  font-weight:610;
+}
+:root[data-theme] .app .simulation-note {
+  padding:14px 3px 0;
+  border:0;
+  border-top:1px solid var(--ta-border);
+  border-radius:0;
+  background:transparent;
+}
+/* More breathing room, but not a sea of empty dashboard chrome. */
+:root[data-theme] .app .content-shell {
+  max-width:1540px;
+  padding:31px clamp(22px,2.2vw,36px) 48px;
+}
+:root[data-theme] .app .workspace-header {min-height:82px;margin-bottom:24px;gap:24px}
+:root[data-theme] .app .crumbs {
+  color:var(--ta-muted-2);
+  margin-bottom:9px;
+  font-size:11px;
+}
+:root[data-theme] .app .workspace-heading h1 {
+  font-size:25px;
+  color:var(--ta-ink);
+  font-weight:600;
+  letter-spacing:-.035em;
+  line-height:1.35;
+}
+:root[data-theme] .app .workspace-heading p {
+  font-size:12px;color:var(--ta-muted);
+  line-height:1.7;margin-top:5px;
+}
+:root[data-theme] .app .header-actions {gap:9px}
+:root[data-theme] .app :is(.outline-button,.secondary-button,.subtle-button) {
+  min-height:37px;
+  border:1px solid var(--ta-border);
+  background:transparent;
+  color:var(--ta-ink-2);
+  border-radius:7px;
+  box-shadow:none;
+  font-weight:530;
+}
+:root[data-theme] .app :is(.outline-button,.secondary-button,.subtle-button):hover:not(:disabled) {
+  background:var(--ta-hover);
+  border-color:var(--ta-muted-2);
+  color:var(--ta-ink);
+  transform:none;box-shadow:none;
+}
+:root[data-theme] .app :is(.primary-button,.guide-action,.pmss-import-button,.pmss-run-button) {
+  border:1px solid var(--ta-primary);
+  border-radius:7px;
+  background:var(--ta-primary);
+  color:var(--ta-rail);
+  font-weight:620;
+  box-shadow:none;
+}
+:root[data-theme] .app :is(.primary-button,.guide-action,.pmss-import-button,.pmss-run-button):hover:not(:disabled) {
+  background:var(--ta-primary-hover);
+  border-color:var(--ta-primary-hover);
+  color:var(--ta-rail);
+  box-shadow:none;transform:none;
+}
+:root[data-theme] .app :is(.primary-button,.guide-action):disabled {opacity:.48}
+:root[data-theme] .app button:focus-visible,
+:root[data-theme] .app a:focus-visible,
+:root[data-theme] .app input:focus-visible,
+:root[data-theme] .app [role="button"]:focus-visible {
+  outline:2px solid var(--ta-primary);
+  outline-offset:3px;
+}
+
+/* Unified quiet cards: real content and chart data are visually dominant. */
+:root[data-theme] .app :is(
+  .ta-stat-card,.ta-chart-card,.ta-capacity,.data-panel,
+  .recommendation-panel,.trials-panel,.chart-card,.result-metric,
+  .report-empty,.trial-placeholder,.quick-guide,.analysis-teaser
+) {
+  border:1px solid var(--ta-border);
+  background:var(--ta-panel);
+  border-radius:10px;
+  box-shadow:none;
+}
+:root[data-theme] .app :is(
+  .ta-stat-card,.ta-chart-card,.ta-capacity,.data-panel,
+  .recommendation-panel,.trials-panel,.chart-card,.result-metric
+):hover {transform:none;box-shadow:none;border-color:var(--ta-border)}
+:root[data-theme] .app .ta-overview {gap:17px}
+:root[data-theme] .app .ta-top-dashboard {gap:17px}
+:root[data-theme] .app .ta-dashboard-left {gap:17px}
+:root[data-theme] .app .ta-stats-grid {gap:17px}
+:root[data-theme] .app .ta-stat-card {min-height:143px;padding:18px 20px}
+:root[data-theme] .app .ta-stat-icon {
+  width:32px;height:32px;margin-bottom:11px;
+  background:transparent;border:0;border-radius:4px;
+  color:var(--ta-muted);
+}
+:root[data-theme] .app .ta-stat-icon svg {width:19px;height:19px;stroke-width:1.5}
+:root[data-theme] .app .ta-stat-label {font-size:12px;font-weight:500;color:var(--ta-muted)}
+:root[data-theme] .app .ta-stat-bottom {margin-top:5px;margin-bottom:5px}
+:root[data-theme] .app .ta-stat-bottom strong {
+  font-size:28px;font-weight:610;letter-spacing:-.045em;
+  color:var(--ta-ink);font-variant-numeric:tabular-nums;
+}
+:root[data-theme] .app .ta-stat-badge {
+  padding:3px 6px;border-radius:5px;
+  background:var(--ta-faint);color:var(--ta-muted);
+  border:1px solid var(--ta-border);
+  font-size:10px;font-weight:510;
+}
+:root[data-theme] .app .ta-stat-detail {font-size:11px;color:var(--ta-muted-2)}
+:root[data-theme] .app .ta-chart-card {padding:20px 21px}
+:root[data-theme] .app .ta-bidding-chart {height:314px}
+:root[data-theme] .app .ta-bars {height:224px;min-height:190px;margin-top:13px}
+:root[data-theme] .app .ta-card-title h3 {
+  font-size:15px;font-weight:595;letter-spacing:-.015em;
+  color:var(--ta-ink);
+}
+:root[data-theme] .app .ta-card-title p {font-size:11.5px;color:var(--ta-muted)}
+:root[data-theme] .app .ta-card-tag,
+:root[data-theme] .app .ta-card-icon {
+  background:transparent;
+  border:1px solid var(--ta-border);
+  color:var(--ta-muted);
+  border-radius:6px;
+  font-size:10px;
+}
+:root[data-theme] .app .ta-capacity {min-height:474px;padding-top:21px}
+:root[data-theme] .app .ta-capacity>.ta-card-title {padding-inline:21px}
+:root[data-theme] .app .ta-gauge-wrap {
+  width:min(72%,250px);
+  min-height:166px;
+  margin:22px auto 0;
+}
+:root[data-theme] .app .ta-gauge-reading {top:83px}
+:root[data-theme] .app .ta-gauge-reading strong {
+  font-size:34px;font-weight:600;letter-spacing:-.055em;color:var(--ta-ink);
+}
+:root[data-theme] .app .ta-gauge-explain {
+  max-width:320px;
+  font-size:11px;color:var(--ta-muted);
+  min-height:48px;margin-top:6px;
+}
+:root[data-theme] .app .ta-capacity-footer {
+  background:transparent;border-top:1px solid var(--ta-border);
+  padding:19px 10px;
+}
+:root[data-theme] .app .ta-capacity-footer>div {border-right-color:var(--ta-border);gap:5px}
+:root[data-theme] .app .ta-capacity-footer span {font-size:10px;color:var(--ta-muted-2)}
+:root[data-theme] .app .ta-capacity-footer strong {font-size:15px;font-weight:610;color:var(--ta-ink)}
+:root[data-theme] .app .ta-wide-chart {min-height:323px}
+:root[data-theme] .app .ta-supply-chart {height:222px}
+:root[data-theme] .app .ta-wide-foot {font-size:10.5px}
+:root[data-theme] .app .ta-report-link {
+  border:1px solid var(--ta-border);
+  color:var(--ta-ink-2);
+  background:transparent;border-radius:6px;
+}
+:root[data-theme] .app .ta-report-link:hover {background:var(--ta-hover);color:var(--ta-ink)}
+:root[data-theme] .app .ta-report-complete {background:var(--ta-faint);color:var(--ta-ink-2);border:1px solid var(--ta-border)}
+:root[data-theme] .app .ta-report-complete strong {color:var(--ta-ink)}
+
+/* Forms and figures retain clear focus and readable data. */
+:root[data-theme] .app .ta-secondary-section {margin-top:30px}
+:root[data-theme] .app .ta-section-heading h2,
+:root[data-theme] .app :is(.panel-head h2,.result-section-heading h2) {
+  font-size:17px;color:var(--ta-ink);font-weight:590;letter-spacing:-.025em;
+}
+:root[data-theme] .app .ta-section-heading span:first-child,
+:root[data-theme] .app .panel-kicker {color:var(--ta-muted-2);font-weight:570}
+:root[data-theme] .app .ta-work-grid {gap:17px}
+:root[data-theme] .app :is(.panel-counter,.table-search,.number-field,.select-wrap) {
+  background:var(--ta-field);
+  color:var(--ta-ink-2);
+  border:1px solid var(--ta-border);
+  border-radius:7px;
+  box-shadow:none;
+}
+:root[data-theme] .app :is(.units-table,.trials-table) thead th {
+  background:var(--ta-faint);
+  color:var(--ta-muted);font-weight:530;
+  border-color:var(--ta-border);
+}
+:root[data-theme] .app :is(.units-table,.trials-table) tbody td {
+  color:var(--ta-ink-2);
+  border-bottom:1px solid var(--ta-border);
+}
+:root[data-theme] .app :is(.units-table,.trials-table) tbody tr:hover {background:var(--ta-hover)}
+:root[data-theme] .app .units-table tbody tr.target-row,
+:root[data-theme] .app .trials-table tbody tr.is-best {background:var(--ta-primary-soft)}
+:root[data-theme] .app .unit-symbol {background:var(--ta-faint);border:1px solid var(--ta-border);color:var(--ta-muted)}
+:root[data-theme] .app .target-row .unit-symbol {background:var(--ta-primary-soft);color:var(--ta-ink)}
+:root[data-theme] .app .cell-editor {
+  color:var(--ta-ink-2);
+  background:transparent;
+}
+:root[data-theme] .app .cell-editor:hover {background:var(--ta-faint);border-color:var(--ta-border)}
+:root[data-theme] .app .cell-editor:focus {
+  background:var(--ta-field);color:var(--ta-ink);
+  border-color:var(--ta-primary);
+  box-shadow:0 0 0 2px var(--ta-primary-soft);
+}
+:root[data-theme] .app .target-radio.selected {
+  background:var(--ta-primary);border-color:var(--ta-primary);
+  box-shadow:none;
+}
+:root[data-theme] .app .recommendation-panel {padding:21px}
+:root[data-theme] .app .recommendation-illustration,
+:root[data-theme] .app .report-empty-art,
+:root[data-theme] .app .settings-emblem {
+  background:var(--ta-faint);border:1px solid var(--ta-border);
+  color:var(--ta-muted);box-shadow:none;border-radius:9px;
+}
+:root[data-theme] .app .recommendation-price span {color:var(--ta-ink);font-weight:620}
+:root[data-theme] .app .result-metric.accent {background:var(--ta-panel);border-color:var(--ta-border)}
+:root[data-theme] .app .result-metric.accent strong {color:var(--ta-primary)}
+:root[data-theme] .app .quick-guide,
+:root[data-theme] .app .analysis-teaser {background:var(--ta-panel);color:var(--ta-ink-2)}
+:root[data-theme] .app .quick-guide h3 {color:var(--ta-ink);font-weight:610}
+:root[data-theme] .app .guide-steps b {color:var(--ta-muted)}
+:root[data-theme] .app .analysis-teaser-icon {background:var(--ta-faint);color:var(--ta-muted)}
+:root[data-theme] .app .ghost-cta {
+  background:transparent;
+  border:1px solid var(--ta-border);
+  color:var(--ta-ink-2);border-radius:7px;
+}
+:root[data-theme] .app .ghost-cta:hover {background:var(--ta-hover);color:var(--ta-ink)}
+:root[data-theme] .app .status-chip.success {background:var(--ta-success-soft);color:var(--ta-success)}
+:root[data-theme] .app .settings-panel {
+  background:var(--ta-panel);
+  border-left:1px solid var(--ta-border);
+  box-shadow:-16px 0 56px var(--pb-quiet-glow);
+}
+:root[data-theme] .app .settings-top,
+:root[data-theme] .app .settings-foot {background:var(--ta-panel);border-color:var(--ta-border)}
+:root[data-theme] .app .setting-section {border-color:var(--ta-border)}
+:root[data-theme] .app .mode-switch {background:var(--ta-faint);border-color:var(--ta-border)}
+:root[data-theme] .app .mode-switch button.active {
+  background:var(--ta-panel);
+  color:var(--ta-ink);box-shadow:none;
+  font-weight:590;
+}
+:root[data-theme] .app .section-note {background:var(--ta-panel);color:var(--ta-muted);border-color:var(--ta-border)}
+:root[data-theme] .app .app-footer {color:var(--ta-muted-2);border-color:var(--ta-border)}
+
+/* PMSS content gets the same card surface and controls where common classes
+   exist. No selectors alter topology controls, graph positions or API forms. */
+:root[data-theme] .app :is(
+  .pmss-workspace,.pmss-smart-bid,.pmss-unified-workspace,
+  .pmss-grid-overview,.pmss-source-picker
+) {color:var(--ta-ink)}
+:root[data-theme] .app :is(.pmss-panel,.pmss-card,.pmss-metric-card) {
+  border-color:var(--ta-border);
+  background:var(--ta-panel);
+  border-radius:10px;
+  box-shadow:none;
+}
+
+/* PMSS-specific editorial surfaces: retain all sections, data and controls. */
+:root[data-theme] .app .pmss-workspace {gap:19px}
+:root[data-theme] .app .pmss-hero {
+  background:var(--ta-panel);
+  border:1px solid var(--ta-border);
+  border-radius:10px;
+  padding:26px 28px;
+}
+:root[data-theme] .app .pmss-hero::after {display:none}
+:root[data-theme] .app .pmss-hero h2 {font-weight:590;font-size:24px;letter-spacing:-.025em}
+:root[data-theme] .app .pmss-eyebrow,
+:root[data-theme] .app :is(.pmss-section-head small,.pmss-panel-head small,.pmss-source-eyebrow) {
+  color:var(--ta-muted-2);font-weight:570;letter-spacing:.1em;
+}
+:root[data-theme] .app .pmss-hero-tags span {
+  border:1px solid var(--ta-border);
+  border-radius:6px;
+  background:var(--ta-faint);
+}
+:root[data-theme] .app :is(.pmss-metric,.pmss-panel,.pmss-source-panel,.pmss-market-context) {
+  background:var(--ta-panel);
+  border:1px solid var(--ta-border);
+  border-radius:10px;
+  box-shadow:none;
+}
+:root[data-theme] .app .pmss-metric {padding:17px 18px;gap:8px}
+:root[data-theme] .app .pmss-metric strong {font-size:21px;font-weight:620}
+:root[data-theme] .app .pmss-panel {padding:22px}
+:root[data-theme] .app :is(.pmss-section-head h3,.pmss-panel-head h3,.pmss-source-heading h3) {
+  color:var(--ta-ink);font-size:17px;font-weight:590;letter-spacing:-.015em;
+}
+:root[data-theme] .app :is(.pmss-controls input,.pmss-controls select,.pmss-source-fields select,.pmss-market-context select) {
+  background:var(--ta-field);color:var(--ta-ink);border-color:var(--ta-border);border-radius:7px;
+}
+:root[data-theme] .app .pmss-source-fields .pmss-source-load {
+  color:var(--ta-rail);background:var(--ta-primary);border:1px solid var(--ta-primary);
+}
+:root[data-theme] .app :is(.pmss-state-label,.pmss-status) {
+  border-radius:6px;font-weight:540;
+}
+:root[data-theme] .app .pmss-grid-canvas {background:var(--ta-faint);border-radius:8px}
+:root[data-theme] .app .pmss-source-panel {padding:22px}
+@media(max-width:700px) {
+  :root[data-theme] .app .pmss-hero {padding:20px}
+  :root[data-theme] .app .pmss-panel,
+  :root[data-theme] .app .pmss-source-panel {padding:16px}
+}
+
+/* Safe layouts: preserve the existing responsive nav drawer behavior. */
+@media (max-width:1480px) {
+  :root[data-theme] .app .ta-top-dashboard,
+  :root[data-theme] .app .ta-stats-grid,
+  :root[data-theme] .app .ta-dashboard-left,
+  :root[data-theme] .app .ta-overview,
+  :root[data-theme] .app .ta-work-grid {gap:14px}
+  :root[data-theme] .app .content-shell {padding-inline:24px}
+}
+@media (max-width:1110px) {
+  :root[data-theme] .app .ta-capacity {min-height:470px}
+  :root[data-theme] .app .ta-gauge-wrap {width:min(76%,240px)}
+  :root[data-theme] .app .ta-stat-card {padding:15px;min-height:135px}
+  :root[data-theme] .app .ta-stat-bottom strong {font-size:24px}
+  :root[data-theme] .app .ta-stat-badge {font-size:9px}
+}
+@media (max-width:960px) {
+  :root[data-theme] .app .content-shell {padding:22px 18px 42px}
+  :root[data-theme] .app .mobile-topbar {background:var(--ta-rail);border-color:var(--ta-border)}
+  :root[data-theme] .app .sidebar .brand {height:80px;flex-basis:80px}
+}
+@media (max-width:780px) {
+  :root[data-theme] .app .workspace-heading h1 {font-size:22px}
+  :root[data-theme] .app .ta-gauge-wrap {margin-top:12px}
+  :root[data-theme] .app .ta-capacity {min-height:0}
+  :root[data-theme] .app .ta-stat-card {min-height:125px}
+  :root[data-theme] .app .ta-stat-bottom strong {font-size:23px}
+}
+@media (prefers-reduced-motion:reduce) {
+  :root[data-theme] .app :is(.nav-entry,.primary-button,.outline-button,.ta-stat-card,.ta-capacity) {
+    transition:none;
+  }
+}
