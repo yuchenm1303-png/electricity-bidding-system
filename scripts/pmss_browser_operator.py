@@ -19,6 +19,7 @@ from urllib.parse import urlsplit
 _LOCK = threading.RLock()
 _HANDLE = None
 _FRAME_METRICS = None
+_DRIVER = None
 _SCHOOL_URL = "http://cq.university.netts-dev.tsintergy.com/"
 _HOST = "cq.university.netts-dev.tsintergy.com"
 _TOKEN_FILE = "/srv/powerbid-platform/private-cases/.pmss-web-login-secret"
@@ -46,20 +47,43 @@ def _trusted(handler):
 
 
 def _driver():
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
-    options = Options()
-    options.debugger_address = os.environ.get(
-        "POWERBID_CHROME_DEBUGGER", "127.0.0.1:9223"
-    )
-    return webdriver.Chrome(options=options)
+    """Keep a single attached ChromeDriver throughout the service lifetime.
+
+    Called only while holding _LOCK. Re-attaching to a running Chrome on
+    every screenshot was the dominant avoidable per-frame overhead.
+    """
+    global _DRIVER
+    if _DRIVER is None:
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        options = Options()
+        options.debugger_address = os.environ.get(
+            "POWERBID_CHROME_DEBUGGER", "127.0.0.1:9223"
+        )
+        _DRIVER = webdriver.Chrome(options=options)
+    return _DRIVER
+
+
+def _reset_driver():
+    """Discard stale attachment only on errors, never after normal frames."""
+    global _DRIVER, _HANDLE, _FRAME_METRICS
+    current = _DRIVER
+    _DRIVER = None
+    _HANDLE = None
+    _FRAME_METRICS = None
+    if current is not None:
+        try:
+            current.quit()
+        except Exception:
+            pass
 
 
 def _pick_tab(driver):
     global _HANDLE
     handles = driver.window_handles
     if _HANDLE in handles:
-        driver.switch_to.window(_HANDLE)
+        if driver.current_window_handle != _HANDLE:
+            driver.switch_to.window(_HANDLE)
         if urlsplit(driver.current_url).hostname == _HOST:
             return
     for handle in handles:
@@ -193,20 +217,18 @@ def handle_school_browser(handler, path, authenticated):
         with _LOCK:
             try:
                 driver = _driver()
-                try:
-                    _pick_tab(driver)
-                    frame = driver.get_screenshot_as_png()
-                    pixel_w, pixel_h = struct.unpack(">II", frame[16:24])
-                    css_w, css_h = driver.execute_script(
-                        "return [window.innerWidth,window.innerHeight]"
-                    )
-                    global _FRAME_METRICS
-                    _FRAME_METRICS = (pixel_w, pixel_h, css_w, css_h)
-                finally:
-                    driver.quit()
+                _pick_tab(driver)
+                frame = driver.get_screenshot_as_png()
+                pixel_w, pixel_h = struct.unpack(">II", frame[16:24])
+                css_w, css_h = driver.execute_script(
+                    "return [window.innerWidth,window.innerHeight]"
+                )
+                global _FRAME_METRICS
+                _FRAME_METRICS = (pixel_w, pixel_h, css_w, css_h)
                 if not 100 <= len(frame) <= 2_000_000:
                     raise ValueError("Invalid frame")
             except Exception:
+                _reset_driver()
                 handler._json(503, {"error": "school_browser_unavailable"})
                 return True
         handler.send_response(200)
@@ -236,15 +258,14 @@ def handle_school_browser(handler, path, authenticated):
                 return True
             with _LOCK:
                 driver = _driver()
-                try:
-                    _pick_tab(driver)
-                    _submit_school_login(driver, username, password)
-                finally:
-                    driver.quit()
+                _pick_tab(driver)
+                _submit_school_login(driver, username, password)
         except (ValueError, TypeError, KeyError):
             handler._json(422, {"error": "invalid_school_login_form"})
             return True
         except Exception:
+            with _LOCK:
+                _reset_driver()
             handler._json(503, {"error": "school_login_unavailable"})
             return True
         handler._json(200, {"submitted": True})
@@ -265,15 +286,14 @@ def handle_school_browser(handler, path, authenticated):
                 return True
             with _LOCK:
                 driver = _driver()
-                try:
-                    _pick_tab(driver)
-                    outcome = _act(driver, body)
-                finally:
-                    driver.quit()
+                _pick_tab(driver)
+                outcome = _act(driver, body)
         except (ValueError, TypeError, KeyError):
             handler._json(422, {"error": "invalid_browser_action"})
             return True
         except Exception:
+            with _LOCK:
+                _reset_driver()
             handler._json(503, {"error": "school_browser_unavailable"})
             return True
         handler._json(200, {"ok": True, **outcome})
