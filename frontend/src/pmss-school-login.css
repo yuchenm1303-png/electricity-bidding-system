@@ -29,3 +29,8 @@
 .pmss-browser-quick-fields button{border:0;border-radius:8px;min-height:38px;padding:0 18px;white-space:nowrap;background:#e7ebee;color:#13202b;font-size:12px;font-weight:700;cursor:pointer}
 .pmss-browser-quick-fields button:disabled{opacity:.55;cursor:default}
 @media(max-width:720px){.pmss-browser-quick-description{align-items:flex-start;flex-wrap:wrap}.pmss-browser-quick-description span{margin-left:0}.pmss-browser-quick-fields{grid-template-columns:1fr}.pmss-browser-quick-fields button{width:100%}.pmss-browser-surface{max-height:43vh}}
+
+.pmss-browser-toggle{width:100%;margin-top:12px;padding:12px 14px;text-align:left;background:#1c2530;color:#d5e4ec;border:1px solid #3c4852;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer}
+.pmss-browser-toggle:hover{background:#273541}
+.pmss-browser-toggle[aria-expanded="true"]{margin-bottom:12px}
+.pmss-browser-quick-login{margin-top:0}
