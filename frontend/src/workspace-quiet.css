@@ -62,32 +62,32 @@
 }
 
 /* One font scale; avoid an extra network font in the workbench. */
-:root .app {
+:root[data-theme] .app {
   font-family:Inter,"SF Pro Text",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
   font-feature-settings:"tnum" 1;
   background:var(--ta-bg);
   color:var(--ta-ink);
 }
-:root .app .app-main,
-:root .app .content-shell {background:var(--ta-bg);color:var(--ta-ink)}
-:root .app .sidebar {
+:root[data-theme] .app .app-main,
+:root[data-theme] .app .content-shell {background:var(--ta-bg);color:var(--ta-ink)}
+:root[data-theme] .app .sidebar {
   background:var(--ta-rail);
   border-right:1px solid var(--ta-border);
 }
-:root .app .brand {
+:root[data-theme] .app .brand {
   height:80px;flex:0 0 80px;
   border-bottom:1px solid var(--ta-border);
 }
-:root .app .brand-home-link {opacity:.95}
-:root .app .brand-name strong {font-size:19px;letter-spacing:-.05em;font-weight:630}
-:root .app .brand-name small {font-weight:500;letter-spacing:.09em}
-:root .app .sidebar-section-label {
+:root[data-theme] .app .brand-home-link {opacity:.95}
+:root[data-theme] .app .brand-name strong {font-size:19px;letter-spacing:-.05em;font-weight:630}
+:root[data-theme] .app .brand-name small {font-weight:500;letter-spacing:.09em}
+:root[data-theme] .app .sidebar-section-label {
   margin-top:16px;color:var(--ta-muted-2);
   font-size:10px;font-weight:520;letter-spacing:.12em;
 }
-:root .app .sidebar-section-label span {font-size:10px}
-:root .app .sidebar-nav {gap:3px;padding-inline:13px}
-:root .app .nav-entry {
+:root[data-theme] .app .sidebar-section-label span {font-size:10px}
+:root[data-theme] .app .sidebar-nav {gap:3px;padding-inline:13px}
+:root[data-theme] .app .nav-entry {
   min-height:41px;
   border:1px solid transparent;
   border-radius:7px;
@@ -97,38 +97,38 @@
   font-size:12.5px;
   transition:background .15s,color .15s,border-color .15s;
 }
-:root .app .nav-entry svg {color:var(--ta-muted-2);stroke-width:1.65}
-:root .app .nav-entry:hover:not(.active) {background:var(--ta-hover);color:var(--ta-ink)}
-:root .app .nav-entry.active {
+:root[data-theme] .app .nav-entry svg {color:var(--ta-muted-2);stroke-width:1.65}
+:root[data-theme] .app .nav-entry:hover:not(.active) {background:var(--ta-hover);color:var(--ta-ink)}
+:root[data-theme] .app .nav-entry.active {
   color:var(--ta-ink);
   background:var(--ta-primary-soft);
   border:1px solid var(--ta-border);
   box-shadow:inset 2px 0 var(--ta-primary);
   font-weight:590;
 }
-:root .app .nav-entry.active svg {color:var(--ta-primary)}
-:root .app .legacy-entry {
+:root[data-theme] .app .nav-entry.active svg {color:var(--ta-primary)}
+:root[data-theme] .app .legacy-entry {
   margin-top:12px;padding-top:10px;
   border-top:1px solid var(--ta-border);
   border-radius:0;
 }
-:root .app .simulation-note {
+:root[data-theme] .app .simulation-note {
   border:1px solid var(--ta-border);
   border-radius:8px;
   background:transparent;
   box-shadow:none;
   padding:11px 12px;
 }
-:root .app .simulation-note strong {font-weight:560;color:var(--ta-ink-2)}
-:root .app .simulation-note p {color:var(--ta-muted-2);line-height:1.7}
-:root .app .simulation-note svg {color:var(--ta-muted-2)}
-:root .app .data-source {color:var(--ta-muted-2)}
-:root .app .sidebar-foot {height:44px;border-top:1px solid var(--ta-border);font-weight:510;color:var(--ta-muted-2)}
-:root .app .version-dot {background:var(--ta-primary)}
-:root .app .online-dot {background:var(--ta-success);box-shadow:none}
+:root[data-theme] .app .simulation-note strong {font-weight:560;color:var(--ta-ink-2)}
+:root[data-theme] .app .simulation-note p {color:var(--ta-muted-2);line-height:1.7}
+:root[data-theme] .app .simulation-note svg {color:var(--ta-muted-2)}
+:root[data-theme] .app .data-source {color:var(--ta-muted-2)}
+:root[data-theme] .app .sidebar-foot {height:44px;border-top:1px solid var(--ta-border);font-weight:510;color:var(--ta-muted-2)}
+:root[data-theme] .app .version-dot {background:var(--ta-primary)}
+:root[data-theme] .app .online-dot {background:var(--ta-success);box-shadow:none}
 
 /* Quiet command bar, no floating icon tiles. */
-:root .app .global-header {
+:root[data-theme] .app .global-header {
   height:73px;flex-basis:73px;
   padding-inline:28px;
   background:var(--ta-bg);
@@ -136,69 +136,69 @@
   box-shadow:none;
   backdrop-filter:none;
 }
-:root .app :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger) {
+:root[data-theme] .app :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger) {
   background:transparent;
   border:1px solid transparent;
   color:var(--ta-muted);
   box-shadow:none;
   border-radius:7px;
 }
-:root .app .ta-header-icon {height:37px;width:37px}
-:root .app .ta-menu-toggle {width:38px;height:38px;flex-basis:38px}
-:root .app :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger):hover {
+:root[data-theme] .app .ta-header-icon {height:37px;width:37px}
+:root[data-theme] .app .ta-menu-toggle {width:38px;height:38px;flex-basis:38px}
+:root[data-theme] .app :is(.ta-menu-toggle,.ta-header-icon,.pb-account-trigger):hover {
   background:var(--ta-hover);
   border-color:var(--ta-border);
   color:var(--ta-ink);
 }
-:root .app .ta-global-search {
+:root[data-theme] .app .ta-global-search {
   height:39px;max-width:370px;
   border:1px solid var(--ta-border);
   background:var(--ta-field);
   border-radius:7px;box-shadow:none;
 }
-:root .app .ta-global-search:focus-within {
+:root[data-theme] .app .ta-global-search:focus-within {
   border-color:var(--ta-primary);
   box-shadow:0 0 0 2px var(--ta-primary-soft);
 }
-:root .app .ta-global-search input {color:var(--ta-ink);font-size:12px}
-:root .app .ta-global-search kbd {
+:root[data-theme] .app .ta-global-search input {color:var(--ta-ink);font-size:12px}
+:root[data-theme] .app .ta-global-search kbd {
   background:transparent;border-color:var(--ta-border);
   color:var(--ta-muted-2);font-size:10px;
 }
-:root .app .environment-pill {
+:root[data-theme] .app .environment-pill {
   background:transparent;
   border:1px solid var(--ta-border);
   color:var(--ta-muted);font-weight:520;
   padding:7px 10px;border-radius:6px;
 }
-:root .app .pb-account-trigger {min-height:39px}
-:root .app .pb-account-name {font-weight:570}
-:root .app .pb-identity-avatar {box-shadow:none}
+:root[data-theme] .app .pb-account-trigger {min-height:39px}
+:root[data-theme] .app .pb-account-name {font-weight:570}
+:root[data-theme] .app .pb-identity-avatar {box-shadow:none}
 
 /* More breathing room, but not a sea of empty dashboard chrome. */
-:root .app .content-shell {
+:root[data-theme] .app .content-shell {
   max-width:1540px;
   padding:31px clamp(22px,2.2vw,36px) 48px;
 }
-:root .app .workspace-header {min-height:82px;margin-bottom:24px;gap:24px}
-:root .app .crumbs {
+:root[data-theme] .app .workspace-header {min-height:82px;margin-bottom:24px;gap:24px}
+:root[data-theme] .app .crumbs {
   color:var(--ta-muted-2);
   margin-bottom:9px;
   font-size:11px;
 }
-:root .app .workspace-heading h1 {
+:root[data-theme] .app .workspace-heading h1 {
   font-size:25px;
   color:var(--ta-ink);
   font-weight:600;
   letter-spacing:-.035em;
   line-height:1.35;
 }
-:root .app .workspace-heading p {
+:root[data-theme] .app .workspace-heading p {
   font-size:12px;color:var(--ta-muted);
   line-height:1.7;margin-top:5px;
 }
-:root .app .header-actions {gap:9px}
-:root .app :is(.outline-button,.secondary-button,.subtle-button) {
+:root[data-theme] .app .header-actions {gap:9px}
+:root[data-theme] .app :is(.outline-button,.secondary-button,.subtle-button) {
   min-height:37px;
   border:1px solid var(--ta-border);
   background:transparent;
@@ -207,13 +207,13 @@
   box-shadow:none;
   font-weight:530;
 }
-:root .app :is(.outline-button,.secondary-button,.subtle-button):hover:not(:disabled) {
+:root[data-theme] .app :is(.outline-button,.secondary-button,.subtle-button):hover:not(:disabled) {
   background:var(--ta-hover);
   border-color:var(--ta-muted-2);
   color:var(--ta-ink);
   transform:none;box-shadow:none;
 }
-:root .app :is(.primary-button,.guide-action,.pmss-import-button,.pmss-run-button) {
+:root[data-theme] .app :is(.primary-button,.guide-action,.pmss-import-button,.pmss-run-button) {
   border:1px solid var(--ta-primary);
   border-radius:7px;
   background:var(--ta-primary);
@@ -221,23 +221,23 @@
   font-weight:620;
   box-shadow:none;
 }
-:root .app :is(.primary-button,.guide-action,.pmss-import-button,.pmss-run-button):hover:not(:disabled) {
+:root[data-theme] .app :is(.primary-button,.guide-action,.pmss-import-button,.pmss-run-button):hover:not(:disabled) {
   background:var(--ta-primary-hover);
   border-color:var(--ta-primary-hover);
   color:var(--ta-rail);
   box-shadow:none;transform:none;
 }
-:root .app :is(.primary-button,.guide-action):disabled {opacity:.48}
-:root .app button:focus-visible,
-:root .app a:focus-visible,
-:root .app input:focus-visible,
-:root .app [role="button"]:focus-visible {
+:root[data-theme] .app :is(.primary-button,.guide-action):disabled {opacity:.48}
+:root[data-theme] .app button:focus-visible,
+:root[data-theme] .app a:focus-visible,
+:root[data-theme] .app input:focus-visible,
+:root[data-theme] .app [role="button"]:focus-visible {
   outline:2px solid var(--ta-primary);
   outline-offset:3px;
 }
 
 /* Unified quiet cards: real content and chart data are visually dominant. */
-:root .app :is(
+:root[data-theme] .app :is(
   .ta-stat-card,.ta-chart-card,.ta-capacity,.data-panel,
   .recommendation-panel,.trials-panel,.chart-card,.result-metric,
   .report-empty,.trial-placeholder,.quick-guide,.analysis-teaser
@@ -247,175 +247,175 @@
   border-radius:10px;
   box-shadow:none;
 }
-:root .app :is(
+:root[data-theme] .app :is(
   .ta-stat-card,.ta-chart-card,.ta-capacity,.data-panel,
   .recommendation-panel,.trials-panel,.chart-card,.result-metric
 ):hover {transform:none;box-shadow:none;border-color:var(--ta-border)}
-:root .app .ta-overview {gap:17px}
-:root .app .ta-top-dashboard {gap:17px}
-:root .app .ta-dashboard-left {gap:17px}
-:root .app .ta-stats-grid {gap:17px}
-:root .app .ta-stat-card {min-height:143px;padding:18px 20px}
-:root .app .ta-stat-icon {
+:root[data-theme] .app .ta-overview {gap:17px}
+:root[data-theme] .app .ta-top-dashboard {gap:17px}
+:root[data-theme] .app .ta-dashboard-left {gap:17px}
+:root[data-theme] .app .ta-stats-grid {gap:17px}
+:root[data-theme] .app .ta-stat-card {min-height:143px;padding:18px 20px}
+:root[data-theme] .app .ta-stat-icon {
   width:32px;height:32px;margin-bottom:11px;
   background:transparent;border:0;border-radius:4px;
   color:var(--ta-muted);
 }
-:root .app .ta-stat-icon svg {width:19px;height:19px;stroke-width:1.5}
-:root .app .ta-stat-label {font-size:12px;font-weight:500;color:var(--ta-muted)}
-:root .app .ta-stat-bottom {margin-top:5px;margin-bottom:5px}
-:root .app .ta-stat-bottom strong {
+:root[data-theme] .app .ta-stat-icon svg {width:19px;height:19px;stroke-width:1.5}
+:root[data-theme] .app .ta-stat-label {font-size:12px;font-weight:500;color:var(--ta-muted)}
+:root[data-theme] .app .ta-stat-bottom {margin-top:5px;margin-bottom:5px}
+:root[data-theme] .app .ta-stat-bottom strong {
   font-size:28px;font-weight:610;letter-spacing:-.045em;
   color:var(--ta-ink);font-variant-numeric:tabular-nums;
 }
-:root .app .ta-stat-badge {
+:root[data-theme] .app .ta-stat-badge {
   padding:3px 6px;border-radius:5px;
   background:var(--ta-faint);color:var(--ta-muted);
   border:1px solid var(--ta-border);
   font-size:10px;font-weight:510;
 }
-:root .app .ta-stat-detail {font-size:11px;color:var(--ta-muted-2)}
-:root .app .ta-chart-card {padding:20px 21px}
-:root .app .ta-bidding-chart {height:314px}
-:root .app .ta-bars {height:224px;min-height:190px;margin-top:13px}
-:root .app .ta-card-title h3 {
+:root[data-theme] .app .ta-stat-detail {font-size:11px;color:var(--ta-muted-2)}
+:root[data-theme] .app .ta-chart-card {padding:20px 21px}
+:root[data-theme] .app .ta-bidding-chart {height:314px}
+:root[data-theme] .app .ta-bars {height:224px;min-height:190px;margin-top:13px}
+:root[data-theme] .app .ta-card-title h3 {
   font-size:15px;font-weight:595;letter-spacing:-.015em;
   color:var(--ta-ink);
 }
-:root .app .ta-card-title p {font-size:11.5px;color:var(--ta-muted)}
-:root .app .ta-card-tag,
-:root .app .ta-card-icon {
+:root[data-theme] .app .ta-card-title p {font-size:11.5px;color:var(--ta-muted)}
+:root[data-theme] .app .ta-card-tag,
+:root[data-theme] .app .ta-card-icon {
   background:transparent;
   border:1px solid var(--ta-border);
   color:var(--ta-muted);
   border-radius:6px;
   font-size:10px;
 }
-:root .app .ta-capacity {min-height:474px;padding-top:21px}
-:root .app .ta-capacity>.ta-card-title {padding-inline:21px}
-:root .app .ta-gauge-wrap {
+:root[data-theme] .app .ta-capacity {min-height:474px;padding-top:21px}
+:root[data-theme] .app .ta-capacity>.ta-card-title {padding-inline:21px}
+:root[data-theme] .app .ta-gauge-wrap {
   width:min(72%,250px);
   min-height:166px;
   margin:22px auto 0;
 }
-:root .app .ta-gauge-reading {top:83px}
-:root .app .ta-gauge-reading strong {
+:root[data-theme] .app .ta-gauge-reading {top:83px}
+:root[data-theme] .app .ta-gauge-reading strong {
   font-size:34px;font-weight:600;letter-spacing:-.055em;color:var(--ta-ink);
 }
-:root .app .ta-gauge-explain {
+:root[data-theme] .app .ta-gauge-explain {
   max-width:320px;
   font-size:11px;color:var(--ta-muted);
   min-height:48px;margin-top:6px;
 }
-:root .app .ta-capacity-footer {
+:root[data-theme] .app .ta-capacity-footer {
   background:transparent;border-top:1px solid var(--ta-border);
   padding:19px 10px;
 }
-:root .app .ta-capacity-footer>div {border-right-color:var(--ta-border);gap:5px}
-:root .app .ta-capacity-footer span {font-size:10px;color:var(--ta-muted-2)}
-:root .app .ta-capacity-footer strong {font-size:15px;font-weight:610;color:var(--ta-ink)}
-:root .app .ta-wide-chart {min-height:323px}
-:root .app .ta-supply-chart {height:222px}
-:root .app .ta-wide-foot {font-size:10.5px}
-:root .app .ta-report-link {
+:root[data-theme] .app .ta-capacity-footer>div {border-right-color:var(--ta-border);gap:5px}
+:root[data-theme] .app .ta-capacity-footer span {font-size:10px;color:var(--ta-muted-2)}
+:root[data-theme] .app .ta-capacity-footer strong {font-size:15px;font-weight:610;color:var(--ta-ink)}
+:root[data-theme] .app .ta-wide-chart {min-height:323px}
+:root[data-theme] .app .ta-supply-chart {height:222px}
+:root[data-theme] .app .ta-wide-foot {font-size:10.5px}
+:root[data-theme] .app .ta-report-link {
   border:1px solid var(--ta-border);
   color:var(--ta-ink-2);
   background:transparent;border-radius:6px;
 }
-:root .app .ta-report-link:hover {background:var(--ta-hover);color:var(--ta-ink)}
-:root .app .ta-report-complete {background:var(--ta-faint);color:var(--ta-ink-2);border:1px solid var(--ta-border)}
-:root .app .ta-report-complete strong {color:var(--ta-ink)}
+:root[data-theme] .app .ta-report-link:hover {background:var(--ta-hover);color:var(--ta-ink)}
+:root[data-theme] .app .ta-report-complete {background:var(--ta-faint);color:var(--ta-ink-2);border:1px solid var(--ta-border)}
+:root[data-theme] .app .ta-report-complete strong {color:var(--ta-ink)}
 
 /* Forms and figures retain clear focus and readable data. */
-:root .app .ta-secondary-section {margin-top:30px}
-:root .app .ta-section-heading h2,
-:root .app :is(.panel-head h2,.result-section-heading h2) {
+:root[data-theme] .app .ta-secondary-section {margin-top:30px}
+:root[data-theme] .app .ta-section-heading h2,
+:root[data-theme] .app :is(.panel-head h2,.result-section-heading h2) {
   font-size:17px;color:var(--ta-ink);font-weight:590;letter-spacing:-.025em;
 }
-:root .app .ta-section-heading span:first-child,
-:root .app .panel-kicker {color:var(--ta-muted-2);font-weight:570}
-:root .app .ta-work-grid {gap:17px}
-:root .app :is(.panel-counter,.table-search,.number-field,.select-wrap) {
+:root[data-theme] .app .ta-section-heading span:first-child,
+:root[data-theme] .app .panel-kicker {color:var(--ta-muted-2);font-weight:570}
+:root[data-theme] .app .ta-work-grid {gap:17px}
+:root[data-theme] .app :is(.panel-counter,.table-search,.number-field,.select-wrap) {
   background:var(--ta-field);
   color:var(--ta-ink-2);
   border:1px solid var(--ta-border);
   border-radius:7px;
   box-shadow:none;
 }
-:root .app :is(.units-table,.trials-table) thead th {
+:root[data-theme] .app :is(.units-table,.trials-table) thead th {
   background:var(--ta-faint);
   color:var(--ta-muted);font-weight:530;
   border-color:var(--ta-border);
 }
-:root .app :is(.units-table,.trials-table) tbody td {
+:root[data-theme] .app :is(.units-table,.trials-table) tbody td {
   color:var(--ta-ink-2);
   border-bottom:1px solid var(--ta-border);
 }
-:root .app :is(.units-table,.trials-table) tbody tr:hover {background:var(--ta-hover)}
-:root .app .units-table tbody tr.target-row,
-:root .app .trials-table tbody tr.is-best {background:var(--ta-primary-soft)}
-:root .app .unit-symbol {background:var(--ta-faint);border:1px solid var(--ta-border);color:var(--ta-muted)}
-:root .app .target-row .unit-symbol {background:var(--ta-primary-soft);color:var(--ta-ink)}
-:root .app .cell-editor {
+:root[data-theme] .app :is(.units-table,.trials-table) tbody tr:hover {background:var(--ta-hover)}
+:root[data-theme] .app .units-table tbody tr.target-row,
+:root[data-theme] .app .trials-table tbody tr.is-best {background:var(--ta-primary-soft)}
+:root[data-theme] .app .unit-symbol {background:var(--ta-faint);border:1px solid var(--ta-border);color:var(--ta-muted)}
+:root[data-theme] .app .target-row .unit-symbol {background:var(--ta-primary-soft);color:var(--ta-ink)}
+:root[data-theme] .app .cell-editor {
   color:var(--ta-ink-2);
   background:transparent;
 }
-:root .app .cell-editor:hover {background:var(--ta-faint);border-color:var(--ta-border)}
-:root .app .cell-editor:focus {
+:root[data-theme] .app .cell-editor:hover {background:var(--ta-faint);border-color:var(--ta-border)}
+:root[data-theme] .app .cell-editor:focus {
   background:var(--ta-field);color:var(--ta-ink);
   border-color:var(--ta-primary);
   box-shadow:0 0 0 2px var(--ta-primary-soft);
 }
-:root .app .target-radio.selected {
+:root[data-theme] .app .target-radio.selected {
   background:var(--ta-primary);border-color:var(--ta-primary);
   box-shadow:none;
 }
-:root .app .recommendation-panel {padding:21px}
-:root .app .recommendation-illustration,
-:root .app .report-empty-art,
-:root .app .settings-emblem {
+:root[data-theme] .app .recommendation-panel {padding:21px}
+:root[data-theme] .app .recommendation-illustration,
+:root[data-theme] .app .report-empty-art,
+:root[data-theme] .app .settings-emblem {
   background:var(--ta-faint);border:1px solid var(--ta-border);
   color:var(--ta-muted);box-shadow:none;border-radius:9px;
 }
-:root .app .recommendation-price span {color:var(--ta-ink);font-weight:620}
-:root .app .result-metric.accent {background:var(--ta-panel);border-color:var(--ta-border)}
-:root .app .result-metric.accent strong {color:var(--ta-primary)}
-:root .app .quick-guide,
-:root .app .analysis-teaser {background:var(--ta-panel);color:var(--ta-ink-2)}
-:root .app .quick-guide h3 {color:var(--ta-ink);font-weight:610}
-:root .app .guide-steps b {color:var(--ta-muted)}
-:root .app .analysis-teaser-icon {background:var(--ta-faint);color:var(--ta-muted)}
-:root .app .ghost-cta {
+:root[data-theme] .app .recommendation-price span {color:var(--ta-ink);font-weight:620}
+:root[data-theme] .app .result-metric.accent {background:var(--ta-panel);border-color:var(--ta-border)}
+:root[data-theme] .app .result-metric.accent strong {color:var(--ta-primary)}
+:root[data-theme] .app .quick-guide,
+:root[data-theme] .app .analysis-teaser {background:var(--ta-panel);color:var(--ta-ink-2)}
+:root[data-theme] .app .quick-guide h3 {color:var(--ta-ink);font-weight:610}
+:root[data-theme] .app .guide-steps b {color:var(--ta-muted)}
+:root[data-theme] .app .analysis-teaser-icon {background:var(--ta-faint);color:var(--ta-muted)}
+:root[data-theme] .app .ghost-cta {
   background:transparent;
   border:1px solid var(--ta-border);
   color:var(--ta-ink-2);border-radius:7px;
 }
-:root .app .ghost-cta:hover {background:var(--ta-hover);color:var(--ta-ink)}
-:root .app .status-chip.success {background:var(--ta-success-soft);color:var(--ta-success)}
-:root .app .settings-panel {
+:root[data-theme] .app .ghost-cta:hover {background:var(--ta-hover);color:var(--ta-ink)}
+:root[data-theme] .app .status-chip.success {background:var(--ta-success-soft);color:var(--ta-success)}
+:root[data-theme] .app .settings-panel {
   background:var(--ta-panel);
   border-left:1px solid var(--ta-border);
   box-shadow:-16px 0 56px var(--pb-quiet-glow);
 }
-:root .app .settings-top,
-:root .app .settings-foot {background:var(--ta-panel);border-color:var(--ta-border)}
-:root .app .setting-section {border-color:var(--ta-border)}
-:root .app .mode-switch {background:var(--ta-faint);border-color:var(--ta-border)}
-:root .app .mode-switch button.active {
+:root[data-theme] .app .settings-top,
+:root[data-theme] .app .settings-foot {background:var(--ta-panel);border-color:var(--ta-border)}
+:root[data-theme] .app .setting-section {border-color:var(--ta-border)}
+:root[data-theme] .app .mode-switch {background:var(--ta-faint);border-color:var(--ta-border)}
+:root[data-theme] .app .mode-switch button.active {
   background:var(--ta-panel);
   color:var(--ta-ink);box-shadow:none;
   font-weight:590;
 }
-:root .app .section-note {background:var(--ta-panel);color:var(--ta-muted);border-color:var(--ta-border)}
-:root .app .app-footer {color:var(--ta-muted-2);border-color:var(--ta-border)}
+:root[data-theme] .app .section-note {background:var(--ta-panel);color:var(--ta-muted);border-color:var(--ta-border)}
+:root[data-theme] .app .app-footer {color:var(--ta-muted-2);border-color:var(--ta-border)}
 
 /* PMSS content gets the same card surface and controls where common classes
    exist. No selectors alter topology controls, graph positions or API forms. */
-:root .app :is(
+:root[data-theme] .app :is(
   .pmss-workspace,.pmss-smart-bid,.pmss-unified-workspace,
   .pmss-grid-overview,.pmss-source-picker
 ) {color:var(--ta-ink)}
-:root .app :is(.pmss-panel,.pmss-card,.pmss-metric-card) {
+:root[data-theme] .app :is(.pmss-panel,.pmss-card,.pmss-metric-card) {
   border-color:var(--ta-border);
   background:var(--ta-panel);
   border-radius:10px;
@@ -424,34 +424,34 @@
 
 /* Safe layouts: preserve the existing responsive nav drawer behavior. */
 @media (max-width:1480px) {
-  :root .app .ta-top-dashboard,
-  :root .app .ta-stats-grid,
-  :root .app .ta-dashboard-left,
-  :root .app .ta-overview,
-  :root .app .ta-work-grid {gap:14px}
-  :root .app .content-shell {padding-inline:24px}
+  :root[data-theme] .app .ta-top-dashboard,
+  :root[data-theme] .app .ta-stats-grid,
+  :root[data-theme] .app .ta-dashboard-left,
+  :root[data-theme] .app .ta-overview,
+  :root[data-theme] .app .ta-work-grid {gap:14px}
+  :root[data-theme] .app .content-shell {padding-inline:24px}
 }
 @media (max-width:1110px) {
-  :root .app .ta-capacity {min-height:470px}
-  :root .app .ta-gauge-wrap {width:min(76%,240px)}
-  :root .app .ta-stat-card {padding:15px;min-height:135px}
-  :root .app .ta-stat-bottom strong {font-size:24px}
-  :root .app .ta-stat-badge {font-size:9px}
+  :root[data-theme] .app .ta-capacity {min-height:470px}
+  :root[data-theme] .app .ta-gauge-wrap {width:min(76%,240px)}
+  :root[data-theme] .app .ta-stat-card {padding:15px;min-height:135px}
+  :root[data-theme] .app .ta-stat-bottom strong {font-size:24px}
+  :root[data-theme] .app .ta-stat-badge {font-size:9px}
 }
 @media (max-width:960px) {
-  :root .app .content-shell {padding:22px 18px 42px}
-  :root .app .mobile-topbar {background:var(--ta-rail);border-color:var(--ta-border)}
-  :root .app .sidebar .brand {height:80px;flex-basis:80px}
+  :root[data-theme] .app .content-shell {padding:22px 18px 42px}
+  :root[data-theme] .app .mobile-topbar {background:var(--ta-rail);border-color:var(--ta-border)}
+  :root[data-theme] .app .sidebar .brand {height:80px;flex-basis:80px}
 }
 @media (max-width:780px) {
-  :root .app .workspace-heading h1 {font-size:22px}
-  :root .app .ta-gauge-wrap {margin-top:12px}
-  :root .app .ta-capacity {min-height:0}
-  :root .app .ta-stat-card {min-height:125px}
-  :root .app .ta-stat-bottom strong {font-size:23px}
+  :root[data-theme] .app .workspace-heading h1 {font-size:22px}
+  :root[data-theme] .app .ta-gauge-wrap {margin-top:12px}
+  :root[data-theme] .app .ta-capacity {min-height:0}
+  :root[data-theme] .app .ta-stat-card {min-height:125px}
+  :root[data-theme] .app .ta-stat-bottom strong {font-size:23px}
 }
 @media (prefers-reduced-motion:reduce) {
-  :root .app :is(.nav-entry,.primary-button,.outline-button,.ta-stat-card,.ta-capacity) {
+  :root[data-theme] .app :is(.nav-entry,.primary-button,.outline-button,.ta-stat-card,.ta-capacity) {
     transition:none;
   }
 }
