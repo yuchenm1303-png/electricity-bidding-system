@@ -526,6 +526,40 @@ export type PMSSStrategyGuard = {
   model_confidence_grade: string;
   training_case_dates: string[];
   untouched_holdout_case_dates: string[];
+  original_bid_distinct_training_curves: number;
+  holdout_reuses_training_original_bid_curve: boolean;
+  historical_price_rules_consistent: boolean;
+  historical_original_bid_vs_imported_price_rules: {
+    case_date: string;
+    market_price_floor: number | null;
+    market_price_ceiling: number | null;
+    max_historical_bid_price: number | null;
+    below_floor_segment_count: number;
+    above_ceiling_segment_count: number;
+    consistent_with_imported_rule: boolean;
+    historical_original_quotes_modified: false;
+  }[];
+  historical_original_bid_validation: {
+    status: string;
+    reasons: string[];
+    holdout_unit_mae: number | null;
+    holdout_nodal_price_mae: number | null;
+  };
+  target_unit_original_bid_historical_fit: {
+    case_date: string;
+    target_unit_id: string;
+    dispatch_mae_mw: number | null;
+    dispatch_coverage: number;
+    max_abs_dispatch_error_mw: number | null;
+    original_bid_only: true;
+    new_bid_counterfactual_verified: false;
+  }[];
+  per_day_original_bid_simulation_vs_real_pmss: {
+    case_date: string;
+    dispatch_mae_mw: number | null;
+    nodal_price_mae_pmss_reported_unit_unverified: number | null;
+    absolute_line_flow_mae_mw: number | null;
+  }[];
   candidates: {
     candidate_id: string;
     candidate_name: string;

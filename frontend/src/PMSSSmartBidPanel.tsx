@@ -23,6 +23,18 @@ type Props = {
   onChoose: (proposal: PMSSBidProposal) => void;
 };
 
+const errorMW = (value: number | null) =>
+  typeof value === "number" && Number.isFinite(value) ? numeric(value, 2) + " MW" : "缺失";
+
+const historicalFailure = (reason: string) => {
+  if (reason.includes("Unit dispatch MAE")) return "留出日期机组出力误差超过研究设定阈值";
+  if (reason.includes("Nodal price MAE")) return "留出日期节点电价误差超过研究设定阈值";
+  if (reason.includes("coverage")) return "历史出清数据覆盖不足";
+  if (reason.includes("topology")) return "历史日期之间电网参数不一致";
+  if (reason.includes("Insufficient independent days")) return "独立历史日期不足";
+  return reason;
+};
+
 const slots = [
   {id: "revenue", title: "收益优先", number: "01"},
   {id: "balanced", title: "均衡策略", number: "02"},
@@ -151,10 +163,10 @@ export function PMSSSmartBidPanel({
               profile.researchAdmitted ? "通过历史研究筛选（非实盘许可）" : "尚未通过独立风控，禁止作为可信推荐"
             }</span>
             <div className="pmss-smart-values">
-              <div><small>模拟期望边际收益</small><strong>{numeric(profile.candidate.expected_margin, 2)}</strong></div>
-              <div><small>模拟下行边际收益</small><strong>{numeric(profile.candidate.downside_margin, 2)}</strong></div>
+              <div><small>本地 DC 模拟边际收益（非实收）</small><strong>{numeric(profile.candidate.expected_margin, 2)}</strong></div>
+              <div><small>本地 DC 下行情景（非实收）</small><strong>{numeric(profile.candidate.downside_margin, 2)}</strong></div>
             </div>
-            <div className="pmss-smart-bottom">本地模型评分 {numeric(profile.candidate.score, 2)}
+            <div className="pmss-smart-bottom">本地模型相对评分 {numeric(profile.candidate.score, 2)}
               <ArrowRight size={16}/></div>
           </> : <>
             <p>当前没有足够的独立、合规候选填入这一类别。</p>
@@ -176,11 +188,63 @@ export function PMSSSmartBidPanel({
     {(trioResult || rankResult) && profiles.length === 0 && <p className="pmss-smart-warning" role="alert">
       当前排序未产生可审核候选，可能存在极端报价或规则不符。请检查网络和市场参数，不能强行推荐。
     </p>}
+    {guardResult && <section className="pmss-smart-evidence" aria-label="历史原报价误差与风控依据">
+      <div className="pmss-smart-evidence-head">
+        <div><span className="pmss-smart-kicker">HISTORICAL MODEL EVIDENCE</span>
+          <h4>为什么暂时不能推荐？</h4>
+          <p>下表只比较老师平台<strong>历史原报价</strong>的真实出清与本地 DC 复算，
+            不代表这三条新方案已在老师平台重新出清。</p>
+        </div>
+        <span className="pmss-smart-evidence-grade">{guardResult.model_confidence_grade.split("_")[0]} · 历史拟合可信度</span>
+      </div>
+      <div className="pmss-smart-evidence-grid">
+        {guardResult.target_unit_original_bid_historical_fit.map(row => {
+          const fleet = guardResult.per_day_original_bid_simulation_vs_real_pmss
+            .find(item => item.case_date === row.case_date);
+          const holdout = guardResult.untouched_holdout_case_dates.includes(row.case_date);
+          const priceRule = guardResult.historical_original_bid_vs_imported_price_rules
+            .find(item => item.case_date === row.case_date);
+          return <div className={"pmss-smart-evidence-day" + (holdout ? " is-holdout" : "")}
+            key={row.case_date}>
+            <div className="pmss-smart-evidence-date">
+              <strong>{row.case_date}</strong><span>{holdout ? "留出检验" : "训练参考"}</span>
+            </div>
+            <div><small>G31 原报价出力 MAE</small><strong>{errorMW(row.dispatch_mae_mw)}</strong></div>
+            <div><small>10台机组总体出力 MAE</small><strong>{errorMW(fleet?.dispatch_mae_mw ?? null)}</strong></div>
+            <div><small>节点电价 MAE</small><strong>{fleet?.nodal_price_mae_pmss_reported_unit_unverified == null
+              ? "缺失" : numeric(fleet.nodal_price_mae_pmss_reported_unit_unverified, 2)}</strong></div>
+            <div><small>历史报价超出现规则的段数</small>
+              <strong>{priceRule ? priceRule.above_ceiling_segment_count +
+                priceRule.below_floor_segment_count : "未检查"}</strong></div>
+          </div>;
+        })}
+      </div>
+      <small className="pmss-smart-evidence-footnote">MAE 为平均绝对误差；节点电价沿用 PMSS 历史数据数值，
+        单位尚未经独立核实。以上均为历史原报价模型拟合，而非新报价预测准确率。</small>
+      <div className="pmss-smart-evidence-reasons">
+        <strong>{guardResult.historical_original_bid_validation.status === "NOT_VALIDATED"
+          ? "历史模型未通过拟合检验" : "历史原报价拟合已达到研究阈值，但不代表新报价有效"}</strong>
+        {guardResult.historical_original_bid_validation.reasons.length > 0 && <ul>
+          {guardResult.historical_original_bid_validation.reasons.map(reason =>
+            <li key={reason}>{historicalFailure(reason)}</li>)}
+        </ul>}
+        {!guardResult.historical_price_rules_consistent && <p>
+          历史原报价存在超出当前导入市场价格上下限的分段，
+          可能是市场规则版本或数据口径不一致。没有修改历史记录，
+          也不能仅凭当前规则将这些历史报价直接认定为违规。
+          在来源核实前禁止据此提高策略可信度。
+        </p>}
+        {guardResult.original_bid_distinct_training_curves < 2 && <p>训练案例的历史原报价曲线缺少足够变化，无法可靠检验报价变化对结果的影响。</p>}
+        {guardResult.holdout_reuses_training_original_bid_curve && <p>留出日期重复使用了训练历史报价，独立性受到限制。</p>}
+        <p>未核实的启停、爬坡、备用等约束仍不能假设已经满足；真实 PMSS 新报价出清验证尚未进行。</p>
+      </div>
+    </section>}
     <div className="pmss-smart-decision">
       <div className="pmss-smart-decision-main">
         <div className="pmss-smart-kicker"><ShieldAlert size={15}/> DECISION & RISK GATE</div>
         <h4>{selectedProfile ? "研究参考：" + selectedProfile.title :
-          selectedId === "surrogate" && fallback ? "单区域近似 · 仅供研究" : "等待生成候选策略"}</h4>
+          selectedId === "surrogate" && fallback ? "单区域近似 · 仅供研究" :
+          profiles.length > 0 && !suggestion ? "已生成候选 · 暂未通过跨日期风控" : "等待生成候选策略"}</h4>
         <p>{selectedProfile ? selectedProfile.rationale :
           selectedId === "surrogate" ? "当前不具备独立网络复核与多策略比较结果。" :
           "选择历史案例与目标机组后，点击生成。模型结果需人工核验，不能直接当作真实收益证明。"}</p>
