@@ -76,7 +76,7 @@ def _valid_bid(data: object) -> bool:
                ("startPower", "endPower", "price")):
             return False
         if not (0 <= segment["startPower"] < segment["endPower"] <= 20000
-                and 0 <= segment["price"] <= 10000):
+                and 0 <= segment["price"] <= 1000):
             return False
         if index > 1 and abs(segment["startPower"] -
                              segments[index - 2]["endPower"]) > 1e-6:

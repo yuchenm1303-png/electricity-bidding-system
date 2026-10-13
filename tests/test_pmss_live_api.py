@@ -99,6 +99,11 @@ def local(monkeypatch, tmp_path):
     map_file.chmod(0o600)
     school = FakeSchool()
     monkeypatch.setattr(live, "_adapter", lambda: school)
+    monkeypatch.setattr(live, "read_market_results", lambda adapter, **kwargs: {
+        "unitResults": [{"unit_id": "U1", "accepted_mw": [10.0] * 24,
+                         "clearing_prices": [200.0] * 24, "income": [2000.0] * 24}],
+        "nodalPrices": [],
+    })
     monkeypatch.setattr(live, "_remote_project_id", lambda _: "real-1")
     monkeypatch.setattr(live, "_catalog", lambda: (
         tmp_path, [{"project_id": "group2",
@@ -154,6 +159,16 @@ def test_live_original_handoff_requires_2_distinct_confirmations(local):
     assert result.json()["school_clearing_status"] == {"isConverge": True, "iters": 5}
     assert result.json()["school_result_overview"] == {"totalCost": 1234}
     assert result.json()["candidate_causality_independently_verified"] is False
+    assert result.json()["clearing_finished"] is False
+    assert result.json()["result_changed_since_execution_baseline"] is False
+    assert result.json()["accepted_mwh"] == 240.0
+    school.get_clearing_result = lambda **kwargs: {"optResult": {"isConverge": 1, "iters": 6}}
+    still_old = client.get("/api/pmss/live/result", params={"intent_token": token}).json()
+    assert still_old["clearing_finished"] is False
+    school.get_result_overview = lambda **kwargs: {"totalCost": 2345}
+    updated = client.get("/api/pmss/live/result", params={"intent_token": token}).json()
+    assert updated["result_changed_since_execution_baseline"] is True
+    assert updated["clearing_finished"] is True
     assert school.saves == school.clearings == 1
 
 

@@ -26,6 +26,7 @@ from powerbid.adapters.teacher_platform import (
     TeacherPlatformError,
 )
 from powerbid.pmss_integration import MarketLimits
+from powerbid.pmss_result_loader import read_market_results
 
 router = APIRouter(prefix="/api/pmss/live", tags=["pmss-original-clearing"])
 _DB = "/data/pmss-live-intents.sqlite3"
@@ -87,10 +88,13 @@ def _adapter() -> TeacherPlatformAdapter:
         token = path.read_text("ascii").strip()
         if len(token) < 40:
             raise ValueError("Private school write authorization is invalid")
-        return TeacherPlatformAdapter(
+        adapter = TeacherPlatformAdapter(
             base_url="http://172.17.0.1:18760",
-            write_gate_token=token, timeout=16,
+            write_gate_token=token, timeout=45,
         )
+        if not adapter.write_gateway_ready():
+            raise ValueError("Restricted original PMSS write gateway is not ready")
+        return adapter
     base = os.getenv("PMSS_BASE_URL", "")
     cookie_path = os.getenv("PMSS_COOKIE_FILE", "")
     if not base or not cookie_path:
@@ -136,6 +140,8 @@ def _database() -> sqlite3.Connection:
           payload TEXT NOT NULL
         )
     """)
+    con.execute("CREATE TABLE IF NOT EXISTS result_baselines "
+                "(token_hash TEXT PRIMARY KEY, digest TEXT NOT NULL)")
     con.commit()
     return con
 
@@ -486,15 +492,37 @@ def verify_saved(request: Request, body: ConfirmInput):
     return {"state": "VERIFIED_SAVED", "readback_verified": True}
 
 
+def _result_digest(status, overview, market):
+    # Iteration counts/timing alone can change while old market results remain.
+    status = status.get("optResult", status)
+    costs = {k: status.get(k) for k in ("totalCost", "totalRunCost", "totalStartCost")}
+    raw = json.dumps([costs, overview, market], sort_keys=True,
+                     separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
 @router.post("/execute")
 def execute(request: Request, body: ConfirmInput):
     user = require_user(request, admin=True)
     row = _intent(body.intent_token, user["id"])
     if body.confirmation != f"执行出清 {row['unit_id']} {row['case_date']}":
         raise HTTPException(422, "必须再次确认本次学校出清操作")
+    if row["state"] != "VERIFIED_SAVED":
+        raise HTTPException(409, "报价尚未核验或出清已经尝试，禁止重复执行")
+    try:
+        adapter = _adapter()
+        baseline_status = adapter.get_clearing_result(case_id=row["case_id"], market_type_atom="DA")
+        baseline_overview = adapter.get_result_overview(case_id=row["case_id"], market_type_atom="DA")
+        baseline_market = read_market_results(adapter, case_id=row["case_id"])
+        digest = _result_digest(baseline_status, baseline_overview, baseline_market)
+    except (TeacherPlatformError, ValueError, OSError) as exc:
+        raise _school_error(exc) from None
+    with _database() as db:
+        db.execute("INSERT OR REPLACE INTO result_baselines VALUES (?, ?)",
+                   (_token_hash(body.intent_token), digest))
     row = _transition(body.intent_token, user["id"], ("VERIFIED_SAVED",), "CLEARING")
     try:
-        _adapter().run_clearing(case_id=row["case_id"],
+        adapter.run_clearing(case_id=row["case_id"],
                                 comment="PowerBid user-confirmed classroom test",
                                 commit=True)
     except (TeacherPlatformError, ValueError, OSError) as exc:
@@ -521,6 +549,20 @@ def result(request: Request, intent_token: str):
         )
     except (TeacherPlatformError, ValueError, OSError) as exc:
         raise _school_error(exc) from None
+    try:
+        market = read_market_results(adapter, case_id=row["case_id"])
+        target = next(x for x in market["unitResults"] if x["unit_id"] == row["unit_id"])
+        complete = all(v is not None for key in ("accepted_mw", "clearing_prices", "income")
+                       for v in target[key])
+        with _database() as db:
+            baseline = db.execute("SELECT digest FROM result_baselines WHERE token_hash=?",
+                                  (_token_hash(intent_token),)).fetchone()
+        changed = bool(baseline and baseline["digest"] != _result_digest(status, overview, market))
+    except (TeacherPlatformError, ValueError, OSError, StopIteration) as exc:
+        raise _school_error(exc) from None
+    # Historical results alone never prove completion of this new attempt.
+    status = status.get("optResult", status)
+    finished = bool(complete and changed and status.get("isConverge") in (True, 1))
     # Only a small documented overview; no raw teacher responses are exposed.
     allowed = ("isConverge", "isRelax", "relaxNum", "iters", "totalCost",
                "totalRunCost", "totalStartCost")
@@ -529,5 +571,11 @@ def result(request: Request, intent_token: str):
     return {"state": row["state"], "case_date": row["case_date"],
             "target_unit_id": row["unit_id"], "school_clearing_status": status_out,
             "school_result_overview": overview_out,
+            "school_target_unit_result": target,
+            "school_nodal_prices": market["nodalPrices"],
+            "accepted_mwh": sum(target["accepted_mw"]) if complete else None,
+            "school_income": sum(target["income"]) if complete else None,
+            "result_changed_since_execution_baseline": changed,
+            "clearing_finished": finished,
             "source": "TEACHER_PMSS_DIRECT_READ", "teacher_response_signed": False,
             "candidate_causality_independently_verified": False}
