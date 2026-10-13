@@ -328,7 +328,7 @@
   .pb-identity-refined .pb-identity-preview-intro h1 {font-size:23px;line-height:1.38;margin:7px 0 5px;}
   .pb-identity-refined .pb-identity-preview-intro h1 br {display:none;}
   .pb-identity-refined .pb-identity-preview-intro p {font-size:10px;}
-  .pb-identity-refined .pb-w-window {height:214px;}
+  .pb-identity-refined .pb-w-window {height:265px;}
   .pb-identity-refined .pb-w-layout {grid-template-columns:89px minmax(0,1fr);}
   .pb-identity-refined .pb-w-titlebar {height:28px;min-height:28px;}
   .pb-identity-refined .pb-w-layout {height:calc(100% - 28px);}
@@ -356,7 +356,7 @@
 /* On narrow phones, show a tiny product teaser only; keep the login readily reachable. */
 @media (max-width:390px) {
   .pb-identity-refined .pb-identity-preview-story {margin-top:8px;}
-  .pb-identity-refined .pb-w-window {height:185px;}
+  .pb-identity-refined .pb-w-window {height:245px;}
   .pb-identity-refined .pb-identity-preview-intro h1 {font-size:21px;}
   .pb-identity-refined .pb-w-panel-label {font-size:7px;}
 }
