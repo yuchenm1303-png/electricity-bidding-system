@@ -102,6 +102,7 @@ class TeacherPlatformAdapter:
         proxy_url: str | None = None,
         cookies: dict[str, str] | None = None,
         timeout: float = 30.0,
+        write_gate_token: str | None = None,
     ) -> None:
         if requests is None:
             raise RuntimeError(
@@ -111,6 +112,7 @@ class TeacherPlatformAdapter:
 
         self.api_base = validate_pmss_base_url(base_url) + "/pmss/web"
         self.timeout = timeout
+        self._write_gate_token = write_gate_token
         self.session = requests.Session()
         # Do not inherit arbitrary HTTP_PROXY/NO_PROXY environment routing:
         # user-authorized PMSS cookies must use the explicitly selected path.
@@ -163,6 +165,12 @@ class TeacherPlatformAdapter:
                     json=json_body,
                     timeout=self.timeout,
                     allow_redirects=False,
+                    headers=({"X-PowerBid-Write-Gate": self._write_gate_token}
+                             if method.upper() == "POST"
+                             and path.lstrip("/") in (
+                                 "tmScene/spot/unit/electricEnergy",
+                                 "simulate/execute",
+                             ) and self._write_gate_token else None),
                 )
                 status = getattr(response, "status_code", 200)
                 if 300 <= status < 400:
