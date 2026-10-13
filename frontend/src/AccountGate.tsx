@@ -9,12 +9,14 @@ import smirelLogo from "./assets/smirel-logo.png";
 import AdminActivation from "./AdminActivation";
 import TurnstileWidget from "./TurnstileWidget";
 import Workspace from "./WorkspaceEntry";
+import WorkspacePreviewCard from "./WorkspacePreviewCard";
 import "./account.css";
 import "./account-portal-polish.css";
 import "./account-buttons.css";
 import "./icon-interactions.css";
 import "./account-one-screen.css";
 import "./account-premium.css";
+import "./account-workspace-preview.css";
 
 export type AccountUser = {
   id: number;
@@ -167,7 +169,7 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
       setBusy(false);
     }
   };
-  return <><main className="pb-identity-screen" data-auth-view={isRegister ? "register" : "login"}>
+  return <><main className="pb-identity-screen pb-identity-refined" data-auth-view={isRegister ? "register" : "login"}>
     <div className="pb-identity-grain" aria-hidden="true"/>
     <div className="pb-identity-layout">
       <aside className="pb-identity-story">
@@ -176,30 +178,18 @@ function AuthScene({ config, onReady }: { config: AuthConfig; onReady: (user: Ac
           <span className="pb-identity-brand-divider"/>
           <strong>PowerBid</strong>
         </a>
-        <div className="pb-identity-story-content">
-          <span className="pb-identity-eyebrow"><span/> POWER MARKET INTELLIGENCE</span>
-          <h1>让每一次报价，<br/><em>都有迹可循。</em></h1>
-          <p>从电力市场仿真到策略分析，<br/>在同一个空间，连接数据与决策。</p>
-          <div className="pb-identity-network" aria-hidden="true">
-            <div className="pb-identity-network-heading">
-              <span>GRID <i/> OVERVIEW</span>
-              <small>NETWORK MODEL</small>
-            </div>
-            <svg className="pb-identity-network-graph" viewBox="0 0 560 180" fill="none" role="presentation">
-              <path className="pb-network-trace" d="M38 120L139 63L240 112L343 38L439 88L528 53M38 120L192 155L240 112L478 149L528 53M139 63L343 38L478 149M240 112L439 88L478 149"/>
-              <path className="pb-network-highlight" d="M38 120L139 63L240 112L343 38L439 88L528 53"/>
-              {[[38,120],[139,63],[240,112],[343,38],[439,88],[528,53],[192,155],[478,149]].map(([x,y],i)=>
-                <g key={i} className="pb-network-point">
-                  <circle cx={x} cy={y} r={i===3?5:3.5} className="pb-network-point-shell"/>
-                  <circle cx={x} cy={y} r={i===3?2.4:1.7} className="pb-network-point-core"/>
-                </g>)}
-            </svg>
-            <div className="pb-identity-network-footer">电力网络拓扑示意 <span>·</span> 非实时数据</div>
+        <div className="pb-identity-story-content pb-identity-preview-story">
+          <div className="pb-identity-preview-intro">
+            <span className="pb-identity-eyebrow"><span/> POWERBID STUDIO / WORKSPACE</span>
+            <h1>看见市场，<br/><em>做出更好的报价决策。</em></h1>
+            <p>一个工作台，连接报价策略、风险约束与市场研究。</p>
           </div>
-          <div className="pb-identity-story-trails" aria-label="研究流程">
-            <span><i>01</i> 数据洞察</span>
-            <span><i>02</i> 策略推演</span>
-            <span><i>03</i> 情景评估</span>
+          <div className="pb-identity-workspace-window">
+            <WorkspacePreviewCard kind="strategy"/>
+          </div>
+          <div className="pb-identity-preview-caption" aria-label="产品预览说明">
+            <span>POWERBID / PRODUCT PREVIEW</span>
+            <span>教学界面示意 · 点击卡片放大查看</span>
           </div>
         </div>
         <div className="pb-identity-story-footer"><span>电力报价系统 · 小组作业</span><span>EST. 2026 <span className="pb-identity-footer-dot"/> SYSTEM ONLINE</span></div>
