@@ -16,6 +16,7 @@ export function PMSSBrowserLogin({
   show, onClose, onConnected,
 }: { show: boolean; onClose: () => void; onConnected: () => Promise<boolean> }) {
   const [frame, setFrame] = useState(0);
+  const [showRemote, setShowRemote] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -69,6 +70,7 @@ export function PMSSBrowserLogin({
         throw new Error(payload.detail || "学校原版登录表单提交失败");
       }
       setHint("已提交学校原版登录表单，正在等待学校验证。此处不会将提交成功当作认证成功。");
+      setShowRemote(true);
       setFrame(n => n + 1);
       void onConnected();
     } catch (cause) {
@@ -98,28 +100,42 @@ export function PMSSBrowserLogin({
     if (!show) {
       setUsername("");
       setPassword("");
+      setShowRemote(false);
       return;
     }
     setError("");
     setUsername("");
     setPassword("");
-    setHint("请使用下方即时输入区登录；学校原版画面仅用于查看进度与处理额外验证。");
-    void post({action: "open"}).catch(e => setError(String(e)));
-    const images = window.setInterval(() => {
-      if (Date.now() - lastInteraction.current > 6500) setFrame(n => n + 1);
-    }, 4500);
+    setShowRemote(false);
+    setHint("直接在下方输入学校账号；只有需要额外验证时再展开学校远程画面。");
     const checker = window.setInterval(() => {
       void onConnected().then(ok => {
         if (ok) { setHint("学校登录已经验证成功。"); onClose(); }
-      });
+      }).catch(() => {});
     }, 6000);
     return () => {
-      window.clearInterval(images); window.clearInterval(checker);
+      window.clearInterval(checker);
       if (typingTimer.current !== null) window.clearTimeout(typingTimer.current);
       typingTimer.current = null;
       textBuffer.current = "";
     };
   }, [show, onClose, onConnected]);
+
+  useEffect(() => {
+    if (!show || !showRemote) return;
+    // Remote screen is an optional fallback. No image polling while the
+    // administrator types in native browser inputs.
+    let inFlight = false;
+    const refresh = () => {
+      if (inFlight || Date.now() - lastInteraction.current <= 2500) return;
+      inFlight = true;
+      setFrame(n => n + 1);
+      // The next frame is requested only after the previous image load/error.
+      // This timeout is a fallback for a broken network image request.
+    };
+    const timer = window.setInterval(refresh, 4500);
+    return () => {window.clearInterval(timer);};
+  }, [show, showRemote]);
 
   if (!show) return null;
 
@@ -178,13 +194,6 @@ export function PMSSBrowserLogin({
         </div>
         <button type="button" aria-label="关闭登录窗口" onClick={onClose}><X size={20}/></button>
       </div>
-      <div ref={surface} className="pmss-browser-surface" tabIndex={0}
-        onKeyDown={keyboard} onPaste={paste} aria-label="学校网页登录画面与键盘控制">
-        <img ref={image} draggable={false} alt="服务器学校官网登录页面"
-          src={BASE + "frame?seq=" + frame} onClick={click}
-          onError={() => setError("暂时无法读取学校浏览器画面，请检查管理员登录网关")}
-        />
-      </div>
       <form className="pmss-browser-quick-login" onSubmit={event => void loginSchool(event)}
         autoComplete="off" aria-label="学校 PMSS 即时登录">
         <div className="pmss-browser-quick-description">
@@ -207,7 +216,18 @@ export function PMSSBrowserLogin({
           </button>
         </div>
       </form>
-      <div className="pmss-browser-footer">
+      <button type="button" className="pmss-browser-toggle"
+        aria-expanded={showRemote} onClick={() => {setShowRemote(value => !value);setFrame(n => n + 1);}}>
+        {showRemote ? "收起学校原版画面" : "显示学校原版画面（验证码或额外验证时使用）"}
+      </button>
+      {showRemote && <div ref={surface} className="pmss-browser-surface" tabIndex={0}
+        onKeyDown={keyboard} onPaste={paste} aria-label="学校网页登录画面与键盘控制">
+        <img ref={image} draggable={false} alt="服务器学校官网登录页面"
+          src={BASE + "frame?seq=" + frame} onClick={click}
+          onError={() => setError("暂时无法读取学校浏览器画面，请检查管理员登录网关")}
+        />
+      </div>}
+      {showRemote && <div className="pmss-browser-footer">
         <span><Keyboard size={14}/> {hint}</span>
         <div className="pmss-browser-buttons">
           <button type="button" onClick={() => send({action: "scroll", dy: -1})}>向上</button>
@@ -216,7 +236,8 @@ export function PMSSBrowserLogin({
             <RefreshCw size={14}/> 刷新画面</button>
           <button type="button" onClick={onClose}>完成 / 关闭</button>
         </div>
-      </div>
+      </div>}
+      {showRemote && <p className="pmss-browser-privacy">远程画面仅用于额外验证；建议优先使用上方原生输入框，避免逐字远程操作。</p>}
       {error && <p className="pmss-browser-error" role="alert">{error}</p>}
       <p className="pmss-browser-privacy"><ExternalLink size={13}/> 账号信息仅用于本次学校网页登录，经过当前 HTTPS 连接传送到受保护服务器，不写入账户数据库。
         登录后的报价提交与原版出清仍须分别人工确认；不会开放服务器桌面或自动提交报价。</p>
