@@ -98,6 +98,13 @@ class SecureBridgeHandler(bridge.Handler):
 
     def _handle(self):
         parsed = urlsplit(self.path)
+        if parsed.path == "/_powerbid/write-gate-ready":
+            if (self.command != "GET" or parsed.query or
+                    not _valid_secret(self.headers.get("X-PowerBid-Write-Gate", ""))):
+                self._json(403, {"ok": False, "error": "write_not_authorized"})
+                return
+            self._json(200, {"ready": True, "source": "ORIGINAL_PMSS_RESTRICTED"})
+            return
         if parsed.path not in _WRITE_PATHS or self.command != "POST":
             with _SESSION_LOCK:
                 return super()._handle()
