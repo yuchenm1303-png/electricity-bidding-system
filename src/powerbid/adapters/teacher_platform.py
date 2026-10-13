@@ -129,6 +129,28 @@ class TeacherPlatformAdapter:
             }
         )
 
+    def write_gateway_ready(self) -> bool:
+        """An independent private capability probe, not a teacher write.
+
+        The old read-only school bridge must NEVER be reported as ready just
+        because its normal project GET returned T200.
+        """
+        if not self._write_gate_token:
+            return False
+        try:
+            endpoint = self.api_base.removesuffix("/pmss/web") + "/_powerbid/write-gate-ready"
+            response = self.session.get(
+                endpoint,
+                headers={"X-PowerBid-Write-Gate": self._write_gate_token},
+                allow_redirects=False,
+                timeout=min(self.timeout, 5),
+            )
+            return (response.status_code == 200 and
+                    response.json().get("ready") is True and
+                    response.json().get("source") == "ORIGINAL_PMSS_RESTRICTED")
+        except (requests.RequestException, ValueError, TypeError, AttributeError):
+            return False
+
     def _request(
         self,
         method: str,
