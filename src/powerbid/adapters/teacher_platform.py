@@ -102,6 +102,7 @@ class TeacherPlatformAdapter:
         proxy_url: str | None = None,
         cookies: dict[str, str] | None = None,
         timeout: float = 30.0,
+        write_gate_token: str | None = None,
     ) -> None:
         if requests is None:
             raise RuntimeError(
@@ -111,6 +112,7 @@ class TeacherPlatformAdapter:
 
         self.api_base = validate_pmss_base_url(base_url) + "/pmss/web"
         self.timeout = timeout
+        self._write_gate_token = write_gate_token
         self.session = requests.Session()
         # Do not inherit arbitrary HTTP_PROXY/NO_PROXY environment routing:
         # user-authorized PMSS cookies must use the explicitly selected path.
@@ -126,6 +128,28 @@ class TeacherPlatformAdapter:
                 "User-Agent": "PowerBid-TeacherPlatformAdapter/0.1",
             }
         )
+
+    def write_gateway_ready(self) -> bool:
+        """An independent private capability probe, not a teacher write.
+
+        The old read-only school bridge must NEVER be reported as ready just
+        because its normal project GET returned T200.
+        """
+        if not self._write_gate_token:
+            return False
+        try:
+            endpoint = self.api_base.removesuffix("/pmss/web") + "/_powerbid/write-gate-ready"
+            response = self.session.get(
+                endpoint,
+                headers={"X-PowerBid-Write-Gate": self._write_gate_token},
+                allow_redirects=False,
+                timeout=min(self.timeout, 5),
+            )
+            return (response.status_code == 200 and
+                    response.json().get("ready") is True and
+                    response.json().get("source") == "ORIGINAL_PMSS_RESTRICTED")
+        except (requests.RequestException, ValueError, TypeError, AttributeError):
+            return False
 
     def _request(
         self,
@@ -163,6 +187,12 @@ class TeacherPlatformAdapter:
                     json=json_body,
                     timeout=self.timeout,
                     allow_redirects=False,
+                    headers=({"X-PowerBid-Write-Gate": self._write_gate_token}
+                             if method.upper() == "POST"
+                             and path.lstrip("/") in (
+                                 "tmScene/spot/unit/electricEnergy",
+                                 "simulate/execute",
+                             ) and self._write_gate_token else None),
                 )
                 status = getattr(response, "status_code", 200)
                 if 300 <= status < 400:
