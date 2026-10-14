@@ -277,7 +277,7 @@ def _readback_matches(original: dict[str, Any], payload: dict[str, Any]) -> bool
 def _readonly_bridge_adapter() -> TeacherPlatformAdapter:
     """Read-only school bridge, never used for save or clearing."""
     endpoint = os.getenv("PMSS_READONLY_BRIDGE_URL", "")
-    if endpoint != "http://172.17.0.1:18762":
+    if endpoint != "http://172.17.0.1:18760":
         raise ValueError("Private read-only school bridge unavailable")
     return TeacherPlatformAdapter(base_url=endpoint, timeout=10)
 
