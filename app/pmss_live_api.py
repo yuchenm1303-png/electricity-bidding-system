@@ -69,7 +69,7 @@ def _json_file(path: str) -> dict[str, Any]:
 
 def _gateway_available() -> bool:
     return (os.getenv("PMSS_LIVE_GATEWAY_ENABLED") == "1"
-            and os.getenv("PMSS_LIVE_GATEWAY_URL") == "http://172.17.0.1:18760"
+            and os.getenv("PMSS_LIVE_GATEWAY_URL") == "http://172.17.0.1:18762"
             and bool(os.getenv("PMSS_LIVE_WRITE_TOKEN_FILE"))
             and bool(os.getenv("PMSS_LIVE_PROJECT_MAP_FILE")))
 
@@ -89,7 +89,7 @@ def _adapter() -> TeacherPlatformAdapter:
         if len(token) < 40:
             raise ValueError("Private school write authorization is invalid")
         adapter = TeacherPlatformAdapter(
-            base_url="http://172.17.0.1:18760",
+            base_url="http://172.17.0.1:18762",
             write_gate_token=token, timeout=45,
         )
         if not adapter.write_gateway_ready():
@@ -277,7 +277,7 @@ def _readback_matches(original: dict[str, Any], payload: dict[str, Any]) -> bool
 def _readonly_bridge_adapter() -> TeacherPlatformAdapter:
     """Read-only school bridge, never used for save or clearing."""
     endpoint = os.getenv("PMSS_READONLY_BRIDGE_URL", "")
-    if endpoint != "http://172.17.0.1:18760":
+    if endpoint != "http://172.17.0.1:18762":
         raise ValueError("Private read-only school bridge unavailable")
     return TeacherPlatformAdapter(base_url=endpoint, timeout=10)
 
