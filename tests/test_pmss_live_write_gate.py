@@ -11,7 +11,7 @@ from powerbid.adapters.teacher_platform import TeacherPlatformAdapter
 
 def test_write_token_sent_only_for_original_irreversible_posts():
     adapter = TeacherPlatformAdapter(
-        base_url="http://172.17.0.1:18760",
+        base_url="http://172.17.0.1:18762",
         write_gate_token="private-test-gate",
     )
     sent = []
@@ -32,7 +32,7 @@ def test_write_token_sent_only_for_original_irreversible_posts():
 def test_write_gate_without_runtime_token_fails_closed(monkeypatch):
     from app import pmss_live_api as live
     monkeypatch.setenv("PMSS_LIVE_GATEWAY_ENABLED", "1")
-    monkeypatch.setenv("PMSS_LIVE_GATEWAY_URL", "http://172.17.0.1:18760")
+    monkeypatch.setenv("PMSS_LIVE_GATEWAY_URL", "http://172.17.0.1:18762")
     monkeypatch.setenv("PMSS_LIVE_WRITE_TOKEN_FILE", "/nonexistent/pmss-token")
     monkeypatch.setenv("PMSS_LIVE_PROJECT_MAP_FILE", "/nonexistent/pmss-map")
     with pytest.raises(ValueError):
@@ -87,7 +87,7 @@ def test_adapter_requires_private_gateway_readiness(monkeypatch, tmp_path, ready
     token.write_text("x" * 64)
     token.chmod(0o600)
     monkeypatch.setenv("PMSS_LIVE_GATEWAY_ENABLED", "1")
-    monkeypatch.setenv("PMSS_LIVE_GATEWAY_URL", "http://172.17.0.1:18760")
+    monkeypatch.setenv("PMSS_LIVE_GATEWAY_URL", "http://172.17.0.1:18762")
     monkeypatch.setenv("PMSS_LIVE_WRITE_TOKEN_FILE", str(token))
     monkeypatch.setenv("PMSS_LIVE_PROJECT_MAP_FILE", "/private/map")
     adapter = MagicMock()
@@ -108,7 +108,7 @@ def test_adapter_requires_private_gateway_readiness(monkeypatch, tmp_path, ready
     (200, {"ready": True, "source": "ORIGINAL_PMSS_RESTRICTED"}, True),
 ])
 def test_private_readiness_rejects_old_bridge(status, payload, expected):
-    adapter = TeacherPlatformAdapter(base_url="http://172.17.0.1:18760",
+    adapter = TeacherPlatformAdapter(base_url="http://172.17.0.1:18762",
                                      write_gate_token="test-private-token")
     response = MagicMock(status_code=status)
     response.json.return_value = payload
