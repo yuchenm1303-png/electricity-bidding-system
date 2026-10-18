@@ -12,7 +12,6 @@ from __future__ import annotations
 import hmac
 import json
 import math
-import os
 import stat
 import threading
 from http.server import ThreadingHTTPServer
