@@ -1,7 +1,9 @@
 """Read-only acceptance reporting contract."""
 from datetime import date
+
 import pytest
 from fastapi import HTTPException
+
 from app import pmss_live_api as live
 
 def test_latest_acceptance_requires_admin(monkeypatch):
