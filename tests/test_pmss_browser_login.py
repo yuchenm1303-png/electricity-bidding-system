@@ -1,8 +1,7 @@
 """Tests use fake browser transport; never contact the school or send credentials."""
-import json
-
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+
 from app import pmss_connection_api as target
 from app.web_server import app
 
@@ -48,7 +47,7 @@ def test_school_browser_fixed_transport_and_validation(monkeypatch):
                            headers={"X-PowerBid-Request": "1"},
                            json={"action": "click", "x": 5000, "y": 7}).status_code == 422
         assert client.post("/api/pmss/connection/browser/action",
-                           json={"action": "open"}).status_code == 200  # no auth middleware when disabled
+                           json={"action": "open"}).status_code == 200
     assert seen[:3] == [
         ("GET", "status", None), ("GET", "frame", None),
         ("POST", "action", {"action": "open"}),

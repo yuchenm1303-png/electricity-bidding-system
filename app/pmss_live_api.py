@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import secrets
 import sqlite3
@@ -511,8 +512,12 @@ def execute(request: Request, body: ConfirmInput):
         raise HTTPException(409, "报价尚未核验或出清已经尝试，禁止重复执行")
     try:
         adapter = _adapter()
-        baseline_status = adapter.get_clearing_result(case_id=row["case_id"], market_type_atom="DA")
-        baseline_overview = adapter.get_result_overview(case_id=row["case_id"], market_type_atom="DA")
+        baseline_status = adapter.get_clearing_result(
+            case_id=row["case_id"], market_type_atom="DA"
+        )
+        baseline_overview = adapter.get_result_overview(
+            case_id=row["case_id"], market_type_atom="DA"
+        )
         baseline_market = read_market_results(adapter, case_id=row["case_id"])
         digest = _result_digest(baseline_status, baseline_overview, baseline_market)
     except (TeacherPlatformError, ValueError, OSError) as exc:
@@ -579,3 +584,120 @@ def result(request: Request, intent_token: str):
             "clearing_finished": finished,
             "source": "TEACHER_PMSS_DIRECT_READ", "teacher_response_signed": False,
             "candidate_causality_independently_verified": False}
+
+
+@router.get("/latest-acceptance")
+def latest_acceptance(request: Request, project_id: str,
+                      case_date: date, target_unit_id: str):
+    """Recover a real, single-attempt school result after refresh.
+
+    Admin-only, read-only. This endpoint has NO submit/execute capability and
+    requires a persisted user-owned PMSS attempt with a pre-execution digest.
+    """
+    user = require_user(request, admin=True)
+    if not (1 <= len(project_id) <= 100 and 1 <= len(target_unit_id) <= 100):
+        raise HTTPException(422, "学校工程或机组标识无效")
+    day = case_date.isoformat()
+    root, projects = _catalog()
+    project = next((p for p in projects if p["project_id"] == project_id), None)
+    if not root.is_dir() or not project or not any(
+        c["case_date"] == day for c in project["cases"]
+    ):
+        raise HTTPException(404, "学校历史案例不存在")
+    with _database() as db:
+        rows = db.execute(
+            "SELECT * FROM intents WHERE user_id=? AND project_id=? "
+            "AND case_date=? AND unit_id=? ORDER BY created DESC LIMIT 2",
+            (user["id"], project_id, day, target_unit_id)
+        ).fetchall()
+        if not rows or rows[0]["state"] not in (
+            "CLEARING_REQUESTED", "UNKNOWN_CLEARING"
+        ):
+            raise HTTPException(404, "该机组还没有可核验的原版出清记录")
+        row = rows[0]
+        baseline = db.execute(
+            "SELECT digest FROM result_baselines WHERE token_hash=?",
+            (row["token_hash"],)
+        ).fetchone()
+    if not baseline:
+        raise HTTPException(409, "缺少出清前结果基线，禁止宣称出清完成")
+    try:
+        adapter = _adapter()
+        remote = _remote_project_id(project_id)
+        _, case, unit, scope = _remote_case(
+            adapter, remote, day, target_unit_id
+        )
+        if str(case.get("caseId")) != row["case_id"]:
+            raise ValueError("School case identity changed")
+        payload = json.loads(row["payload"])
+        if payload["scopeId"] != scope or payload["unitId"] != target_unit_id:
+            raise ValueError("School bid identity changed")
+        saved = adapter.get_unit_bid(scope_id=scope, unit_id=target_unit_id)
+        bid_verified = _readback_matches(saved, payload)
+        status = adapter.get_clearing_result(
+            case_id=row["case_id"], market_type_atom="DA"
+        )
+        overview = adapter.get_result_overview(
+            case_id=row["case_id"], market_type_atom="DA"
+        )
+        market = read_market_results(adapter, case_id=row["case_id"])
+        target = next(
+            x for x in market["unitResults"]
+            if x["unit_id"] == target_unit_id
+        )
+        required = ("accepted_mw", "clearing_prices", "income")
+        complete = all(
+            isinstance(target.get(key), (list, tuple))
+            and len(target[key]) == 24
+            and all(
+                type(v) in (int, float) and math.isfinite(v)
+                for v in target[key]
+            )
+            for key in required
+        )
+        changed = baseline["digest"] != _result_digest(
+            status, overview, market
+        )
+        result_status = status.get("optResult", status)
+        finished = bool(
+            bid_verified and complete and changed
+            and result_status.get("isConverge") in (True, 1)
+        )
+    except (TeacherPlatformError, ValueError, KeyError, OSError,
+            TypeError, StopIteration) as exc:
+        raise _school_error(exc) from None
+    return {
+        "source": "TEACHER_PMSS_ORIGINAL",
+        "project_id": project_id,
+        "case_date": day,
+        "target_unit_id": target_unit_id,
+        "target_unit_name": str(unit.get("title", "")),
+        "state": row["state"],
+        "school_bid_readback_verified": bid_verified,
+        "school_bid_prices": [
+            block["price"] for period in payload["datas"]
+            for block in period["segmentDatas"]
+        ],
+        "school_clearing_result_changed": changed,
+        "school_converged": result_status.get("isConverge") in (True, 1),
+        "school_relaxed": result_status.get("isRelax"),
+        "school_iterations": result_status.get("iters"),
+        "school_total_system_cost_raw": result_status.get("totalCost"),
+        "school_total_system_run_cost_raw": result_status.get("totalRunCost"),
+        "school_total_system_start_cost_raw": result_status.get("totalStartCost"),
+        "school_nodal_count": len(market["nodalPrices"]),
+        "school_branch_count": len(market["branchFlows"]),
+        "hourly_complete": complete,
+        "clearing_finished": finished,
+        "accepted_mwh": sum(target["accepted_mw"]) if complete else None,
+        "hourly_accepted_mw": list(target["accepted_mw"]) if complete else [],
+        "hourly_clearing_prices": list(target["clearing_prices"]) if complete else [],
+        "hourly_income_raw": list(target["income"]) if complete else [],
+        "school_income_raw_sum": sum(target["income"]) if complete else None,
+        "school_income_unit_verified": False,
+        "direct_profit_comparison_valid": False,
+        "teacher_response_signed": False,
+        "candidate_causality_independently_verified": False,
+        "teacher_write_performed_by_this_query": False,
+        "teacher_clearing_executed_by_this_query": False,
+    }

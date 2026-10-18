@@ -7,7 +7,6 @@ forwards commands using a local, owner-only shared token.
 from __future__ import annotations
 
 import json
-import os
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -54,7 +53,7 @@ def _read_school_auth():
     except (requests.RequestException, ValueError, AttributeError):
         # Fail closed: a network error is not permission to interact with a
         # possibly authenticated PMSS administrator session.
-        raise RuntimeError("School authentication cannot be determined")
+        raise RuntimeError("School authentication cannot be determined") from None
 
 
 class Handler(BaseHTTPRequestHandler):

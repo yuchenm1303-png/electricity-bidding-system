@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import hmac
 import json
-import os
 import math
+import os
 import stat
 import struct
 import threading

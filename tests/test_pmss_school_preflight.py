@@ -2,7 +2,7 @@
 from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+
 import pytest
 from fastapi import HTTPException
 
