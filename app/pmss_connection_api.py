@@ -30,6 +30,8 @@ _BRIDGE_URL = "http://172.17.0.1:18760"
 _HEADERS = {"Cache-Control": "private, no-store", "Vary": "Cookie"}
 _PROBE_LOCK = threading.Lock()
 _PROBE_CACHE: tuple[float, str] = (0.0, "unknown")
+_PROBE_RUNNING = False
+_PROBE_REVISION = 0
 
 
 class _UnixHTTP(http.client.HTTPConnection):
@@ -62,41 +64,55 @@ def _operator(method: str, path: str) -> dict:
         connection.close()
 
 
-def _probe_bridge() -> str:
-    """Check upstream read authorization; bridge /health only proves cookies exist."""
-    global _PROBE_CACHE
+def _invalidate_probe_cache() -> None:
+    global _PROBE_CACHE, _PROBE_REVISION
     with _PROBE_LOCK:
-        now = time.monotonic()
-        if now - _PROBE_CACHE[0] < 25:
+        _PROBE_REVISION += 1
+        _PROBE_CACHE = (0.0, "unknown")
+
+
+def _probe_bridge() -> str:
+    """Single-flight probe; slow school I/O must never hold the input cache lock."""
+    global _PROBE_CACHE, _PROBE_RUNNING
+    with _PROBE_LOCK:
+        if time.monotonic() - _PROBE_CACHE[0] < 25:
             return _PROBE_CACHE[1]
-        outcome = "unknown"
-        try:
-            query = (
-                "/pmss/web/project/list?permissionType=0&projectType=1"
-                "&pageSize=1&pageNo=1&version=base"
-            )
-            request = URLRequest(
-                _BRIDGE_URL + query,
-                headers={"Accept": "application/json"},
-                method="GET",
-            )
-            with urlopen(request, timeout=3.5) as response:
-                if response.status == 200:
-                    data = json.loads(response.read(16384))
-                    if isinstance(data, dict):
-                        if data.get("retCode") == "T200":
-                            outcome = "authorized"
-                        elif data.get("retCode") == "T000":
-                            outcome = "login_required"
-        except HTTPError:
-            # An upstream HTTP response is not proof of a VPN transport outage.
-            pass
-        except (OSError, URLError, TimeoutError):
-            outcome = "unreachable"
-        except ValueError:
-            pass
-        _PROBE_CACHE = (time.monotonic(), outcome)
-        return outcome
+        if _PROBE_RUNNING:
+            return "unknown"
+        _PROBE_RUNNING = True
+        revision = _PROBE_REVISION
+    outcome = "unknown"
+    try:
+        query = (
+            "/pmss/web/project/list?permissionType=0&projectType=1"
+            "&pageSize=1&pageNo=1&version=base"
+        )
+        request = URLRequest(
+            _BRIDGE_URL + query,
+            headers={"Accept": "application/json"},
+            method="GET",
+        )
+        with urlopen(request, timeout=3.5) as response:
+            if response.status == 200:
+                data = json.loads(response.read(16384))
+                if isinstance(data, dict):
+                    if data.get("retCode") == "T200":
+                        outcome = "authorized"
+                    elif data.get("retCode") == "T000":
+                        outcome = "login_required"
+    except HTTPError:
+        # An upstream HTTP response is not proof of a VPN transport outage.
+        pass
+    except (OSError, URLError, TimeoutError):
+        outcome = "unreachable"
+    except ValueError:
+        pass
+    finally:
+        with _PROBE_LOCK:
+            if revision == _PROBE_REVISION:
+                _PROBE_CACHE = (time.monotonic(), outcome)
+            _PROBE_RUNNING = False
+    return outcome
 
 
 def _response(data: dict, status: int = 200) -> JSONResponse:
@@ -160,9 +176,7 @@ async def reconnect(request: Request):
         raise HTTPException(503, detail="服务器 VPN 重连服务尚未就绪") from None
     if result.get("restart_requested") is not True:
         raise HTTPException(503, detail="未能执行服务器 VPN 重连")
-    global _PROBE_CACHE
-    with _PROBE_LOCK:
-        _PROBE_CACHE = (0.0, "unknown")
+    _invalidate_probe_cache()
     return _response({
         "restart_requested": True,
         "vpn_authenticated": False,
@@ -265,13 +279,12 @@ def browser_action(request: Request, body: SchoolBrowserAction):
         raise HTTPException(422, "Missing scroll direction")
     code, _raw = _browser_call("POST", "action", values)
     if code == 409:
+        _invalidate_probe_cache()
         raise HTTPException(409, "学校已完成身份认证，无需继续操作登录窗口")
     if code != 200:
         raise HTTPException(503, "学校登录操作未被执行")
     # Don't echo browser input, especially secrets, even to the caller.
-    global _PROBE_CACHE
-    with _PROBE_LOCK:
-        _PROBE_CACHE = (0.0, "unknown")
+    _invalidate_probe_cache()
     # Echo only a boolean focus state, never input text or credentials.
     try:
         confirmed_focus = json.loads(_raw).get("focused_input") is True
@@ -306,9 +319,7 @@ def browser_school_login(request: Request, body: SchoolLoginCredentials):
         raise HTTPException(422, detail="学校原版登录表单不可用，请刷新后重试")
     if status != 200:
         raise HTTPException(503, detail="学校登录操作暂时不可用")
-    global _PROBE_CACHE
-    with _PROBE_LOCK:
-        _PROBE_CACHE = (0.0, "unknown")
+    _invalidate_probe_cache()
     # Login success is NEVER inferred from an accepted submit. The frontend
     # separately polls the read-only T200 school authorization result.
     return _response({"submitted": True, "authenticated": False})

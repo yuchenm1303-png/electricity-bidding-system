@@ -38,7 +38,9 @@ export function PMSSConnectionPanel({ enabled, isAdmin }: { enabled: boolean; is
 
   const checkSchoolAuthorized = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch(STATUS, { credentials: "same-origin", cache: "no-store" });
+      const response = await fetch(STATUS, {
+        credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(6000),
+      });
       if (!response.ok) return false;
       const next = await response.json() as ConnectionState;
       setStatus(next);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Keyboard, LockKeyhole, RefreshCw, X } from "lucide-react";
 import "./pmss-school-login.css";
 import { browserImagePoint } from "./pmssBrowserCoordinates";
+import { createFramePump } from "./pmssFramePump";
 
 const BASE = import.meta.env.BASE_URL + "api/pmss/connection/browser/";
 
@@ -15,12 +16,13 @@ type BrowserAction =
 export function PMSSBrowserLogin({
   show, onClose, onConnected,
 }: { show: boolean; onClose: () => void; onConnected: () => Promise<boolean> }) {
-  const [frame, setFrame] = useState(0);
+  const [frameUrl, setFrameUrl] = useState("");
   const [showRemote, setShowRemote] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [frameError, setFrameError] = useState("");
   const [hint, setHint] = useState("点击画面里的输入框，然后在键盘上正常输入。");
   const image = useRef<HTMLImageElement>(null);
   const surface = useRef<HTMLDivElement>(null);
@@ -28,8 +30,8 @@ export function PMSSBrowserLogin({
   const actionGeneration = useRef(0);
   const textBuffer = useRef("");
   const typingTimer = useRef<number | null>(null);
-  const lastInteraction = useRef(0);
-  const framePending = useRef(false);
+  const pendingActions = useRef(0);
+  const requestFrame = useRef<() => void>(() => {});
 
   async function post(data: BrowserAction): Promise<void> {
     const response = await fetch(BASE + "action", {
@@ -39,6 +41,9 @@ export function PMSSBrowserLogin({
       body: JSON.stringify(data),
     });
     if (!response.ok) {
+      if (response.status === 409) {
+        void onConnected().then(ok => { if (ok) onClose(); }).catch(() => {});
+      }
       const payload = await response.json().catch(() => ({})) as {detail?: string};
       throw new Error(payload.detail || "学校登录窗口暂时无法控制");
     }
@@ -49,16 +54,14 @@ export function PMSSBrowserLogin({
         ? "已选中学校输入框。现在直接键入用户名或密码。"
         : "点击已送达学校页面；如需输入，请点击对应输入框。");
     }
-    lastInteraction.current = Date.now();
-    if (data.action === "open" || data.action === "key" && data.key === "Enter") {
-      setFrame(n => n + 1);
-    }
+    setError("");
   }
 
   async function loginSchool(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting || !username || !password) return;
     setSubmitting(true);
+    pendingActions.current += 1;
     setError("");
     setHint("正在将账号信息一次性提交到学校原版登录页面…");
     try {
@@ -75,25 +78,31 @@ export function PMSSBrowserLogin({
       }
       setHint("已提交学校原版登录表单，正在等待学校验证。此处不会将提交成功当作认证成功。");
       setShowRemote(true);
-      setFrame(n => n + 1);
-      void onConnected();
+      requestFrame.current();
+      void onConnected().catch(() => {});
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "学校登录暂时不可用");
     } finally {
       setPassword("");
       setSubmitting(false);
+      pendingActions.current -= 1;
+      requestFrame.current();
     }
   }
 
   function send(data: BrowserAction) {
     // Serialize keyboard and mouse actions so characters never arrive out of order.
     const generation = actionGeneration.current;
+    pendingActions.current += 1;
     queue.current = queue.current.then(() => {
       if (generation !== actionGeneration.current) return;
       return post(data);
     }).catch(cause => {
       actionGeneration.current += 1;
       setError(cause instanceof Error ? cause.message : "学校登录操作失败");
+    }).finally(() => {
+      pendingActions.current -= 1;
+      requestFrame.current();
     });
   }
 
@@ -138,18 +147,57 @@ export function PMSSBrowserLogin({
   }, [show, onClose, onConnected]);
 
   useEffect(() => {
-    if (!show || !showRemote) { framePending.current = false; return; }
-    // Remote screen is an optional fallback. No image polling while the
-    // administrator types in native browser inputs.
-    const refresh = () => {
-      if (document.hidden || framePending.current ||
-          Date.now() - lastInteraction.current <= 2500) return;
-      framePending.current = true;
-      setFrame(n => n + 1);
-      // Resume only after img load/error, never queue screenshots.
+    if (!show || !showRemote) return;
+    let active = true;
+    let currentUrl = "";
+    let controller: AbortController | undefined;
+    setFrameUrl("");
+    setFrameError("");
+    const pump = createFramePump({
+      blocked: () => document.hidden || pendingActions.current > 0,
+      schedule: (callback, delay) => window.setTimeout(callback, delay),
+      cancel: timer => window.clearTimeout(timer),
+      onError: () => setFrameError("学校画面暂时无法读取，正在重试；也可点击刷新画面。"),
+      capture: async () => {
+        controller = new AbortController();
+        const deadline = window.setTimeout(() => controller?.abort(), 6000);
+        let nextUrl = "";
+        try {
+          const response = await fetch(BASE + "frame", {
+            credentials: "same-origin", cache: "no-store", signal: controller.signal,
+          });
+          if (!response.ok) throw new Error("frame unavailable");
+          nextUrl = URL.createObjectURL(await response.blob());
+          // Decode before replacing the visible image; retain the last good
+          // frame during slow requests and failures instead of flashing black.
+          const decoded = new Image();
+          decoded.src = nextUrl;
+          await decoded.decode();
+          if (!active) return;
+          const previous = currentUrl;
+          currentUrl = nextUrl;
+          nextUrl = "";
+          setFrameUrl(currentUrl);
+          setFrameError("");
+          if (previous) URL.revokeObjectURL(previous);
+        } finally {
+          window.clearTimeout(deadline);
+          if (nextUrl) URL.revokeObjectURL(nextUrl);
+        }
+      },
+    });
+    requestFrame.current = () => pump.request();
+    const visible = () => { if (!document.hidden) pump.request(); };
+    document.addEventListener("visibilitychange", visible);
+    pump.request();
+    return () => {
+      active = false;
+      pump.stop();
+      controller?.abort();
+      requestFrame.current = () => {};
+      document.removeEventListener("visibilitychange", visible);
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
     };
-    const timer = window.setInterval(refresh, 4500);
-    return () => {window.clearInterval(timer);};
   }, [show, showRemote]);
 
   if (!show) return null;
@@ -164,7 +212,6 @@ export function PMSSBrowserLogin({
     if (!point) return;
     flushText();
     surface.current?.focus();
-    lastInteraction.current = Date.now();
     setHint("正在将点击发送到学校浏览器…");
     send({action: "click", ...point});
   }
@@ -179,7 +226,6 @@ export function PMSSBrowserLogin({
       send({action: "key", key: event.key});
     } else if (event.key.length === 1) {
       event.preventDefault();
-      lastInteraction.current = Date.now();
       textBuffer.current += event.key;
       if (textBuffer.current.length >= 100) flushText();
       else {
@@ -232,29 +278,28 @@ export function PMSSBrowserLogin({
         </div>
       </form>
       <button type="button" className="pmss-browser-toggle"
-        aria-expanded={showRemote} onClick={() => {setShowRemote(value => !value);setFrame(n => n + 1);}}>
+        aria-expanded={showRemote} onClick={() => setShowRemote(value => !value)}>
         {showRemote ? "收起学校原版画面" : "显示学校原版画面（验证码或额外验证时使用）"}
       </button>
       {showRemote && <div ref={surface} className="pmss-browser-surface" tabIndex={0}
         onKeyDown={keyboard} onPaste={paste} aria-label="学校网页登录画面与键盘控制">
-        <img ref={image} draggable={false} alt="服务器学校官网登录页面"
-          src={BASE + "frame?seq=" + frame} onClick={click}
-          onLoad={() => { framePending.current = false; }}
-          onError={() => { framePending.current = false; setError("暂时无法读取学校浏览器画面，请检查管理员登录网关"); }}
-        />
+        {frameUrl ? <img ref={image} draggable={false} alt="服务器学校官网登录页面"
+          src={frameUrl} onClick={click}/>
+          : <p role="status">正在读取学校登录画面…</p>}
       </div>}
       {showRemote && <div className="pmss-browser-footer">
         <span><Keyboard size={14}/> {hint}</span>
         <div className="pmss-browser-buttons">
           <button type="button" onClick={() => send({action: "scroll", dy: -1})}>向上</button>
           <button type="button" onClick={() => send({action: "scroll", dy: 1})}>向下</button>
-          <button type="button" onClick={() => setFrame(n => n + 1)}>
+          <button type="button" onClick={() => requestFrame.current()}>
             <RefreshCw size={14}/> 刷新画面</button>
           <button type="button" onClick={onClose}>完成 / 关闭</button>
         </div>
       </div>}
       {showRemote && <p className="pmss-browser-privacy">远程画面仅用于额外验证；建议优先使用上方原生输入框，避免逐字远程操作。</p>}
       {error && <p className="pmss-browser-error" role="alert">{error}</p>}
+      {frameError && <p className="pmss-browser-error" role="status">{frameError}</p>}
       <p className="pmss-browser-privacy"><ExternalLink size={13}/> 账号信息仅用于本次学校网页登录，经过当前 HTTPS 连接传送到受保护服务器，不写入账户数据库。
         登录后的报价提交与原版出清仍须分别人工确认；不会开放服务器桌面或自动提交报价。</p>
     </section>
