@@ -57,10 +57,22 @@ def _driver():
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         options = Options()
+        # VPN subresources can remain pending indefinitely. Relay commands
+        # must not wait for the school's full page-load event.
+        options.page_load_strategy = "none"
         options.debugger_address = os.environ.get(
             "POWERBID_CHROME_DEBUGGER", "127.0.0.1:9223"
         )
-        _DRIVER = webdriver.Chrome(options=options)
+        driver_path = os.environ.get("POWERBID_CHROMEDRIVER")
+        if driver_path:
+            from selenium.webdriver.chrome.service import Service
+            _DRIVER = webdriver.Chrome(service=Service(driver_path), options=options)
+        else:
+            _DRIVER = webdriver.Chrome(options=options)
+        # Bound Chrome transport as well as the outer HTTP relay; otherwise
+        # a stalled renderer holds _LOCK long after the caller has timed out.
+        _DRIVER.command_executor._client_config.timeout = 3
+        _DRIVER.set_page_load_timeout(4)
     return _DRIVER
 
 

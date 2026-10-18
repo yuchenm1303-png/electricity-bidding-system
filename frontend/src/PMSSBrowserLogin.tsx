@@ -25,6 +25,7 @@ export function PMSSBrowserLogin({
   const image = useRef<HTMLImageElement>(null);
   const surface = useRef<HTMLDivElement>(null);
   const queue = useRef<Promise<void>>(Promise.resolve());
+  const actionGeneration = useRef(0);
   const textBuffer = useRef("");
   const typingTimer = useRef<number | null>(null);
   const lastInteraction = useRef(0);
@@ -32,6 +33,7 @@ export function PMSSBrowserLogin({
 
   async function post(data: BrowserAction): Promise<void> {
     const response = await fetch(BASE + "action", {
+      signal: AbortSignal.timeout(12000),
       method: "POST", credentials: "same-origin", cache: "no-store",
       headers: { "Content-Type": "application/json", "X-PowerBid-Request": "1" },
       body: JSON.stringify(data),
@@ -62,6 +64,7 @@ export function PMSSBrowserLogin({
     try {
       // One request for the complete school form, not one round trip per key.
       const response = await fetch(BASE + "login", {
+        signal: AbortSignal.timeout(12000),
         method: "POST", credentials: "same-origin", cache: "no-store",
         headers: {"Content-Type":"application/json", "X-PowerBid-Request":"1"},
         body: JSON.stringify({username, password}),
@@ -84,7 +87,12 @@ export function PMSSBrowserLogin({
 
   function send(data: BrowserAction) {
     // Serialize keyboard and mouse actions so characters never arrive out of order.
-    queue.current = queue.current.then(() => post(data)).catch(cause => {
+    const generation = actionGeneration.current;
+    queue.current = queue.current.then(() => {
+      if (generation !== actionGeneration.current) return;
+      return post(data);
+    }).catch(cause => {
+      actionGeneration.current += 1;
       setError(cause instanceof Error ? cause.message : "学校登录操作失败");
     });
   }
@@ -109,12 +117,19 @@ export function PMSSBrowserLogin({
     setPassword("");
     setShowRemote(false);
     setHint("直接在下方输入学校账号；只有需要额外验证时再展开学校远程画面。");
+    let checking = false;
+    let active = true;
     const checker = window.setInterval(() => {
+      if (checking) return;
+      checking = true;
       void onConnected().then(ok => {
+        if (!active) return;
         if (ok) { setHint("学校登录已经验证成功。"); onClose(); }
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => { checking = false; });
     }, 6000);
     return () => {
+      active = false;
+      actionGeneration.current += 1;
       window.clearInterval(checker);
       if (typingTimer.current !== null) window.clearTimeout(typingTimer.current);
       typingTimer.current = null;

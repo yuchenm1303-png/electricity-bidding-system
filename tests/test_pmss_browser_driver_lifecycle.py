@@ -16,8 +16,13 @@ def test_driver_is_reused_until_explicit_reset(monkeypatch):
         debugger_address = ""
     class Chrome:
         def __init__(self, options):
+            assert options.page_load_strategy == "none"
+            self.command_executor = types.SimpleNamespace(
+                _client_config=types.SimpleNamespace(timeout=120))
             created.append(options.debugger_address)
             self.quit_count = 0
+        def set_page_load_timeout(self, value):
+            assert value == 4
         def quit(self):
             self.quit_count += 1
 
@@ -35,6 +40,7 @@ def test_driver_is_reused_until_explicit_reset(monkeypatch):
     monkeypatch.setattr(operator, "_DRIVER", None)
     try:
         first = operator._driver()
+        assert first.command_executor._client_config.timeout == 3
         assert operator._driver() is first
         assert created == ["127.0.0.1:9223"]
         operator._reset_driver()
