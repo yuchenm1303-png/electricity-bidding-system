@@ -8,8 +8,8 @@ from __future__ import annotations
 import http.client
 import json
 import os
-import stat
 import socket
+import stat
 import threading
 import time
 from pathlib import Path
