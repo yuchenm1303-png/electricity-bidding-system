@@ -31,7 +31,19 @@ frames 0.178/0.522/0.098s; subsequent login-page frame 0.326s.
 One navigation still exceeded the outer timeout before transport bounds were
 added; do not interpret these frame measurements as end-to-end login timings.
 
-Local frontend safeguards (12s fetch deadline, queue invalidation on failure,
-single in-flight status check) pass the production build but are not deployed.
-12 targeted Python tests pass. Successful school authentication remains untested
-and requires the user's school credentials.
+Frontend safeguards (12s fetch deadline, queue invalidation on failure,
+single in-flight status check) were deployed after user authorization.
+Server production build and 27 frontend workflow tests passed; all 8 public
+assets match the release files. 12 targeted Python tests pass.
+
+Frontend release image: `powerbid-studio:login-latency-3c3dc96`.
+Previous image: `powerbid-studio:before-login-latency-3c3dc96`.
+The existing runtime image tag also points to the repaired image so recreating
+the existing deployment retains the repair. Frontend resources were copied
+first, then the HTML entry point was replaced atomically; old hashed assets
+were retained for already-open browser sessions.
+Deployment manifest and original frontend backup are under
+`/var/lib/sentinelx/uploads/powerbid-login-latency-3c3dc96/`.
+
+Successful school authentication remains untested and requires the user's
+school credentials.
