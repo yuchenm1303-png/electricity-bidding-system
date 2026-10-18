@@ -1,0 +1,23 @@
+[Unit]
+Description=PowerBid restricted original PMSS gateway
+After=network-online.target docker.service powerbid-platform-browser.service
+Wants=network-online.target powerbid-platform-browser.service
+
+[Service]
+Type=simple
+User=sentinelx
+Group=sentinelx
+WorkingDirectory=/opt/powerbid-platform-bridge
+Environment=POWERBID_BRIDGE_BIND=172.17.0.1
+Environment=POWERBID_BRIDGE_PORT=18762
+Environment=POWERBID_PMSS_PROXY=socks5h://127.0.0.1:11080
+Environment=POWERBID_CHROME_DEBUGGER=127.0.0.1:9223
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/powerbid-platform-bridge/venv/bin/python /opt/powerbid-platform-bridge/pmss_live_gateway_candidate.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
