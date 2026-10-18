@@ -6,8 +6,8 @@ persistent single-use state transition, no retry, and an explicit human click.
 from __future__ import annotations
 
 import hashlib
-import math
 import json
+import math
 import os
 import secrets
 import sqlite3
@@ -512,8 +512,12 @@ def execute(request: Request, body: ConfirmInput):
         raise HTTPException(409, "报价尚未核验或出清已经尝试，禁止重复执行")
     try:
         adapter = _adapter()
-        baseline_status = adapter.get_clearing_result(case_id=row["case_id"], market_type_atom="DA")
-        baseline_overview = adapter.get_result_overview(case_id=row["case_id"], market_type_atom="DA")
+        baseline_status = adapter.get_clearing_result(
+            case_id=row["case_id"], market_type_atom="DA"
+        )
+        baseline_overview = adapter.get_result_overview(
+            case_id=row["case_id"], market_type_atom="DA"
+        )
         baseline_market = read_market_results(adapter, case_id=row["case_id"])
         digest = _result_digest(baseline_status, baseline_overview, baseline_market)
     except (TeacherPlatformError, ValueError, OSError) as exc:
