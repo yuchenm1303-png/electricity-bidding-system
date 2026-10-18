@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from app import pmss_live_api as live
 
+
 def test_latest_acceptance_requires_admin(monkeypatch):
     def deny(request,admin=False):
         raise HTTPException(403, "Admin only")
