@@ -47,3 +47,40 @@ Deployment manifest and original frontend backup are under
 
 Successful school authentication remains untested and requires the user's
 school credentials.
+
+## Follow-up: input-to-frame latency
+
+The user still observed about 10s per click. Warm host measurements were only
+18–20ms for input and 66–78ms for screenshots. The UI nevertheless paused frame
+polling for 2500ms after an action, then waited for a 4500ms poll; ordinary
+click, text and scroll success did not explicitly refresh a frame.
+
+Release `953c183` removes this delay using a single-flight frame pump. Completed
+input requests a frame after 40ms; repeated requests coalesce, pending input
+has priority, idle polling is 1200ms, and a failed/slow capture retains the
+last decoded image. Frames have a 6s deadline and are aborted on dialog close.
+This is refresh scheduling time, not a claimed end-to-end network latency.
+
+The API's status probe previously held `_PROBE_LOCK` throughout school HTTP
+I/O. Successful input then acquired this same lock to invalidate status,
+adding the probe's network wait to its acknowledgment. Probes now do network
+I/O outside a short cache lock, avoid duplicate in-flight probes and discard
+cache updates invalidated by newer input. A concurrency regression test holds
+the school request pending and verifies input invalidation still completes.
+
+Server build and 33 frontend tests passed. All 22 relevant backend tests passed
+in an isolated Linux test container (Windows lacks UnixStreamServer for one
+existing operator test). The public HTML and every release asset match.
+An unauthenticated production status request still returns HTTP 401.
+
+Image: `powerbid-studio:input-feedback-953c183`.
+Rollback image: `powerbid-studio:before-input-feedback-953c183`.
+Backup sources, frontend and test logs:
+`/var/lib/sentinelx/uploads/powerbid-input-feedback-953c183/`.
+The existing deployment image tag also points to the new image.
+
+The user's school session became authorized during this follow-up. Interactive
+school actions correctly return 409 after authorization; the session was not
+logged out to repeat a login-only click-to-image benchmark. No new end-to-end
+remote input timing is claimed. A local UI expand/collapse dispatch took about
+273ms before this deployment.
