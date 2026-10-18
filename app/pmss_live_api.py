@@ -701,3 +701,28 @@ def latest_acceptance(request: Request, project_id: str,
         "teacher_write_performed_by_this_query": False,
         "teacher_clearing_executed_by_this_query": False,
     }
+
+
+@router.get("/attempt-state")
+def attempt_state(request: Request, project_id: str, case_date: date,
+                  target_unit_id: str):
+    """Return only local, user-owned intent state. Never query or write school PMSS.
+
+    Allows a refreshed browser to prefer recovering existing original-clearing
+    results over accidentally entering the create-submission workflow again.
+    """
+    user = require_user(request, admin=True)
+    if not (1 <= len(project_id) <= 100 and 1 <= len(target_unit_id) <= 100):
+        raise HTTPException(422, "学校工程或机组标识无效")
+    with _database() as db:
+        row = db.execute(
+            "SELECT state FROM intents WHERE user_id=? AND project_id=? "
+            "AND case_date=? AND unit_id=? ORDER BY created DESC LIMIT 1",
+            (user["id"], project_id, case_date.isoformat(), target_unit_id),
+        ).fetchone()
+    return {
+        "exists": row is not None,
+        "state": row["state"] if row else None,
+        "read_only": True,
+        "school_write_performed": False,
+    }

@@ -35,6 +35,7 @@ type SchoolAcceptance = {
   school_income_raw_sum: number | null;
   school_income_unit_verified: false; direct_profit_comparison_valid: false;
 };
+type ExistingAttempt = {exists: boolean; state: string | null; read_only: true};
 type SchoolResult = {
   state: string; source: string; case_date: string; target_unit_id: string;
   school_clearing_status: Record<string, unknown>;
@@ -75,6 +76,7 @@ export function PMSSOfficialClearingPanel({
   const [notice, setNotice] = useState("");
   const [result, setResult] = useState<SchoolResult | null>(null);
   const [acceptance, setAcceptance] = useState<SchoolAcceptance | null>(null);
+  const [existingAttempt, setExistingAttempt] = useState<ExistingAttempt | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -87,6 +89,21 @@ export function PMSSOfficialClearingPanel({
     return () => {active = false;};
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    setExistingAttempt(null);
+    if (projectId && caseDate && targetUnitId) {
+      const query = new URLSearchParams({
+        project_id: projectId, case_date: caseDate, target_unit_id: targetUnitId,
+      });
+      void schoolAPI<ExistingAttempt>("attempt-state?" + query.toString())
+        .then(data => {if (active) setExistingAttempt(data);})
+        .catch(() => {if (active) setExistingAttempt(null);});
+    }
+    return () => {active = false;};
+  }, [projectId, caseDate, targetUnitId]);
+
+  const hasExistingAttempt = existingAttempt?.exists === true;
   const usable = trio.target_unit_id === targetUnitId ?
     trio.candidates.filter(item => item.price_blocks.length === 5 &&
       item.price_blocks.some(block => block[2] > 0) &&
@@ -142,12 +159,24 @@ export function PMSSOfficialClearingPanel({
   async function prepare() {
     if (!profile || !school?.live_write_enabled) return;
     await action(async () => {
-      const p = await schoolAPI<Prepared>("prepare", {
-        project_id: projectId, case_date: caseDate, target_unit_id: targetUnitId,
-        segments: profile.price_blocks.map(([start_power, end_power, price]) =>
-          ({start_power, end_power, price})),
-      });
+      let p: Prepared;
+      try {
+        p = await schoolAPI<Prepared>("prepare", {
+          project_id: projectId, case_date: caseDate, target_unit_id: targetUnitId,
+          segments: profile.price_blocks.map(([start_power, end_power, price]) =>
+            ({start_power, end_power, price})),
+        });
+      } catch (err) {
+        if (err instanceof Error && (err.message.includes("禁止重复创建") ||
+            err.message.includes("已有提交"))) {
+          setExistingAttempt({exists: true, state: "EXISTING", read_only: true});
+          setNotice("此机组已有学校提交记录，请使用上方只读入口恢复真实出清结果；禁止重新提交。");
+          return;
+        }
+        throw err;
+      }
       setPrepared(p);setStage(p.state);setTyped("");
+      setExistingAttempt({exists: true, state: p.state, read_only: true});
       setNotice("已根据学校实时规则和原报价成本生成真实预览；尚未修改学校平台。");
     });
   }
@@ -236,6 +265,11 @@ export function PMSSOfficialClearingPanel({
         读取本机组真实出清结果（只读）
       </button>
     </div>
+    {hasExistingAttempt && !currentAcceptance && <p role="status"
+      className="pmss-live-success">
+      本案例与机组已有学校提交或出清记录（{existingAttempt?.state ?? "已记录"}）。
+      为防止重复执行，新建提交已禁用。请点击上方「读取本机组真实出清结果（只读）」查看已执行的验收结果。
+    </p>}
     {currentAcceptance && <div className="pmss-live-results" role="region"
       aria-label="老师原版最新出清验收">
       <h4>老师 PMSS 原版出清验收</h4>
@@ -293,7 +327,8 @@ export function PMSSOfficialClearingPanel({
           <span key={i}>第{i+1}段 {start}–{end} MW · {price}</span>)}
       </div>}
     </div>
-    {stage === "IDLE" && <button type="button" className="pmss-live-action"
+    {stage === "IDLE" && !hasExistingAttempt &&
+      <button type="button" className="pmss-live-action"
       disabled={busy || !profile || !school?.live_write_enabled}
       onClick={() => void prepare()}>读取学校规则并预览真实提交</button>}
     {prepared && <div className="pmss-live-preview">
