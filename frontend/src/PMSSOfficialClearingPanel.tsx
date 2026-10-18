@@ -19,6 +19,22 @@ type Prepared = {
   state: string; segments: {startPower: number; endPower: number; price: number}[];
   price_limits: [number, number]; expires_in_seconds: number;
 };
+type SchoolAcceptance = {
+  source: "TEACHER_PMSS_ORIGINAL"; project_id: string; case_date: string;
+  target_unit_id: string; target_unit_name: string; state: string;
+  school_bid_readback_verified: boolean; school_bid_prices: number[];
+  school_clearing_result_changed: boolean; school_converged: boolean;
+  school_relaxed: number | null; school_iterations: number | null;
+  school_total_system_cost_raw: number | null;
+  school_total_system_run_cost_raw: number | null;
+  school_total_system_start_cost_raw: number | null;
+  school_nodal_count: number; school_branch_count: number;
+  hourly_complete: boolean; clearing_finished: boolean;
+  accepted_mwh: number | null; hourly_accepted_mw: number[];
+  hourly_clearing_prices: number[]; hourly_income_raw: number[];
+  school_income_raw_sum: number | null;
+  school_income_unit_verified: false; direct_profit_comparison_valid: false;
+};
 type SchoolResult = {
   state: string; source: string; case_date: string; target_unit_id: string;
   school_clearing_status: Record<string, unknown>;
@@ -58,6 +74,7 @@ export function PMSSOfficialClearingPanel({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [result, setResult] = useState<SchoolResult | null>(null);
+  const [acceptance, setAcceptance] = useState<SchoolAcceptance | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +97,14 @@ export function PMSSOfficialClearingPanel({
   const verifiedPreflight = preflight?.case_date === caseDate &&
     preflight.target_unit_id === targetUnitId ? preflight : null;
   const confirmExecute = "执行出清 " + targetUnitId + " " + caseDate;
+  const currentAcceptance = acceptance?.project_id === projectId &&
+    acceptance.case_date === caseDate &&
+    acceptance.target_unit_id === targetUnitId ? acceptance : null;
+  const localBalanced = trio.candidates.find(c => c.profile.includes("均衡"));
+  const formatValue = (value: number | null, digits = 2) =>
+    value === null ? "—" : value.toLocaleString("zh-CN", {
+      minimumFractionDigits: digits, maximumFractionDigits: digits,
+    });
 
   async function action(callback: () => Promise<void>) {
     if (busy) return;
@@ -96,6 +121,21 @@ export function PMSSOfficialClearingPanel({
       const report = await schoolAPI<SchoolPreflight>("school-preflight?" + params.toString());
       setPreflight(report);
       setNotice("已直接读取学校原版工程、日期、机组及报价规则；本次仅做只读核验，未提交或出清。");
+    });
+  }
+
+  async function checkLatestAcceptance() {
+    await action(async () => {
+      const query = new URLSearchParams({
+        project_id: projectId, case_date: caseDate, target_unit_id: targetUnitId,
+      });
+      const data = await schoolAPI<SchoolAcceptance>(
+        "latest-acceptance?" + query.toString()
+      );
+      setAcceptance(data);
+      setNotice(data.clearing_finished ?
+        "老师 PMSS 已返回新出清结果：基线变化、收敛及 24 小时数据完整性均通过。" :
+        "已读取老师出清记录，但尚未满足完整验收条件。");
     });
   }
 
@@ -188,6 +228,53 @@ export function PMSSOfficialClearingPanel({
       <div><strong>实时报价范围</strong><span>{verifiedPreflight.price_limits[0]}～{verifiedPreflight.price_limits[1]}</span></div>
       <div><strong>学校原报价读取</strong><span>{verifiedPreflight.existing_school_bid_blocks} 段 · 原始成本字段：{verifiedPreflight.original_cost_fields_present ? "已核验" : "缺失"}</span></div>
       <p>只读学校原始数据，尚未保存新报价或执行出清。学校读写权限与本地策略风控分开核验。</p>
+    </div>}
+    <div className="pmss-live-connect">
+      <strong>老师原版最新真实出清：</strong>
+      <button type="button" disabled={busy || !school?.live_write_enabled}
+        onClick={() => void checkLatestAcceptance()}>
+        读取本机组真实出清结果（只读）
+      </button>
+    </div>
+    {currentAcceptance && <div className="pmss-live-results" role="region"
+      aria-label="老师原版最新出清验收">
+      <h4>老师 PMSS 原版出清验收</h4>
+      <div><span>状态</span><strong>{currentAcceptance.clearing_finished ?
+        "真实出清完成 · 已收敛" : "尚未通过完整验收"}</strong></div>
+      <div><span>工程 / 日期 / 机组</span><strong>
+        {currentAcceptance.project_id} / {currentAcceptance.case_date} /
+        {currentAcceptance.target_unit_name}</strong></div>
+      <div><span>学校已保存的五段报价</span><strong>
+        {currentAcceptance.school_bid_prices.join(" / ")}
+        {currentAcceptance.school_bid_readback_verified ? " · 读回一致" : " · 待核验"}
+      </strong></div>
+      <div><span>真实中标电量（24小时）</span>
+        <strong>{formatValue(currentAcceptance.accepted_mwh)} MWh</strong></div>
+      <div><span>原始收入字段合计（单位待核实）</span>
+        <strong>{formatValue(currentAcceptance.school_income_raw_sum, 4)}</strong></div>
+      <div><span>老师原版市场系统总成本（原始接口数值）</span>
+        <strong>{formatValue(currentAcceptance.school_total_system_cost_raw)}</strong></div>
+      <div><span>求解与网络数据</span><strong>
+        {currentAcceptance.school_iterations ?? "—"} 次迭代 /
+        {currentAcceptance.school_nodal_count} 节点 /
+        {currentAcceptance.school_branch_count} 线路</strong></div>
+      <div><span>新的出清结果相对执行前基线</span><strong>
+        {currentAcceptance.school_clearing_result_changed ? "已发生变化" : "未验证变化"}</strong></div>
+      {localBalanced && <div><span>PowerBid 均衡方案本地模拟利润（非学校收益）</span>
+        <strong>{formatValue(localBalanced.expected_dc_margin)}</strong></div>}
+      <p>学校原始收入字段的计量单位尚未独立核实，也未获得 G31 真实成本分摊。
+        因此不能把学校收入与 PowerBid 本地利润直接相减或声称收益误差率。
+        该报告只读取服务器已保存的人工确认操作记录，不会再次提交报价或执行出清。</p>
+      {currentAcceptance.hourly_complete && <details className="pmss-live-hourly">
+        <summary>查看 G31 全天 24 小时中标量、价格与原始收入</summary>
+        <table><thead><tr><th>时段</th><th>中标 MW</th><th>价格</th><th>收入原始值</th></tr></thead>
+          <tbody>{currentAcceptance.hourly_accepted_mw.map((mw, index) =>
+            <tr key={index}><td>{index + 1}</td>
+              <td>{formatValue(mw, 3)}</td>
+              <td>{formatValue(currentAcceptance.hourly_clearing_prices[index])}</td>
+              <td>{formatValue(currentAcceptance.hourly_income_raw[index], 4)}</td>
+            </tr>)}</tbody></table>
+      </details>}
     </div>}
     <p className="pmss-live-warning"><AlertTriangle size={16}/>
       三类本地策略尚未经过老师 PMSS 验证，部分机组物理约束也尚未核实。实际能否接受报价由学校实时规则检查；操作会修改学校对应案例的报价与结果；
