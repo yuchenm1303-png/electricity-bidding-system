@@ -216,6 +216,19 @@ def reject_wrong_pmss_method(operation: str) -> None:
     raise HTTPException(status_code=404, detail="API route not found")
 
 
+@app.get("/privacy", include_in_schema=False)
+@app.get("/privacy/", include_in_schema=False)
+def public_privacy_policy() -> FileResponse:
+    """Serve a publicly readable policy, not the SPA login fallback."""
+    policy = DIST / "privacy" / "index.html"
+    if not policy.is_file():
+        raise HTTPException(status_code=503, detail="Privacy policy unavailable")
+    return FileResponse(
+        policy, media_type="text/html; charset=utf-8",
+        headers={"Cache-Control": "no-cache", "X-Robots-Tag": "index, follow"},
+    )
+
+
 @app.get("/")
 def index() -> FileResponse:
     return _index()
